@@ -102,10 +102,10 @@ function AppContent() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-emerald-50/30 to-white">
+      <div className="min-h-screen flex items-center justify-center paper-texture">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-teal-600">Cargando...</p>
+          <div className="w-12 h-12 border-4 border-ivory-300 border-t-gold-400 rounded-full animate-spin mx-auto" />
+          <p className="mt-4 text-bark-500 font-light">Cargando...</p>
         </div>
       </div>
     );

@@ -72,116 +72,102 @@ export function AuthRegister() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-emerald-50/30 to-white px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center paper-texture px-4 py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-teal-600 flex items-center justify-center">
-              <Leaf className="w-6 h-6 text-white" />
+          <div className="inline-flex items-center gap-2.5 mb-5">
+            <div className="w-11 h-11 rounded-lg bg-gold-400 flex items-center justify-center">
+              <Leaf className="w-6 h-6 text-bark-900" />
             </div>
-            <span className="font-bold text-2xl text-teal-800">AP</span>
+            <span className="font-serif font-bold text-2xl text-bark-700">AP</span>
           </div>
-          <h1 className="text-2xl font-bold text-teal-900">Crear Cuenta</h1>
-          <p className="text-teal-600 mt-1">Registrate para solicitar turnos</p>
+          <h1 className="text-2xl font-serif font-bold text-bark-700">Crear Cuenta</h1>
+          <p className="text-bark-500 mt-1 font-light">Registrate para solicitar turnos</p>
         </div>
 
-        <Card className="border-teal-100 shadow-lg">
+        <Card className="bg-ivory-50 border-ivory-300/50 shadow-lg">
           <CardContent className="p-6 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nombre completo *</Label>
+                <Label htmlFor="name" className="text-bark-700 font-medium">Nombre completo *</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bark-300" />
                   <Input
                     id="name"
                     required
                     value={form.name}
-                    onChange={(e) =>
-                      setForm({ ...form, name: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                     placeholder="Tu nombre completo"
-                    className="pl-10 border-teal-200 focus:border-teal-500"
+                    className="pl-10 border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reg-email">Email *</Label>
+                <Label htmlFor="reg-email" className="text-bark-700 font-medium">Email *</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bark-300" />
                   <Input
                     id="reg-email"
                     type="email"
                     required
                     value={form.email}
-                    onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
                     placeholder="tu@email.com"
-                    className="pl-10 border-teal-200 focus:border-teal-500"
+                    className="pl-10 border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono</Label>
+                <Label htmlFor="phone" className="text-bark-700 font-medium">Teléfono</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bark-300" />
                   <Input
                     id="phone"
                     value={form.phone}
-                    onChange={(e) =>
-                      setForm({ ...form, phone: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     placeholder="+54 11 xxxx-xxxx"
-                    className="pl-10 border-teal-200 focus:border-teal-500"
+                    className="pl-10 border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reg-password">Contraseña *</Label>
+                <Label htmlFor="reg-password" className="text-bark-700 font-medium">Contraseña *</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bark-300" />
                   <Input
                     id="reg-password"
                     type={showPassword ? "text" : "password"}
                     required
                     value={form.password}
-                    onChange={(e) =>
-                      setForm({ ...form, password: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
                     placeholder="Mínimo 6 caracteres"
-                    className="pl-10 pr-10 border-teal-200 focus:border-teal-500"
+                    className="pl-10 pr-10 border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 hover:text-teal-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-bark-400 hover:text-bark-600"
                   >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirmar Contraseña *</Label>
+                <Label htmlFor="confirm-password" className="text-bark-700 font-medium">Confirmar Contraseña *</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bark-300" />
                   <Input
                     id="confirm-password"
                     type={showPassword ? "text" : "password"}
                     required
                     value={form.confirmPassword}
-                    onChange={(e) =>
-                      setForm({ ...form, confirmPassword: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                     placeholder="Repetí tu contraseña"
-                    className="pl-10 border-teal-200 focus:border-teal-500"
+                    className="pl-10 border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
                   />
                 </div>
               </div>
@@ -190,7 +176,7 @@ export function AuthRegister() {
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-sm text-red-500 bg-red-50 p-3 rounded-lg"
+                  className="text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg"
                 >
                   {error}
                 </motion.p>
@@ -199,18 +185,18 @@ export function AuthRegister() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white h-11"
+                className="w-full btn-gold text-bark-900 font-semibold h-11"
               >
                 {loading ? "Creando cuenta..." : "Crear Cuenta"}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-teal-600">
+              <p className="text-sm text-bark-500 font-light">
                 ¿Ya tenés cuenta?{" "}
                 <button
                   onClick={() => setCurrentView("login")}
-                  className="text-teal-700 font-semibold hover:underline"
+                  className="text-gold-600 font-semibold hover:text-gold-700 transition-colors"
                 >
                   Iniciá sesión
                 </button>
@@ -222,7 +208,7 @@ export function AuthRegister() {
         <div className="mt-6 text-center">
           <button
             onClick={() => setCurrentView("landing")}
-            className="text-sm text-teal-500 hover:text-teal-700 inline-flex items-center gap-1"
+            className="text-sm text-bark-400 hover:text-bark-600 inline-flex items-center gap-1 font-light transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Volver al inicio

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Heart,
@@ -20,6 +20,12 @@ import {
   CheckCircle2,
   Leaf,
   ArrowRight,
+  Menu,
+  X,
+  CalendarPlus,
+  HandHeart,
+  BookOpen,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,15 +42,39 @@ import {
 import { useAppStore } from "@/lib/store";
 
 const specialties = [
-  { icon: Brain, label: "Ansiedad y Estrés", desc: "Técnicas de manejo y afrontamiento" },
-  { icon: Heart, label: "Depresión", desc: "Acompañamiento y terapia integral" },
-  { icon: Sparkles, label: "Crisis Vitales", desc: "Soporte en momentos difíciles" },
-  { icon: HeartHandshake, label: "Conflictos Vinculares", desc: "Mejora de relaciones interpersonales" },
-  { icon: Baby, label: "Niños", desc: "Psicología infanto-juvenil" },
-  { icon: UserCheck, label: "Adolescentes", desc: "Acompañamiento en la adolescencia" },
-  { icon: Users, label: "Adultos", desc: "Terapia individual para adultos" },
-  { icon: HeartHandshake, label: "Parejas", desc: "Terapia vincular y de pareja" },
-  { icon: Shield, label: "Familias", desc: "Terapia familiar sistémica" },
+  { icon: Brain, label: "Ansiedad y Estrés", desc: "Técnicas de manejo y afrontamiento para recuperar la calma" },
+  { icon: Heart, label: "Depresión", desc: "Acompañamiento y terapia integral para transitar el dolor" },
+  { icon: Sparkles, label: "Crisis Vitales", desc: "Soporte profesional en momentos de transformación" },
+  { icon: HeartHandshake, label: "Conflictos Vinculares", desc: "Mejora de relaciones interpersonales y comunicación" },
+  { icon: Baby, label: "Niños", desc: "Psicología infanto-juvenil con abordaje lúdico" },
+  { icon: UserCheck, label: "Adolescentes", desc: "Acompañamiento respetuoso en la adolescencia" },
+  { icon: Users, label: "Adultos", desc: "Terapia individual para adultos en todas las etapas" },
+  { icon: HeartHandshake, label: "Parejas", desc: "Terapia vincular y de pareja para reconstruir vínculos" },
+  { icon: Shield, label: "Familias", desc: "Terapia familiar sistémica para armonizar el hogar" },
+];
+
+const specialtyTabs = [
+  { id: "individual", label: "Individual", items: [0, 1, 2, 6] },
+  { id: "vincular", label: "Vínculos", items: [3, 7, 8] },
+  { id: "infanto", label: "Infanto-Juvenil", items: [4, 5] },
+];
+
+const testimonials = [
+  {
+    text: "Encontré en AP un espacio seguro donde puedo hablar sin ser juzgada. Mi terapeuta me ayudó a entender mis emociones y a construir herramientas para el día a día.",
+    name: "M.L.",
+    role: "Paciente",
+  },
+  {
+    text: "Después de años evitando buscar ayuda, el proceso de registro fue tan simple que me animé a dar el paso. Fue la mejor decisión que tomé para mi bienestar.",
+    name: "R.G.",
+    role: "Paciente",
+  },
+  {
+    text: "Como profesional, la plataforma me permite gestionar mi agenda de forma eficiente y concentrarme en lo que más importa: mis pacientes.",
+    name: "Dra. S.R.",
+    role: "Psicóloga",
+  },
 ];
 
 const fadeInUp = {
@@ -72,6 +102,28 @@ export function LandingPage() {
   });
   const [contactSent, setContactSent] = useState(false);
   const [contactSending, setContactSending] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("individual");
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close mobile menu on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,177 +146,422 @@ export function LandingPage() {
     }
   };
 
+  const scrollToSection = (id: string) => {
+    setMobileMenuOpen(false);
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-teal-100">
+    <div className="min-h-screen flex flex-col bg-ivory-100">
+      {/* ===== NAVBAR ===== */}
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? "bg-bark-900/55 backdrop-blur-xl"
+            : "bg-bark-900/15 backdrop-blur-sm"
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-teal-600 flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between h-16 md:h-18">
+            {/* Logo */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-gold-400 flex items-center justify-center">
+                <Leaf className="w-5 h-5 text-bark-900" />
               </div>
               <div>
-                <span className="font-bold text-lg text-teal-800">AP</span>
-                <span className="hidden sm:inline text-sm text-teal-600 ml-2">
+                <span className="font-serif font-bold text-lg text-ivory-100 tracking-wide">AP</span>
+                <span className="hidden sm:inline text-xs text-ivory-300 ml-2 font-light tracking-wider">
                   Red Asistencial de Salud Mental
                 </span>
               </div>
             </div>
-            <nav className="hidden md:flex items-center gap-6">
-              <a
-                href="#inicio"
-                className="text-sm font-medium text-teal-700 hover:text-teal-900 transition-colors"
+
+            {/* Desktop nav links */}
+            <div className="hidden md:flex items-center gap-8">
+              <button
+                onClick={() => scrollToSection("inicio")}
+                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
               >
                 Inicio
-              </a>
-              <a
-                href="#servicios"
-                className="text-sm font-medium text-teal-700 hover:text-teal-900 transition-colors"
+              </button>
+              <button
+                onClick={() => scrollToSection("nosotros")}
+                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
               >
-                Servicios
-              </a>
-              <a
-                href="#contacto"
-                className="text-sm font-medium text-teal-700 hover:text-teal-900 transition-colors"
+                Nosotros
+              </button>
+              <button
+                onClick={() => scrollToSection("especialidades")}
+                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
+              >
+                Especialidades
+              </button>
+              <button
+                onClick={() => scrollToSection("contacto")}
+                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
               >
                 Contacto
-              </a>
-              <Button
+              </button>
+              <button
                 onClick={() => setCurrentView("login")}
-                className="bg-teal-600 hover:bg-teal-700 text-white"
+                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
               >
                 Ingresar
+              </button>
+              <Button
+                onClick={() => setCurrentView("register")}
+                className="btn-gold text-bark-900 font-semibold text-sm px-5 h-9 rounded-full"
+              >
+                Solicitar Turno
               </Button>
-            </nav>
-            <Button
-              variant="ghost"
-              className="md:hidden text-teal-700"
-              onClick={() => setCurrentView("login")}
+            </div>
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2.5 text-ivory-100 active:bg-white/10 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
             >
-              Ingresar
-            </Button>
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
-      </header>
 
-      {/* Hero */}
-      <section id="inicio" className="relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-50 via-emerald-50/30 to-white" />
-        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-200/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-32">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.7 }}
+        {/* Mobile menu dropdown */}
+        <div
+          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+            mobileMenuOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
+          }`}
+          style={{ pointerEvents: mobileMenuOpen ? "auto" : "none" }}
+        >
+          <div className="bg-bark-900/80 backdrop-blur-xl border-t border-ivory-100/10 px-4 py-4 space-y-1">
+            <button
+              onClick={() => scrollToSection("inicio")}
+              className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
             >
-              <div className="inline-flex items-center gap-2 bg-teal-100 text-teal-800 px-4 py-1.5 rounded-full text-sm font-medium mb-6">
-                <Leaf className="w-4 h-4" />
-                Más de 30 años de experiencia
-              </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-teal-900 leading-tight">
-                Red Asistencial de{" "}
-                <span className="text-teal-600">Salud Mental</span>
-              </h1>
-              <p className="mt-6 text-lg sm:text-xl text-teal-700/80 leading-relaxed max-w-xl">
-                Más de 30 años acompañando tu bienestar. Nuestro equipo de
-                profesionales está aquí para escucharte y ayudarte a transitar
-                los momentos difíciles.
-              </p>
-              <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                <Button
-                  size="lg"
-                  onClick={() => setCurrentView("register")}
-                  className="bg-teal-600 hover:bg-teal-700 text-white text-base px-8 h-12"
-                >
-                  Solicitar Turno
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() =>
-                    document
-                      .getElementById("contacto")
-                      ?.scrollIntoView({ behavior: "smooth" })
-                  }
-                  className="border-teal-300 text-teal-700 hover:bg-teal-50 text-base px-8 h-12"
-                >
-                  <Phone className="mr-2 w-5 h-5" />
-                  Contactanos
-                </Button>
-              </div>
-
-              {/* No wait list highlight */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.5 }}
-                className="mt-10 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-4 w-fit"
+              Inicio
+            </button>
+            <button
+              onClick={() => scrollToSection("nosotros")}
+              className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
+            >
+              Nosotros
+            </button>
+            <button
+              onClick={() => scrollToSection("especialidades")}
+              className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
+            >
+              Especialidades
+            </button>
+            <button
+              onClick={() => scrollToSection("contacto")}
+              className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
+            >
+              Contacto
+            </button>
+            <div className="pt-2 space-y-2">
+              <button
+                onClick={() => { setMobileMenuOpen(false); setCurrentView("login"); }}
+                className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
               >
-                <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold text-emerald-800">
-                    ¡Sin listas de espera!
-                  </p>
-                  <p className="text-sm text-emerald-600">
-                    Turnos disponibles en menos de 48 horas
-                  </p>
-                </div>
-              </motion.div>
+                Ingresar
+              </button>
+              <Button
+                onClick={() => { setMobileMenuOpen(false); setCurrentView("register"); }}
+                className="w-full btn-gold text-bark-900 font-semibold text-base py-3 rounded-full min-h-[44px]"
+              >
+                Solicitar Turno
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* ===== HERO ===== */}
+      <section id="inicio" className="relative min-h-screen flex items-center overflow-hidden">
+        {/* Nature-inspired gradient background */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-bark-900 via-bark-800 to-bark-700" />
+          {/* Decorative nature elements */}
+          <div className="absolute top-0 right-0 w-1/2 h-full opacity-20">
+            <div className="absolute top-20 right-20 w-64 h-64 bg-gold-400/30 rounded-full blur-3xl" />
+            <div className="absolute bottom-20 right-40 w-80 h-80 bg-terracotta-400/20 rounded-full blur-3xl" />
+            <div className="absolute top-40 right-60 w-48 h-48 bg-emerald-500/15 rounded-full blur-3xl" />
+          </div>
+          <div className="absolute inset-0 hero-overlay" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 w-full">
+          <div className="max-w-3xl">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <div className="inline-flex items-center gap-2 border border-gold-400/40 text-gold-300 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider">
+                <Leaf className="w-4 h-4" />
+                MÁS DE 30 AÑOS DE EXPERIENCIA
+              </div>
             </motion.div>
 
-            {/* Hero illustration - calming abstract shape */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="hidden lg:flex justify-center"
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.1 }}
+              className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-ivory-100 leading-tight"
             >
-              <div className="relative w-96 h-96">
-                {/* Abstract calming circles */}
-                <div className="absolute inset-0 bg-gradient-to-br from-teal-400/20 to-emerald-300/20 rounded-full animate-pulse" />
-                <div className="absolute inset-8 bg-gradient-to-tr from-teal-300/30 to-emerald-200/30 rounded-full" />
-                <div className="absolute inset-16 bg-gradient-to-br from-teal-200/40 to-emerald-100/40 rounded-full" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <Heart className="w-20 h-20 text-teal-500 mx-auto" />
-                    <p className="mt-4 text-teal-700 font-medium text-lg">
-                      Tu bienestar es nuestra prioridad
-                    </p>
-                  </div>
-                </div>
-                {/* Floating decorative elements */}
-                <motion.div
-                  animate={{ y: [-10, 10, -10] }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                  className="absolute top-8 right-8 w-12 h-12 bg-teal-200/50 rounded-xl rotate-12"
-                />
-                <motion.div
-                  animate={{ y: [10, -10, 10] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                  className="absolute bottom-16 left-8 w-10 h-10 bg-emerald-200/50 rounded-full"
-                />
-                <motion.div
-                  animate={{ y: [-8, 8, -8] }}
-                  transition={{ duration: 5, repeat: Infinity }}
-                  className="absolute top-24 left-4 w-8 h-8 bg-teal-300/40 rounded-lg rotate-45"
-                />
+              Red Asistencial de{" "}
+              <span className="text-gold-400">Salud Mental</span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.25 }}
+              className="mt-6 text-lg sm:text-xl text-ivory-300/90 leading-relaxed max-w-xl font-light"
+            >
+              Más de tres décadas acompañando tu bienestar. Nuestro equipo de
+              profesionales está aquí para escucharte y ayudarte a transitar
+              los momentos difíciles con respeto y profesionalismo.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="mt-10 flex flex-col sm:flex-row gap-4"
+            >
+              <Button
+                size="lg"
+                onClick={() => setCurrentView("register")}
+                className="btn-gold text-bark-900 font-semibold text-base px-8 h-12 rounded-full"
+              >
+                Solicitar Turno
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => scrollToSection("contacto")}
+                className="border-ivory-300/30 text-ivory-200 hover:bg-ivory-100/10 text-base px-8 h-12 rounded-full bg-transparent"
+              >
+                <Phone className="mr-2 w-5 h-5" />
+                Contactanos
+              </Button>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
+              className="mt-12 flex items-center gap-4"
+            >
+              <div className="flex items-center gap-2 text-gold-400">
+                <CheckCircle2 className="w-5 h-5" />
+                <span className="text-sm font-medium text-ivory-200">Sin listas de espera</span>
+              </div>
+              <div className="w-px h-4 bg-ivory-300/30" />
+              <div className="flex items-center gap-2 text-gold-400">
+                <Clock className="w-5 h-5" />
+                <span className="text-sm font-medium text-ivory-200">Turnos en menos de 48hs</span>
               </div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Stats bar */}
-      <section className="bg-teal-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      {/* ===== NOSOTROS / PHILOSOPHY ===== */}
+      <section id="nosotros" className="paper-texture py-20 sm:py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="gold-line max-w-xs mx-auto mb-12" />
+          <motion.div
+            className="text-center max-w-3xl mx-auto mb-16"
+            {...fadeInUp}
+          >
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-bark-700 leading-tight">
+              Nuestra Filosofía
+            </h2>
+            <p className="mt-6 text-bark-500 text-lg leading-relaxed font-light">
+              Creemos que cada persona merece un espacio de escucha genuina.
+              Desde hace más de 30 años, acompañamos a quienes buscan
+              bienestar emocional con un enfoque humano, ético y profesional.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+            {[
+              {
+                icon: HandHeart,
+                title: "Acompañamiento",
+                desc: "Cada persona es única. Nuestros profesionales diseñan un abordaje personalizado, respetando tus tiempos y necesidades para que el proceso terapéutico sea significativo y transformador.",
+              },
+              {
+                icon: Shield,
+                title: "Confidencialidad",
+                desc: "El secreto profesional es el pilar de nuestra práctica. Garantizamos un espacio seguro donde podés expresarte libremente, sabiendo que tu privacidad está protegida en todo momento.",
+              },
+              {
+                icon: BookOpen,
+                title: "Profesionalismo",
+                desc: "Nuestro equipo se forma continuamente en las corrientes más reconocidas de la psicología, asegurando una atención de calidad basada en evidencia y buenas prácticas clínicas.",
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15, duration: 0.6 }}
+                className="text-center"
+              >
+                <div className="w-16 h-16 bg-gold-400/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                  <item.icon className="w-8 h-8 text-gold-500" />
+                </div>
+                <h3 className="font-serif text-xl font-semibold text-bark-700 mb-3">
+                  {item.title}
+                </h3>
+                <p className="text-bark-500 font-light leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== ESPECIALIDADES ===== */}
+      <section id="especialidades" className="bg-ivory-50 py-20 sm:py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="gold-line max-w-xs mx-auto mb-12" />
+          <motion.div className="text-center max-w-2xl mx-auto mb-12" {...fadeInUp}>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-bark-700">
+              Nuestras Especialidades
+            </h2>
+            <p className="mt-4 text-bark-500 text-lg font-light">
+              Contamos con profesionales especializados en diversas áreas de la
+              salud mental para brindarte la mejor atención.
+            </p>
+          </motion.div>
+
+          {/* Tabs */}
+          <div className="flex justify-center gap-2 mb-10">
+            {specialtyTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                  activeTab === tab.id
+                    ? "bg-bark-700 text-ivory-100 shadow-md"
+                    : "bg-ivory-200 text-bark-600 hover:bg-ivory-300"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+          >
+            {specialtyTabs
+              .find((t) => t.id === activeTab)
+              ?.items.map((idx) => {
+                const spec = specialties[idx];
+                return (
+                  <div
+                    key={idx}
+                    className="specialty-card bg-ivory-100 rounded-xl p-6 cursor-default"
+                  >
+                    <div className="w-12 h-12 bg-gold-400/15 rounded-xl flex items-center justify-center mb-4">
+                      <spec.icon className="w-6 h-6 text-gold-500" />
+                    </div>
+                    <h3 className="font-serif font-semibold text-bark-700 text-lg">
+                      {spec.label}
+                    </h3>
+                    <p className="text-bark-500 text-sm mt-1.5 font-light">{spec.desc}</p>
+                  </div>
+                );
+              })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ===== CÓMO FUNCIONA ===== */}
+      <section className="bg-bark-700 py-20 sm:py-28 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 left-0 w-64 h-64 bg-gold-400/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-terracotta-400/5 rounded-full blur-3xl" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="gold-line max-w-xs mx-auto mb-12" />
+          <motion.div className="text-center max-w-2xl mx-auto mb-16" {...fadeInUp}>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-ivory-100">
+              ¿Cómo Funciona?
+            </h2>
+            <p className="mt-4 text-ivory-300 text-lg font-light">
+              Un proceso simple y respetuoso para que puedas acceder a la atención que necesitás.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-4 gap-8">
+            {[
+              {
+                step: "01",
+                icon: CalendarPlus,
+                title: "Solicitá tu turno",
+                desc: "Completá el registro y elegí el profesional y horario que mejor se ajuste a tus necesidades.",
+              },
+              {
+                step: "02",
+                icon: MessageCircle,
+                title: "Primer contacto",
+                desc: "El profesional se pondrá en contacto con vos para coordinar los detalles de la primera sesión.",
+              },
+              {
+                step: "03",
+                icon: Heart,
+                title: "Comenzá tu proceso",
+                desc: "Iniciá tu recorrido terapéutico en un espacio seguro, confidencial y profesional.",
+              },
+              {
+                step: "04",
+                icon: Leaf,
+                title: "Acompañamiento",
+                desc: "Recibí seguimiento continuo y personalizá tu tratamiento según tu evolución.",
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15, duration: 0.6 }}
+                className="text-center"
+              >
+                <div className="text-gold-400 font-serif text-4xl font-bold mb-4">
+                  {item.step}
+                </div>
+                <div className="w-14 h-14 bg-ivory-100/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <item.icon className="w-7 h-7 text-gold-400" />
+                </div>
+                <h3 className="font-serif text-lg font-semibold text-ivory-100 mb-2">
+                  {item.title}
+                </h3>
+                <p className="text-ivory-300/80 text-sm font-light leading-relaxed">
+                  {item.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== STATS BAR ===== */}
+      <section className="bg-gold-400 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
               { value: "30+", label: "Años de experiencia" },
@@ -274,74 +571,66 @@ export function LandingPage() {
             ].map((stat, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
               >
-                <p className="text-3xl sm:text-4xl font-bold">{stat.value}</p>
-                <p className="text-teal-200 text-sm mt-1">{stat.label}</p>
+                <p className="text-3xl sm:text-4xl font-serif font-bold text-bark-900">{stat.value}</p>
+                <p className="text-bark-700 text-sm mt-1 font-medium">{stat.label}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Services */}
-      <section id="servicios" className="py-16 sm:py-24 bg-white">
+      {/* ===== TESTIMONIOS ===== */}
+      <section className="paper-texture py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center max-w-2xl mx-auto mb-16"
-            {...fadeInUp}
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-teal-900">
-              Nuestras Especialidades
+          <div className="gold-line max-w-xs mx-auto mb-12" />
+          <motion.div className="text-center max-w-2xl mx-auto mb-14" {...fadeInUp}>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-bark-700">
+              Lo que Dicen de Nosotros
             </h2>
-            <p className="mt-4 text-teal-600 text-lg">
-              Contamos con profesionales especializados en diversas áreas de la
-              salud mental para brindarte la mejor atención.
-            </p>
           </motion.div>
 
-          <motion.div
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {specialties.map((spec, i) => (
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((t, i) => (
               <motion.div
                 key={i}
-                variants={fadeInUp}
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15, duration: 0.6 }}
               >
-                <Card className="border-teal-100 hover:border-teal-300 hover:shadow-lg transition-all duration-300 h-full">
-                  <CardContent className="p-6">
-                    <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center mb-4">
-                      <spec.icon className="w-6 h-6 text-teal-600" />
+                <Card className="bg-ivory-50 border-ivory-300/50 h-full">
+                  <CardContent className="p-6 sm:p-8">
+                    <div className="text-gold-400 text-4xl font-serif leading-none mb-4">&ldquo;</div>
+                    <p className="text-bark-600 font-light leading-relaxed mb-6">{t.text}</p>
+                    <div className="border-t border-ivory-300/50 pt-4">
+                      <p className="font-serif font-semibold text-bark-700">{t.name}</p>
+                      <p className="text-sm text-bark-400 font-light">{t.role}</p>
                     </div>
-                    <h3 className="font-semibold text-teal-900 text-lg">
-                      {spec.label}
-                    </h3>
-                    <p className="text-teal-600/70 text-sm mt-1">{spec.desc}</p>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 sm:py-20 bg-gradient-to-br from-teal-600 to-teal-800 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      {/* ===== CTA ===== */}
+      <section className="bg-bark-700 py-16 sm:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-1/4 w-48 h-48 bg-gold-400 rounded-full blur-3xl" />
+          <div className="absolute bottom-10 right-1/4 w-64 h-64 bg-terracotta-400 rounded-full blur-3xl" />
+        </div>
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div {...fadeInUp} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} initial={{ opacity: 0, y: 20 }}>
-            <h2 className="text-3xl sm:text-4xl font-bold">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-ivory-100">
               ¿Necesitás hablar con alguien?
             </h2>
-            <p className="mt-4 text-teal-100 text-lg max-w-2xl mx-auto">
+            <p className="mt-5 text-ivory-300 text-lg max-w-2xl mx-auto font-light">
               No estás solo/a. Nuestro equipo de profesionales está listo para
               acompañarte. Sin listas de espera, con turnos disponibles.
             </p>
@@ -349,7 +638,7 @@ export function LandingPage() {
               <Button
                 size="lg"
                 onClick={() => setCurrentView("register")}
-                className="bg-white text-teal-700 hover:bg-teal-50 text-base px-8 h-12 font-semibold"
+                className="btn-gold text-bark-900 font-semibold text-base px-8 h-12 rounded-full"
               >
                 Solicitar Turno
                 <ChevronRight className="ml-1 w-5 h-5" />
@@ -357,12 +646,8 @@ export function LandingPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white/30 text-white hover:bg-white/10 text-base px-8 h-12"
-                onClick={() =>
-                  document
-                    .getElementById("contacto")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
+                className="border-ivory-300/30 text-ivory-200 hover:bg-ivory-100/10 text-base px-8 h-12 rounded-full bg-transparent"
+                onClick={() => scrollToSection("contacto")}
               >
                 <Mail className="mr-2 w-5 h-5" />
                 Enviar Consulta
@@ -372,70 +657,40 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Contact Form */}
-      <section id="contacto" className="py-16 sm:py-24 bg-teal-50/50">
+      {/* ===== CONTACT ===== */}
+      <section id="contacto" className="paper-texture py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="gold-line max-w-xs mx-auto mb-12" />
           <div className="grid lg:grid-cols-2 gap-12">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-3xl sm:text-4xl font-bold text-teal-900">
+              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-bark-700">
                 Contactanos
               </h2>
-              <p className="mt-4 text-teal-600 text-lg">
+              <p className="mt-4 text-bark-500 text-lg font-light">
                 Completá el formulario y nos comunicaremos con vos a la brevedad.
               </p>
 
               <div className="mt-8 space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center shrink-0">
-                    <MapPin className="w-5 h-5 text-teal-600" />
+                {[
+                  { icon: MapPin, title: "Dirección", text: "Av. Corrientes 1234, CABA, Buenos Aires, Argentina" },
+                  { icon: Phone, title: "Teléfono", text: "+54 11 4567-8900" },
+                  { icon: Mail, title: "Email", text: "info@ap.com.ar" },
+                  { icon: Clock, title: "Horarios", text: "Lunes a Viernes: 9:00 - 20:00\nSábados: 9:00 - 13:00" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-gold-400/15 rounded-lg flex items-center justify-center shrink-0">
+                      <item.icon className="w-5 h-5 text-gold-500" />
+                    </div>
+                    <div>
+                      <p className="font-serif font-semibold text-bark-700">{item.title}</p>
+                      <p className="text-bark-500 text-sm font-light whitespace-pre-line">{item.text}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-teal-900">Dirección</p>
-                    <p className="text-teal-600 text-sm">
-                      Av. Corrientes 1234, CABA, Buenos Aires, Argentina
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Phone className="w-5 h-5 text-teal-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-teal-900">Teléfono</p>
-                    <p className="text-teal-600 text-sm">
-                      +54 11 4567-8900
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Mail className="w-5 h-5 text-teal-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-teal-900">Email</p>
-                    <p className="text-teal-600 text-sm">
-                      info@ap.com.ar
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center shrink-0">
-                    <Clock className="w-5 h-5 text-teal-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-teal-900">Horarios</p>
-                    <p className="text-teal-600 text-sm">
-                      Lunes a Viernes: 9:00 - 20:00
-                    </p>
-                    <p className="text-teal-600 text-sm">
-                      Sábados: 9:00 - 13:00
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
             </motion.div>
 
@@ -444,7 +699,7 @@ export function LandingPage() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <Card className="border-teal-100">
+              <Card className="bg-ivory-50 border-ivory-300/50 shadow-lg">
                 <CardContent className="p-6 sm:p-8">
                   {contactSent ? (
                     <motion.div
@@ -452,11 +707,11 @@ export function LandingPage() {
                       animate={{ opacity: 1, scale: 1 }}
                       className="text-center py-8"
                     >
-                      <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto" />
-                      <h3 className="mt-4 text-xl font-semibold text-teal-900">
+                      <CheckCircle2 className="w-16 h-16 text-gold-500 mx-auto" />
+                      <h3 className="mt-4 font-serif text-xl font-semibold text-bark-700">
                         ¡Consulta enviada!
                       </h3>
-                      <p className="mt-2 text-teal-600">
+                      <p className="mt-2 text-bark-500 font-light">
                         Nos comunicaremos con vos a la brevedad.
                       </p>
                     </motion.div>
@@ -464,7 +719,7 @@ export function LandingPage() {
                     <form onSubmit={handleContactSubmit} className="space-y-4">
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="contact-name">Nombre *</Label>
+                          <Label htmlFor="contact-name" className="text-bark-700 font-medium">Nombre *</Label>
                           <Input
                             id="contact-name"
                             required
@@ -473,11 +728,11 @@ export function LandingPage() {
                               setContactForm({ ...contactForm, name: e.target.value })
                             }
                             placeholder="Tu nombre completo"
-                            className="border-teal-200 focus:border-teal-500"
+                            className="border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="contact-email">Email *</Label>
+                          <Label htmlFor="contact-email" className="text-bark-700 font-medium">Email *</Label>
                           <Input
                             id="contact-email"
                             type="email"
@@ -487,13 +742,13 @@ export function LandingPage() {
                               setContactForm({ ...contactForm, email: e.target.value })
                             }
                             placeholder="tu@email.com"
-                            className="border-teal-200 focus:border-teal-500"
+                            className="border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
                           />
                         </div>
                       </div>
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="contact-phone">Teléfono</Label>
+                          <Label htmlFor="contact-phone" className="text-bark-700 font-medium">Teléfono</Label>
                           <Input
                             id="contact-phone"
                             value={contactForm.phone}
@@ -501,18 +756,18 @@ export function LandingPage() {
                               setContactForm({ ...contactForm, phone: e.target.value })
                             }
                             placeholder="+54 11 xxxx-xxxx"
-                            className="border-teal-200 focus:border-teal-500"
+                            className="border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="contact-reason">Motivo</Label>
+                          <Label htmlFor="contact-reason" className="text-bark-700 font-medium">Motivo</Label>
                           <Select
                             value={contactForm.reason}
                             onValueChange={(value) =>
                               setContactForm({ ...contactForm, reason: value })
                             }
                           >
-                            <SelectTrigger className="border-teal-200">
+                            <SelectTrigger className="border-ivory-300 bg-ivory-100 focus:ring-gold-400/20">
                               <SelectValue placeholder="Seleccioná un motivo" />
                             </SelectTrigger>
                             <SelectContent>
@@ -530,7 +785,7 @@ export function LandingPage() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="contact-message">Mensaje *</Label>
+                        <Label htmlFor="contact-message" className="text-bark-700 font-medium">Mensaje *</Label>
                         <Textarea
                           id="contact-message"
                           required
@@ -540,13 +795,13 @@ export function LandingPage() {
                           }
                           placeholder="Contanos cómo podemos ayudarte..."
                           rows={4}
-                          className="border-teal-200 focus:border-teal-500"
+                          className="border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
                         />
                       </div>
                       <Button
                         type="submit"
                         disabled={contactSending}
-                        className="w-full bg-teal-600 hover:bg-teal-700 text-white h-11"
+                        className="w-full btn-gold text-bark-900 font-semibold h-11"
                       >
                         <Send className="mr-2 w-4 h-4" />
                         {contactSending ? "Enviando..." : "Enviar Consulta"}
@@ -560,53 +815,58 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-teal-900 text-teal-100 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      {/* ===== FOOTER ===== */}
+      <footer className="bg-bark-900 text-ivory-300 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-                  <Leaf className="w-4 h-4 text-white" />
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gold-400 flex items-center justify-center">
+                  <Leaf className="w-4 h-4 text-bark-900" />
                 </div>
-                <span className="font-bold text-lg text-white">AP</span>
+                <span className="font-serif font-bold text-lg text-ivory-100">AP</span>
               </div>
-              <p className="text-teal-300 text-sm">
+              <p className="text-ivory-400 text-sm font-light leading-relaxed">
                 Red Asistencial de Salud Mental. Más de 30 años acompañando tu
                 bienestar en Buenos Aires, Argentina.
               </p>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-3">Navegación</h4>
-              <ul className="space-y-2 text-sm text-teal-300">
+              <h4 className="font-serif font-semibold text-ivory-100 mb-3">Navegación</h4>
+              <ul className="space-y-2 text-sm text-ivory-400">
                 <li>
-                  <a href="#inicio" className="hover:text-white transition-colors">
+                  <button onClick={() => scrollToSection("inicio")} className="hover:text-gold-400 transition-colors font-light">
                     Inicio
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#servicios" className="hover:text-white transition-colors">
-                    Servicios
-                  </a>
+                  <button onClick={() => scrollToSection("nosotros")} className="hover:text-gold-400 transition-colors font-light">
+                    Nosotros
+                  </button>
                 </li>
                 <li>
-                  <a href="#contacto" className="hover:text-white transition-colors">
+                  <button onClick={() => scrollToSection("especialidades")} className="hover:text-gold-400 transition-colors font-light">
+                    Especialidades
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => scrollToSection("contacto")} className="hover:text-gold-400 transition-colors font-light">
                     Contacto
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-3">Contacto</h4>
-              <ul className="space-y-2 text-sm text-teal-300">
+              <h4 className="font-serif font-semibold text-ivory-100 mb-3">Contacto</h4>
+              <ul className="space-y-2 text-sm text-ivory-400 font-light">
                 <li>Av. Corrientes 1234, CABA</li>
                 <li>+54 11 4567-8900</li>
                 <li>info@ap.com.ar</li>
               </ul>
             </div>
           </div>
-          <div className="mt-8 pt-6 border-t border-teal-800 text-center text-sm text-teal-400">
-            © {new Date().getFullYear()} AP - Red Asistencial de Salud Mental.
+          <div className="mt-10 pt-6 border-t border-ivory-100/10 text-center text-sm text-ivory-500 font-light">
+            &copy; {new Date().getFullYear()} AP - Red Asistencial de Salud Mental.
             Todos los derechos reservados.
           </div>
         </div>
