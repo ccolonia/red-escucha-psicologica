@@ -3,6 +3,14 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+// Valid status transitions
+const validTransitions: Record<string, string[]> = {
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -20,6 +28,28 @@ export async function PATCH(
     if (!status) {
       return NextResponse.json(
         { error: "Estado es requerido" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch the current appointment to validate status transition
+    const currentAppointment = await db.appointment.findUnique({
+      where: { id },
+    });
+
+    if (!currentAppointment) {
+      return NextResponse.json(
+        { error: "Turno no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    const currentStatus = currentAppointment.status;
+
+    // Validate the status transition
+    if (!validTransitions[currentStatus]?.includes(status)) {
+      return NextResponse.json(
+        { error: `No se puede cambiar de ${currentStatus} a ${status}` },
         { status: 400 }
       );
     }

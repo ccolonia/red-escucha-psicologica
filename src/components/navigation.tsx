@@ -38,6 +38,7 @@ const PROFESSIONAL_NAV: NavItem[] = [
   { view: "professional-dashboard", label: "Inicio", icon: Home },
   { view: "professional-schedule", label: "Mi Agenda", icon: Clock },
   { view: "professional-patients", label: "Pacientes", icon: Users },
+  { view: "professional-profile", label: "Mi Perfil", icon: User },
 ];
 
 const ADMIN_NAV: NavItem[] = [
@@ -65,9 +66,9 @@ export function AppNavigation() {
             <Leaf className="w-5 h-5 text-white" />
           </div>
           <div>
-            <span className="font-bold text-lg text-teal-800">AP</span>
+            <span className="font-bold text-base text-teal-800">Red Escucha</span>
             <p className="text-[10px] text-teal-500 -mt-1 leading-tight">
-              Red Asistencial
+              Psicológica
             </p>
           </div>
         </div>
@@ -126,7 +127,7 @@ export function AppNavigation() {
             <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
               <Leaf className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-teal-800">AP</span>
+            <span className="font-bold text-sm text-teal-800">Red Escucha</span>
           </div>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}

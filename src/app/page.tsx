@@ -16,6 +16,7 @@ import {
   ProfessionalDashboard,
   ProfessionalSchedule,
   ProfessionalPatients,
+  ProfessionalProfile,
 } from "@/components/professional-dashboard";
 import {
   AdminDashboard,
@@ -39,6 +40,7 @@ function DashboardContent() {
     "professional-dashboard": <ProfessionalDashboard />,
     "professional-schedule": <ProfessionalSchedule />,
     "professional-patients": <ProfessionalPatients />,
+    "professional-profile": <ProfessionalProfile />,
     "admin-dashboard": <AdminDashboard />,
     "admin-appointments": <AdminAppointments />,
     "admin-professionals": <AdminProfessionals />,

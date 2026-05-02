@@ -134,7 +134,7 @@ export function AdminDashboard() {
       <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl p-6 text-white">
         <h1 className="text-2xl font-bold">Panel de Administración</h1>
         <p className="text-teal-100 mt-1">
-          Resumen general de la red asistencial
+          Resumen general de la red
         </p>
       </div>
 

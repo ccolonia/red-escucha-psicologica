@@ -47,7 +47,7 @@ export function AuthLogin() {
             <div className="w-11 h-11 rounded-lg bg-gold-400 flex items-center justify-center">
               <Leaf className="w-6 h-6 text-bark-900" />
             </div>
-            <span className="font-serif font-bold text-2xl text-bark-700">AP</span>
+            <span className="font-serif font-bold text-lg text-bark-700">Red Escucha</span>
           </div>
           <h1 className="text-2xl font-serif font-bold text-bark-700">Iniciar Sesión</h1>
           <p className="text-bark-500 mt-1 font-light">Ingresá a tu cuenta</p>

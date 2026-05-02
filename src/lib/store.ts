@@ -11,6 +11,7 @@ export type AppView =
   | "professional-dashboard"
   | "professional-schedule"
   | "professional-patients"
+  | "professional-profile"
   | "admin-dashboard"
   | "admin-appointments"
   | "admin-professionals"
@@ -22,6 +23,8 @@ interface AppState {
   setCurrentView: (view: AppView) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  justRegistered: boolean;
+  setJustRegistered: (value: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -29,4 +32,6 @@ export const useAppStore = create<AppState>((set) => ({
   setCurrentView: (view) => set({ currentView: view }),
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  justRegistered: false,
+  setJustRegistered: (value) => set({ justRegistered: value }),
 }));

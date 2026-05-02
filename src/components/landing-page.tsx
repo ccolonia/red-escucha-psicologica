@@ -61,7 +61,7 @@ const specialtyTabs = [
 
 const testimonials = [
   {
-    text: "Encontré en AP un espacio seguro donde puedo hablar sin ser juzgada. Mi terapeuta me ayudó a entender mis emociones y a construir herramientas para el día a día.",
+    text: "Encontré en Red Escucha Psicológica un espacio seguro donde puedo hablar sin ser juzgada. Mi terapeuta me ayudó a entender mis emociones y a construir herramientas para el día a día.",
     name: "M.L.",
     role: "Paciente",
   },
@@ -170,9 +170,9 @@ export function LandingPage() {
                 <Leaf className="w-5 h-5 text-bark-900" />
               </div>
               <div>
-                <span className="font-serif font-bold text-lg text-ivory-100 tracking-wide">AP</span>
+                <span className="font-serif font-bold text-lg text-ivory-100 tracking-wide">Red Escucha</span>
                 <span className="hidden sm:inline text-xs text-ivory-300 ml-2 font-light tracking-wider">
-                  Red Asistencial de Salud Mental
+                  Red Escucha Psicológica
                 </span>
               </div>
             </div>
@@ -311,8 +311,8 @@ export function LandingPage() {
               transition={{ duration: 0.8, delay: 0.1 }}
               className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-ivory-100 leading-tight"
             >
-              Red Asistencial de{" "}
-              <span className="text-gold-400">Salud Mental</span>
+              Red Escucha{" "}
+              <span className="text-gold-400">Psicológica</span>
             </motion.h1>
 
             <motion.p
@@ -824,10 +824,10 @@ export function LandingPage() {
                 <div className="w-8 h-8 rounded-lg bg-gold-400 flex items-center justify-center">
                   <Leaf className="w-4 h-4 text-bark-900" />
                 </div>
-                <span className="font-serif font-bold text-lg text-ivory-100">AP</span>
+                <span className="font-serif font-bold text-lg text-ivory-100">Red Escucha</span>
               </div>
               <p className="text-ivory-400 text-sm font-light leading-relaxed">
-                Red Asistencial de Salud Mental. Más de 30 años acompañando tu
+                Red Escucha Psicológica. Más de 30 años acompañando tu
                 bienestar en Buenos Aires, Argentina.
               </p>
             </div>
@@ -866,7 +866,7 @@ export function LandingPage() {
             </div>
           </div>
           <div className="mt-10 pt-6 border-t border-ivory-100/10 text-center text-sm text-ivory-500 font-light">
-            &copy; {new Date().getFullYear()} AP - Red Asistencial de Salud Mental.
+            &copy; {new Date().getFullYear()} Red Escucha Psicológica.
             Todos los derechos reservados.
           </div>
         </div>

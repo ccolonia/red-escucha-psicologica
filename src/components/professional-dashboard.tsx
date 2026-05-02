@@ -12,10 +12,21 @@ import {
   UserCheck,
   Stethoscope,
   FileText,
+  Lock,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 
@@ -295,6 +306,8 @@ export function ProfessionalDashboard() {
 export function ProfessionalSchedule() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const [sessionNotes, setSessionNotes] = useState("");
 
   useEffect(() => {
     fetch("/api/appointments")
@@ -306,21 +319,69 @@ export function ProfessionalSchedule() {
       .catch(() => setLoading(false));
   }, []);
 
-  const handleStatusUpdate = async (id: string, status: string) => {
+  const handleConfirm = async (id: string) => {
     try {
       const res = await fetch(`/api/appointments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: "confirmed" }),
       });
       if (res.ok) {
         setAppointments((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, status } : a))
+          prev.map((a) => (a.id === id ? { ...a, status: "confirmed" } : a))
         );
-        toast.success("Estado actualizado");
+        toast.success("Turno confirmado");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al confirmar");
       }
     } catch {
-      toast.error("Error al actualizar");
+      toast.error("Error al confirmar");
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    try {
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (res.ok) {
+        setAppointments((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, status: "cancelled" } : a))
+        );
+        toast.success("Turno cancelado");
+      }
+    } catch {
+      toast.error("Error al cancelar");
+    }
+  };
+
+  const handleComplete = async (id: string) => {
+    if (!sessionNotes.trim()) {
+      toast.error("Debés completar las notas de la sesión antes de marcar como completado");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed", notes: sessionNotes }),
+      });
+      if (res.ok) {
+        setAppointments((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, status: "completed", notes: sessionNotes } : a))
+        );
+        setCompletingId(null);
+        setSessionNotes("");
+        toast.success("Turno completado");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al completar turno");
+      }
+    } catch {
+      toast.error("Error al completar turno");
     }
   };
 
@@ -366,42 +427,121 @@ export function ProfessionalSchedule() {
                 {apts.map((apt) => (
                   <div
                     key={apt.id}
-                    className="flex items-center justify-between p-3 bg-teal-50/50 rounded-lg"
+                    className="p-3 bg-teal-50/50 rounded-lg"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-teal-100 rounded flex items-center justify-center">
-                        <Clock className="w-4 h-4 text-teal-600" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-teal-100 rounded flex items-center justify-center">
+                          <Clock className="w-4 h-4 text-teal-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-teal-600">
+                            {apt.time} hs
+                          </p>
+                          <p className="text-sm font-semibold text-teal-900">
+                            {apt.patient.user.name}
+                          </p>
+                          {apt.reason ? (
+                            <p className="text-xs text-teal-600 mt-0.5 bg-teal-100/50 px-2 py-1 rounded">
+                              <span className="font-medium">Motivo:</span> {apt.reason}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-teal-400 italic">Sin motivo especificado</p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-teal-900">
-                          {apt.time} hs — {apt.patient.user.name}
-                        </p>
-                        {apt.reason && (
-                          <p className="text-xs text-teal-500">{apt.reason}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            STATUS_MAP[apt.status]?.variant || "outline"
+                          }
+                        >
+                          {STATUS_MAP[apt.status]?.label || apt.status}
+                        </Badge>
+                        {apt.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              className="bg-teal-600 hover:bg-teal-700 text-white h-7 text-xs"
+                              onClick={() => handleConfirm(apt.id)}
+                            >
+                              Confirmar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-7 text-xs"
+                              onClick={() => handleCancel(apt.id)}
+                            >
+                              Cancelar
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          STATUS_MAP[apt.status]?.variant || "outline"
-                        }
-                      >
-                        {STATUS_MAP[apt.status]?.label || apt.status}
-                      </Badge>
-                      {apt.status === "confirmed" && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="h-7 text-xs"
-                          onClick={() =>
-                            handleStatusUpdate(apt.id, "completed")
-                          }
-                        >
-                          Completar
-                        </Button>
-                      )}
-                    </div>
+                    {/* Complete appointment with notes - only for confirmed */}
+                    {apt.status === "confirmed" && (
+                      <div className="mt-3 pt-3 border-t border-teal-100">
+                        {completingId === apt.id ? (
+                          <div className="space-y-3">
+                            <Label className="text-sm text-teal-700">
+                              Notas de la sesión (obligatorio para completar)
+                            </Label>
+                            <textarea
+                              value={sessionNotes}
+                              onChange={(e) => setSessionNotes(e.target.value)}
+                              placeholder="Registre las observaciones de la sesión..."
+                              className="w-full min-h-[80px] rounded-md border border-teal-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                              rows={3}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="h-7 text-xs"
+                                onClick={() => handleComplete(apt.id)}
+                              >
+                                <CheckCircle2 className="mr-1 w-3 h-3" />
+                                Completar Turno
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs border-teal-200"
+                                onClick={() => {
+                                  setCompletingId(null);
+                                  setSessionNotes("");
+                                }}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              setCompletingId(apt.id);
+                              setSessionNotes("");
+                            }}
+                          >
+                            <CheckCircle2 className="mr-1 w-3 h-3" />
+                            Completar Turno
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {/* Show notes for completed appointments */}
+                    {apt.status === "completed" && apt.notes && (
+                      <div className="mt-2 pt-2 border-t border-teal-100">
+                        <p className="text-xs text-teal-500">
+                          <FileText className="inline w-3 h-3 mr-1" />
+                          Notas: {apt.notes}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </CardContent>
@@ -467,6 +607,220 @@ export function ProfessionalPatients() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+export function ProfessionalProfile() {
+  const { data: session } = useSession();
+  const [name, setName] = useState(session?.user?.name || "");
+  const [phone, setPhone] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [bio, setBio] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  useEffect(() => {
+    if (session?.user) {
+      const userId = (session.user as { id: string }).id;
+      fetch("/api/professionals")
+        .then((res) => res.json())
+        .then((data) => {
+          const prof = Array.isArray(data)
+            ? data.find((p: { userId: string }) => p.userId === userId)
+            : null;
+          if (prof) {
+            setSpecialty(prof.specialty || "");
+            setBio(prof.bio || "");
+            if (prof.user) {
+              setPhone(prof.user.phone || "");
+            }
+          }
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    }
+  }, [session]);
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      const userId = (session?.user as { id: string })?.id;
+      const userRes = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone }),
+      });
+      if (!userRes.ok) {
+        toast.error("Error al actualizar perfil");
+        setSaving(false);
+        return;
+      }
+      const profRes = await fetch("/api/professionals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ specialty, bio }),
+      });
+      if (profRes.ok) {
+        toast.success("Perfil actualizado");
+      } else {
+        toast.error("Error al actualizar datos profesionales");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Completá todos los campos de contraseña");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (res.ok) {
+        toast.success("Contraseña actualizada exitosamente");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al cambiar la contraseña");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <div className="h-16 bg-teal-50 animate-pulse rounded-lg" />
+        <div className="h-40 bg-teal-50 animate-pulse rounded-lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-teal-900">Mi Perfil</h2>
+      <Card className="border-teal-100">
+        <CardHeader>
+          <CardTitle className="text-teal-900 flex items-center gap-2 text-base">
+            <UserCheck className="w-4 h-4" />
+            Datos Personales
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Nombre completo</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="border-teal-200" />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={session?.user?.email || ""} disabled className="border-teal-200 bg-teal-50/50" />
+            </div>
+            <div className="space-y-2">
+              <Label>Teléfono</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+54 11 xxxx-xxxx" className="border-teal-200" />
+            </div>
+          </div>
+          <Button className="bg-teal-600 hover:bg-teal-700 text-white" disabled={saving} onClick={handleSaveProfile}>
+            <Save className="mr-2 w-4 h-4" />
+            {saving ? "Guardando..." : "Guardar Cambios"}
+          </Button>
+        </CardContent>
+      </Card>
+      <Card className="border-teal-100">
+        <CardHeader>
+          <CardTitle className="text-teal-900 flex items-center gap-2 text-base">
+            <Stethoscope className="w-4 h-4" />
+            Datos Profesionales
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Especialidad</Label>
+              <Select value={specialty} onValueChange={(value) => setSpecialty(value)}>
+                <SelectTrigger className="border-teal-200">
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Psicología Clínica">Psicología Clínica</SelectItem>
+                  <SelectItem value="Terapia de Pareja y Familia">Terapia de Pareja y Familia</SelectItem>
+                  <SelectItem value="Psicología Infanto-Juvenil">Psicología Infanto-Juvenil</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Biografía / Presentación</Label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Breve descripción de tu formación y experiencia..."
+              className="w-full min-h-[100px] rounded-md border border-teal-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+              rows={4}
+            />
+          </div>
+          <Button className="bg-teal-600 hover:bg-teal-700 text-white" disabled={saving} onClick={handleSaveProfile}>
+            <Save className="mr-2 w-4 h-4" />
+            {saving ? "Guardando..." : "Guardar Datos Profesionales"}
+          </Button>
+        </CardContent>
+      </Card>
+      <Card className="border-teal-100">
+        <CardHeader>
+          <CardTitle className="text-teal-900 flex items-center gap-2 text-base">
+            <Lock className="w-4 h-4" />
+            Cambiar Contraseña
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Contraseña actual</Label>
+            <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Ingresá tu contraseña actual" className="border-teal-200" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Nueva contraseña</Label>
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="border-teal-200" />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar nueva contraseña</Label>
+              <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repetir nueva contraseña" className="border-teal-200" />
+            </div>
+          </div>
+          <Button variant="outline" className="border-teal-300 text-teal-600 hover:bg-teal-50" disabled={changingPassword} onClick={handleChangePassword}>
+            <Lock className="mr-2 w-4 h-4" />
+            {changingPassword ? "Cambiando..." : "Cambiar Contraseña"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

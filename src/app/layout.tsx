@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AP - Red Asistencial de Salud Mental",
+  title: "Red Escucha Psicológica",
   description: "Más de 30 años acompañando tu bienestar. Red de profesionales de salud mental en Buenos Aires.",
 };
 
