@@ -619,6 +619,7 @@ export function ProfessionalProfile() {
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [professionalId, setProfessionalId] = useState<string | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -635,6 +636,7 @@ export function ProfessionalProfile() {
             ? data.find((p: { userId: string }) => p.userId === userId)
             : null;
           if (prof) {
+            setProfessionalId(prof.id);
             setSpecialty(prof.specialty || "");
             setBio(prof.bio || "");
             if (prof.user) {
@@ -661,15 +663,19 @@ export function ProfessionalProfile() {
         setSaving(false);
         return;
       }
-      const profRes = await fetch("/api/professionals", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ specialty, bio }),
-      });
-      if (profRes.ok) {
-        toast.success("Perfil actualizado");
+      if (professionalId) {
+        const profRes = await fetch("/api/professionals", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: professionalId, specialty, bio }),
+        });
+        if (profRes.ok) {
+          toast.success("Perfil actualizado");
+        } else {
+          toast.error("Error al actualizar datos profesionales");
+        }
       } else {
-        toast.error("Error al actualizar datos profesionales");
+        toast.success("Perfil actualizado");
       }
     } catch {
       toast.error("Error de conexión");

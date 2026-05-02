@@ -520,6 +520,9 @@ export function AdminProfessionals() {
   const handleSaveEdit = async (id: string) => {
     setSaving(true);
     try {
+      // Find the professional to get userId
+      const prof = professionals.find((p) => p.id === id);
+
       const res = await fetch("/api/professionals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -532,7 +535,7 @@ export function AdminProfessionals() {
       });
       if (res.ok) {
         // Also update user name/phone
-        if (prof.userId) {
+        if (prof?.userId) {
           await fetch(`/api/users/${prof.userId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
