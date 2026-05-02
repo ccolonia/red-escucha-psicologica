@@ -6,7 +6,7 @@ async function seed() {
   // Create admin user
   const admin = await db.user.create({
     data: {
-      name: "Administrador AP",
+      name: "Administrador",
       email: "admin@ap.com.ar",
       password: "admin123",
       role: "admin",

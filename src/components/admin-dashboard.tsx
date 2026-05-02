@@ -16,6 +16,13 @@ import {
   AlertCircle,
   FileText,
   MessageSquare,
+  Pencil,
+  Trash2,
+  Lock,
+  Save,
+  X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,12 +74,14 @@ interface Appointment {
   time: string;
   status: string;
   reason: string | null;
+  createdAt: string;
   patient: { user: { name: string; email: string } };
   professional: { user: { name: string }; specialty: string };
 }
 
 interface Professional {
   id: string;
+  userId: string;
   license: string;
   specialty: string;
   available: boolean;
@@ -340,6 +349,11 @@ export function AdminAppointments() {
                     <p className="text-sm text-teal-500">
                       {apt.date} • {apt.time} hs
                     </p>
+                    {apt.createdAt && (
+                      <p className="text-xs text-teal-400 mt-0.5">
+                        Solicitado: {new Date(apt.createdAt).toLocaleDateString("es-AR")}
+                      </p>
+                    )}
                     {apt.reason && (
                       <p className="text-xs text-teal-400 mt-1">
                         {apt.reason}
@@ -382,6 +396,8 @@ export function AdminProfessionals() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [addForm, setAddForm] = useState({
     name: "",
     email: "",
@@ -389,9 +405,18 @@ export function AdminProfessionals() {
     license: "",
     specialty: "",
     bio: "",
-    password: "prof123",
+    password: "",
+  });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    license: "",
+    specialty: "",
+    bio: "",
   });
   const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const loadProfessionals = () => {
     fetch("/api/professionals")
@@ -409,16 +434,19 @@ export function AdminProfessionals() {
 
   const handleToggleAvailable = async (id: string, available: boolean) => {
     try {
-      // We need a PATCH endpoint for professionals - let's use a direct approach
-      // For now, we'll just toggle locally and show a toast
-      setProfessionals((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, available: !available } : p))
-      );
-      toast.success(
-        available
-          ? "Profesional desactivado"
-          : "Profesional activado"
-      );
+      const res = await fetch("/api/professionals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, available: !available }),
+      });
+      if (res.ok) {
+        setProfessionals((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, available: !available } : p))
+        );
+        toast.success(available ? "Profesional desactivado" : "Profesional activado");
+      } else {
+        toast.error("Error al actualizar");
+      }
     } catch {
       toast.error("Error al actualizar");
     }
@@ -426,10 +454,17 @@ export function AdminProfessionals() {
 
   const handleAddProfessional = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!addForm.password || addForm.password.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (!addForm.license || !addForm.specialty) {
+      toast.error("Matrícula y especialidad son obligatorias");
+      return;
+    }
     setAdding(true);
     try {
-      // Create user first
-      const userRes = await fetch("/api/auth/register", {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -437,12 +472,16 @@ export function AdminProfessionals() {
           email: addForm.email,
           phone: addForm.phone,
           password: addForm.password,
+          role: "professional",
+          license: addForm.license,
+          specialty: addForm.specialty,
+          bio: addForm.bio,
         }),
       });
 
-      if (!userRes.ok) {
-        const data = await userRes.json();
-        toast.error(data.error || "Error al crear usuario");
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Error al crear profesional");
         setAdding(false);
         return;
       }
@@ -456,15 +495,78 @@ export function AdminProfessionals() {
         license: "",
         specialty: "",
         bio: "",
-        password: "prof123",
+        password: "",
       });
-      // Reload would need a proper professional creation endpoint
-      // For now just refresh
       setTimeout(() => loadProfessionals(), 500);
     } catch {
       toast.error("Error al agregar profesional");
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleEdit = (prof: Professional) => {
+    setEditingId(prof.id);
+    setEditForm({
+      name: prof.user.name,
+      email: prof.user.email,
+      phone: prof.user.phone || "",
+      license: prof.license,
+      specialty: prof.specialty,
+      bio: "",
+    });
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/professionals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          license: editForm.license,
+          specialty: editForm.specialty,
+          bio: editForm.bio || null,
+        }),
+      });
+      if (res.ok) {
+        // Also update user name/phone
+        if (prof.userId) {
+          await fetch(`/api/users/${prof.userId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: editForm.name, phone: editForm.phone }),
+          });
+        }
+        toast.success("Profesional actualizado");
+        setEditingId(null);
+        loadProfessionals();
+      } else {
+        toast.error("Error al actualizar");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Estás seguro de que querés eliminar este profesional?")) return;
+    try {
+      const res = await fetch(`/api/professionals?id=${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("Profesional eliminado");
+        loadProfessionals();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al eliminar");
+      }
+    } catch {
+      toast.error("Error de conexión");
     }
   };
 
@@ -497,7 +599,7 @@ export function AdminProfessionals() {
               <form onSubmit={handleAddProfessional} className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Nombre completo</Label>
+                    <Label>Nombre completo *</Label>
                     <Input
                       required
                       value={addForm.name}
@@ -508,7 +610,7 @@ export function AdminProfessionals() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Email</Label>
+                    <Label>Email *</Label>
                     <Input
                       type="email"
                       required
@@ -526,22 +628,24 @@ export function AdminProfessionals() {
                       onChange={(e) =>
                         setAddForm({ ...addForm, phone: e.target.value })
                       }
+                      placeholder="+54 11 xxxx-xxxx"
                       className="border-teal-200"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Matrícula</Label>
+                    <Label>Matrícula *</Label>
                     <Input
                       required
                       value={addForm.license}
                       onChange={(e) =>
                         setAddForm({ ...addForm, license: e.target.value })
                       }
+                      placeholder="MN-XXXXX"
                       className="border-teal-200"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Especialidad</Label>
+                    <Label>Especialidad *</Label>
                     <Select
                       value={addForm.specialty}
                       onValueChange={(value) =>
@@ -563,6 +667,29 @@ export function AdminProfessionals() {
                         </SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Contraseña *</Label>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={addForm.password}
+                        onChange={(e) =>
+                          setAddForm({ ...addForm, password: e.target.value })
+                        }
+                        placeholder="Mínimo 6 caracteres"
+                        className="border-teal-200 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 hover:text-teal-600"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-teal-400">El profesional podrá cambiarla después</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -598,49 +725,139 @@ export function AdminProfessionals() {
         <div className="space-y-3">
           {professionals.map((prof) => (
             <Card key={prof.id} className="border-teal-100">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      prof.available ? "bg-teal-100" : "bg-gray-100"
-                    }`}
-                  >
-                    <Stethoscope
-                      className={`w-5 h-5 ${
-                        prof.available ? "text-teal-600" : "text-gray-400"
-                      }`}
-                    />
+              <CardContent className="p-4">
+                {editingId === prof.id ? (
+                  <div className="space-y-4">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nombre completo</Label>
+                        <Input
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          className="border-teal-200"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          value={editForm.email}
+                          disabled
+                          className="border-teal-200 bg-teal-50/50"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Teléfono</Label>
+                        <Input
+                          value={editForm.phone}
+                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                          className="border-teal-200"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Matrícula</Label>
+                        <Input
+                          value={editForm.license}
+                          onChange={(e) => setEditForm({ ...editForm, license: e.target.value })}
+                          className="border-teal-200"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Especialidad</Label>
+                        <Select
+                          value={editForm.specialty}
+                          onValueChange={(value) => setEditForm({ ...editForm, specialty: value })}
+                        >
+                          <SelectTrigger className="border-teal-200">
+                            <SelectValue placeholder="Seleccionar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Psicología Clínica">Psicología Clínica</SelectItem>
+                            <SelectItem value="Terapia de Pareja y Familia">Terapia de Pareja y Familia</SelectItem>
+                            <SelectItem value="Psicología Infanto-Juvenil">Psicología Infanto-Juvenil</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-teal-600 hover:bg-teal-700 text-white h-8"
+                        disabled={saving}
+                        onClick={() => handleSaveEdit(prof.id)}
+                      >
+                        <Save className="mr-1 w-3 h-3" />
+                        {saving ? "Guardando..." : "Guardar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-teal-200"
+                        onClick={() => setEditingId(null)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-teal-900">{prof.user.name}</p>
-                    <p className="text-sm text-teal-600">
-                      {prof.specialty} • MP: {prof.license}
-                    </p>
-                    <p className="text-sm text-teal-500">{prof.user.email}</p>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          prof.available ? "bg-teal-100" : "bg-gray-100"
+                        }`}
+                      >
+                        <Stethoscope
+                          className={`w-5 h-5 ${
+                            prof.available ? "text-teal-600" : "text-gray-400"
+                          }`}
+                        />
+                      </div>
+                      <div>
+                        <p className="font-medium text-teal-900">{prof.user.name}</p>
+                        <p className="text-sm text-teal-600">
+                          {prof.specialty} • MP: {prof.license}
+                        </p>
+                        <p className="text-sm text-teal-500">{prof.user.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={prof.available ? "default" : "secondary"}
+                        className={
+                          prof.available
+                            ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+                            : ""
+                        }
+                      >
+                        {prof.available ? "Activo" : "Inactivo"}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-teal-200"
+                        onClick={() => handleToggleAvailable(prof.id, prof.available)}
+                      >
+                        {prof.available ? "Desactivar" : "Activar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-teal-200 text-teal-600 hover:text-teal-800 hover:bg-teal-50"
+                        onClick={() => handleEdit(prof)}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-red-200 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDelete(prof.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={prof.available ? "default" : "secondary"}
-                    className={
-                      prof.available
-                        ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
-                        : ""
-                    }
-                  >
-                    {prof.available ? "Activo" : "Inactivo"}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 border-teal-200"
-                    onClick={() =>
-                      handleToggleAvailable(prof.id, prof.available)
-                    }
-                  >
-                    {prof.available ? "Desactivar" : "Activar"}
-                  </Button>
-                </div>
+                )}
               </CardContent>
             </Card>
           ))}

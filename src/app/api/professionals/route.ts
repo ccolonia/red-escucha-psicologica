@@ -101,3 +101,58 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || (session.user as { role: string }).role !== "admin") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID del profesional es requerido" },
+        { status: 400 }
+      );
+    }
+
+    const professional = await db.professional.findUnique({
+      where: { id },
+    });
+
+    if (!professional) {
+      return NextResponse.json(
+        { error: "Profesional no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    // Delete appointments first (to avoid FK constraint issues)
+    await db.appointment.deleteMany({
+      where: { professionalId: id },
+    });
+
+    // Delete the professional
+    await db.professional.delete({
+      where: { id },
+    });
+
+    // Delete the associated user
+    if (professional.userId) {
+      await db.user.delete({
+        where: { id: professional.userId },
+      }).catch(() => {});
+    }
+
+    return NextResponse.json({ message: "Profesional eliminado exitosamente" });
+  } catch (error) {
+    console.error("Delete professional error:", error);
+    return NextResponse.json(
+      { error: "Error al eliminar el profesional" },
+      { status: 500 }
+    );
+  }
+}

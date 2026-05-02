@@ -443,13 +443,20 @@ function BookingFlow({ patientId }: { patientId: string }) {
 
 export function PatientDashboard() {
   const { data: session } = useSession();
-  const { setCurrentView } = useAppStore();
+  const { setCurrentView, justRegistered, setJustRegistered } = useAppStore();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patientId, setPatientId] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     if (session?.user) {
+      // Check if this is a first-time registration
+      if (justRegistered) {
+        setShowWelcome(true);
+        setJustRegistered(false);
+      }
+
       // Get patient ID and appointments
       fetch("/api/appointments")
         .then((res) => res.json())
@@ -495,19 +502,42 @@ export function PatientDashboard() {
     <div className="space-y-6">
       {/* Welcome */}
       <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl p-6 text-white">
-        <h1 className="text-2xl font-bold">
-          ¡Hola, {session?.user?.name?.split(" ")[0]}!
-        </h1>
-        <p className="text-teal-100 mt-1">
-          Bienvenido/a a tu panel de turnos
-        </p>
-        <Button
-          className="mt-4 bg-white text-teal-700 hover:bg-teal-50 font-semibold"
-          onClick={() => setCurrentView("patient-book")}
-        >
-          <CalendarPlus className="mr-2 w-4 h-4" />
-          Solicitar Turno
-        </Button>
+        {showWelcome ? (
+          <>
+            <h1 className="text-2xl font-bold">
+              ¡Bienvenido/a, {session?.user?.name?.split(" ")[0]}!
+            </h1>
+            <p className="text-teal-100 mt-1">
+              Tu cuenta fue creada exitosamente. Ya podés solicitar tu primer turno de forma simple y rápida.
+            </p>
+            <Button
+              className="mt-4 bg-white text-teal-700 hover:bg-teal-50 font-semibold"
+              onClick={() => {
+                setShowWelcome(false);
+                setCurrentView("patient-book");
+              }}
+            >
+              <CalendarPlus className="mr-2 w-4 h-4" />
+              Solicitar mi primer turno
+            </Button>
+          </>
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold">
+              ¡Hola, {session?.user?.name?.split(" ")[0]}!
+            </h1>
+            <p className="text-teal-100 mt-1">
+              Bienvenido/a a tu panel de turnos
+            </p>
+            <Button
+              className="mt-4 bg-white text-teal-700 hover:bg-teal-50 font-semibold"
+              onClick={() => setCurrentView("patient-book")}
+            >
+              <CalendarPlus className="mr-2 w-4 h-4" />
+              Solicitar Turno
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Quick stats */}
