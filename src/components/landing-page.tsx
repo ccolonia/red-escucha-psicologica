@@ -81,39 +81,43 @@ const testimonials = [
 const heroSlides = [
   {
     badge: "MÁS DE 30 AÑOS DE EXPERIENCIA",
-    title: <>Red Escucha <span className="text-gold-400">Psicológica</span></>,
+    title: <>Red Escucha <span className="text-sage-300">Psicológica</span></>,
     description: "Más de tres décadas acompañando tu bienestar. Nuestro equipo de profesionales está aquí para escucharte y ayudarte a transitar los momentos difíciles con respeto y profesionalismo.",
     cta: "Solicitar Turno",
     ctaIcon: ArrowRight,
     secondaryCta: "Contactanos",
     secondaryIcon: Phone,
+    image: "/images/carousel/nature.png",
   },
   {
     badge: "TERAPIA INDIVIDUAL Y VINCULAR",
-    title: <>Un espacio seguro <span className="text-gold-400">para vos</span></>,
+    title: <>Un espacio seguro <span className="text-sage-300">para vos</span></>,
     description: "Ofrecemos terapia individual, de pareja y familiar con profesionales especializados. Cada proceso es único y respetamos tus tiempos y necesidades.",
     cta: "Conocer Especialidades",
     ctaIcon: ArrowRight,
     secondaryCta: "Contactanos",
     secondaryIcon: Phone,
+    image: "/images/carousel/families.png",
   },
   {
     badge: "SIN LISTAS DE ESPERA",
-    title: <>Turnos en <span className="text-gold-400">menos de 48hs</span></>,
+    title: <>Turnos en <span className="text-sage-300">menos de 48hs</span></>,
     description: "Accedé a la atención que necesitás sin esperas innecesarias. Nuestra plataforma te permite solicitar un turno de forma rápida y simple desde cualquier dispositivo.",
     cta: "Solicitar Turno",
     ctaIcon: CalendarPlus,
     secondaryCta: "Cómo Funciona",
     secondaryIcon: MessageCircle,
+    image: "/images/carousel/jovenes.png",
   },
   {
     badge: "CONFIDENCIALIDAD GARANTIZADA",
-    title: <>Tu privacidad, <span className="text-gold-400">nuestra prioridad</span></>,
+    title: <>Tu privacidad, <span className="text-sage-300">nuestra prioridad</span></>,
     description: "El secreto profesional es el pilar de nuestra práctica. Garantizamos un espacio donde podés expresarte libremente, sabiendo que tu privacidad está protegida en todo momento.",
     cta: "Solicitar Turno",
     ctaIcon: ArrowRight,
     secondaryCta: "Contactanos",
     secondaryIcon: Phone,
+    image: "/images/carousel/ninos.png",
   },
 ];
 
@@ -121,14 +125,6 @@ const fadeInUp = {
   initial: { opacity: 0, y: 30 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.6 },
-};
-
-const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
 };
 
 export function LandingPage() {
@@ -216,25 +212,25 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-ivory-100">
+    <div className="min-h-screen flex flex-col bg-beige-100">
       {/* ===== NAVBAR ===== */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-bark-900/55 backdrop-blur-xl"
-            : "bg-bark-900/15 backdrop-blur-sm"
+            ? "bg-forest-900/60 backdrop-blur-xl"
+            : "bg-forest-900/15 backdrop-blur-sm"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-18">
             {/* Logo */}
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-gold-400 flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-bark-900" />
+              <div className="w-9 h-9 rounded-lg bg-sage-300 flex items-center justify-center">
+                <Leaf className="w-5 h-5 text-forest-900" />
               </div>
               <div>
-                <span className="font-serif font-bold text-lg text-ivory-100 tracking-wide">Red Escucha</span>
-                <span className="hidden sm:inline text-xs text-ivory-300 ml-2 font-light tracking-wider">
+                <span className="font-serif font-bold text-lg text-beige-50 tracking-wide">Red Escucha</span>
+                <span className="hidden sm:inline text-xs text-beige-200 ml-2 font-light tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
                   Red Escucha Psicológica
                 </span>
               </div>
@@ -244,37 +240,37 @@ export function LandingPage() {
             <div className="hidden md:flex items-center gap-8">
               <button
                 onClick={() => scrollToSection("inicio")}
-                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
+                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Inicio
               </button>
               <button
                 onClick={() => scrollToSection("nosotros")}
-                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
+                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Nosotros
               </button>
               <button
                 onClick={() => scrollToSection("especialidades")}
-                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
+                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Especialidades
               </button>
               <button
                 onClick={() => scrollToSection("contacto")}
-                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
+                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Contacto
               </button>
               <button
                 onClick={() => setCurrentView("login")}
-                className="text-sm text-ivory-200 hover:text-gold-400 transition-colors font-light tracking-wide"
+                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Ingresar
               </button>
               <Button
                 onClick={() => setCurrentView("register")}
-                className="btn-gold text-bark-900 font-semibold text-sm px-5 h-9 rounded-full"
+                className="btn-sage text-forest-900 font-semibold text-sm px-5 h-9 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Solicitar Turno
               </Button>
@@ -283,7 +279,7 @@ export function LandingPage() {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2.5 text-ivory-100 active:bg-white/10 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="md:hidden p-2.5 text-beige-50 active:bg-white/10 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -298,41 +294,41 @@ export function LandingPage() {
           }`}
           style={{ pointerEvents: mobileMenuOpen ? "auto" : "none" }}
         >
-          <div className="bg-bark-900/80 backdrop-blur-xl border-t border-ivory-100/10 px-4 py-4 space-y-1">
+          <div className="bg-forest-900/80 backdrop-blur-xl border-t border-beige-50/10 px-4 py-4 space-y-1">
             <button
               onClick={() => scrollToSection("inicio")}
-              className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
+              className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Inicio
             </button>
             <button
               onClick={() => scrollToSection("nosotros")}
-              className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
+              className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Nosotros
             </button>
             <button
               onClick={() => scrollToSection("especialidades")}
-              className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
+              className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Especialidades
             </button>
             <button
               onClick={() => scrollToSection("contacto")}
-              className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
+              className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Contacto
             </button>
             <div className="pt-2 space-y-2">
               <button
                 onClick={() => { setMobileMenuOpen(false); setCurrentView("login"); }}
-                className="w-full text-left px-4 py-3 text-ivory-200 hover:text-gold-400 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center"
+                className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Ingresar
               </button>
               <Button
                 onClick={() => { setMobileMenuOpen(false); setCurrentView("register"); }}
-                className="w-full btn-gold text-bark-900 font-semibold text-base py-3 rounded-full min-h-[44px]"
+                className="w-full btn-sage text-forest-900 font-semibold text-base py-3 rounded-full min-h-[44px]" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Solicitar Turno
               </Button>
@@ -341,24 +337,32 @@ export function LandingPage() {
         </div>
       </nav>
 
-      {/* ===== HERO CAROUSEL ===== */}
+      {/* ===== HERO CAROUSEL WITH BACKGROUND IMAGES ===== */}
       <section
         id="inicio"
         className="relative min-h-screen flex items-center overflow-hidden"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
-        {/* Nature-inspired gradient background */}
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-bark-900 via-bark-800 to-bark-700" />
-          {/* Decorative nature elements */}
-          <div className="absolute top-0 right-0 w-1/2 h-full opacity-20">
-            <div className="absolute top-20 right-20 w-64 h-64 bg-gold-400/30 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 right-40 w-80 h-80 bg-terracotta-400/20 rounded-full blur-3xl" />
-            <div className="absolute top-40 right-60 w-48 h-48 bg-emerald-500/15 rounded-full blur-3xl" />
-          </div>
-          <div className="absolute inset-0 hero-overlay" />
-        </div>
+        {/* Background image - changes per slide */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentSlide}
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            transition={{ duration: 1.2, ease: "easeInOut" }}
+            className="absolute inset-0"
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${heroSlides[currentSlide].image})` }}
+            />
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 hero-overlay" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 w-full">
           <div className="max-w-3xl">
@@ -371,18 +375,18 @@ export function LandingPage() {
                 transition={{ duration: 0.5 }}
               >
                 {/* Badge */}
-                <div className="inline-flex items-center gap-2 border border-gold-400/40 text-gold-300 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider">
+                <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
                   <Leaf className="w-4 h-4" />
                   {heroSlides[currentSlide].badge}
                 </div>
 
                 {/* Title */}
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-ivory-100 leading-tight">
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-beige-50 leading-tight">
                   {heroSlides[currentSlide].title}
                 </h1>
 
                 {/* Description */}
-                <p className="mt-6 text-lg sm:text-xl text-ivory-300/90 leading-relaxed max-w-xl font-light">
+                <p className="mt-6 text-lg sm:text-xl text-beige-200/90 leading-relaxed max-w-xl font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                   {heroSlides[currentSlide].description}
                 </p>
 
@@ -397,7 +401,7 @@ export function LandingPage() {
                         setCurrentView("register");
                       }
                     }}
-                    className="btn-gold text-bark-900 font-semibold text-base px-8 h-12 rounded-full"
+                    className="btn-sage text-forest-900 font-semibold text-base px-8 h-12 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
                     {heroSlides[currentSlide].cta}
                     <ArrowRight className="ml-2 w-5 h-5" />
@@ -412,7 +416,7 @@ export function LandingPage() {
                         scrollToSection("contacto");
                       }
                     }}
-                    className="border-ivory-300/30 text-ivory-200 hover:bg-ivory-100/10 text-base px-8 h-12 rounded-full bg-transparent"
+                    className="border-beige-200/30 text-beige-100 hover:bg-beige-50/10 text-base px-8 h-12 rounded-full bg-transparent" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
                     <Phone className="mr-2 w-5 h-5" />
                     {heroSlides[currentSlide].secondaryCta}
@@ -431,8 +435,8 @@ export function LandingPage() {
                     onClick={() => goToSlide(i)}
                     className={`transition-all duration-300 rounded-full ${
                       i === currentSlide
-                        ? "w-8 h-2.5 bg-gold-400"
-                        : "w-2.5 h-2.5 bg-ivory-300/30 hover:bg-ivory-300/50"
+                        ? "w-8 h-2.5 bg-sage-300"
+                        : "w-2.5 h-2.5 bg-beige-200/30 hover:bg-beige-200/50"
                     }`}
                     aria-label={`Slide ${i + 1}`}
                   />
@@ -440,20 +444,20 @@ export function LandingPage() {
               </div>
 
               {/* Divider */}
-              <div className="w-px h-6 bg-ivory-300/20" />
+              <div className="w-px h-6 bg-beige-200/20" />
 
               {/* Arrows */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={prevSlide}
-                  className="w-9 h-9 rounded-full border border-ivory-300/20 flex items-center justify-center text-ivory-300/60 hover:text-gold-400 hover:border-gold-400/40 transition-colors"
+                  className="w-9 h-9 rounded-full border border-beige-200/20 flex items-center justify-center text-beige-200/60 hover:text-sage-300 hover:border-sage-300/40 transition-colors"
                   aria-label="Slide anterior"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={nextSlide}
-                  className="w-9 h-9 rounded-full border border-ivory-300/20 flex items-center justify-center text-ivory-300/60 hover:text-gold-400 hover:border-gold-400/40 transition-colors"
+                  className="w-9 h-9 rounded-full border border-beige-200/20 flex items-center justify-center text-beige-200/60 hover:text-sage-300 hover:border-sage-300/40 transition-colors"
                   aria-label="Siguiente slide"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -461,31 +465,31 @@ export function LandingPage() {
               </div>
 
               {/* Divider */}
-              <div className="w-px h-6 bg-ivory-300/20" />
+              <div className="w-px h-6 bg-beige-200/20" />
 
               {/* Trust badges */}
               <div className="hidden sm:flex items-center gap-4">
-                <div className="flex items-center gap-2 text-gold-400">
+                <div className="flex items-center gap-2 text-sage-300">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span className="text-sm font-medium text-ivory-200">Sin listas de espera</span>
+                  <span className="text-sm font-medium text-beige-100" style={{ fontFamily: "Montserrat, sans-serif" }}>Sin listas de espera</span>
                 </div>
-                <div className="w-px h-4 bg-ivory-300/30" />
-                <div className="flex items-center gap-2 text-gold-400">
+                <div className="w-px h-4 bg-beige-200/30" />
+                <div className="flex items-center gap-2 text-sage-300">
                   <Clock className="w-5 h-5" />
-                  <span className="text-sm font-medium text-ivory-200">Turnos en menos de 48hs</span>
+                  <span className="text-sm font-medium text-beige-100" style={{ fontFamily: "Montserrat, sans-serif" }}>Turnos en menos de 48hs</span>
                 </div>
               </div>
             </div>
 
             {/* Mobile trust badges */}
             <div className="sm:hidden mt-6 flex items-center gap-4">
-              <div className="flex items-center gap-2 text-gold-400">
+              <div className="flex items-center gap-2 text-sage-300">
                 <CheckCircle2 className="w-4 h-4" />
-                <span className="text-xs font-medium text-ivory-200">Sin listas de espera</span>
+                <span className="text-xs font-medium text-beige-100" style={{ fontFamily: "Montserrat, sans-serif" }}>Sin listas de espera</span>
               </div>
-              <div className="flex items-center gap-2 text-gold-400">
+              <div className="flex items-center gap-2 text-sage-300">
                 <Clock className="w-4 h-4" />
-                <span className="text-xs font-medium text-ivory-200">Turnos en 48hs</span>
+                <span className="text-xs font-medium text-beige-100" style={{ fontFamily: "Montserrat, sans-serif" }}>Turnos en 48hs</span>
               </div>
             </div>
           </div>
@@ -495,15 +499,15 @@ export function LandingPage() {
       {/* ===== NOSOTROS / PHILOSOPHY ===== */}
       <section id="nosotros" className="paper-texture py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="gold-line max-w-xs mx-auto mb-12" />
+          <div className="sage-line max-w-xs mx-auto mb-12" />
           <motion.div
             className="text-center max-w-3xl mx-auto mb-16"
             {...fadeInUp}
           >
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-bark-700 leading-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-forest-500 leading-tight">
               Nuestra Filosofía
             </h2>
-            <p className="mt-6 text-bark-500 text-lg leading-relaxed font-light">
+            <p className="mt-6 text-forest-400 text-lg leading-relaxed font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
               Creemos que cada persona merece un espacio de escucha genuina.
               Desde hace más de 30 años, acompañamos a quienes buscan
               bienestar emocional con un enfoque humano, ético y profesional.
@@ -536,13 +540,13 @@ export function LandingPage() {
                 transition={{ delay: i * 0.15, duration: 0.6 }}
                 className="text-center"
               >
-                <div className="w-16 h-16 bg-gold-400/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                  <item.icon className="w-8 h-8 text-gold-500" />
+                <div className="w-16 h-16 bg-sage-300/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                  <item.icon className="w-8 h-8 text-sage-500" />
                 </div>
-                <h3 className="font-serif text-xl font-semibold text-bark-700 mb-3">
+                <h3 className="font-serif text-xl font-semibold text-forest-500 mb-3">
                   {item.title}
                 </h3>
-                <p className="text-bark-500 font-light leading-relaxed">{item.desc}</p>
+                <p className="text-forest-400 font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>{item.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -550,14 +554,14 @@ export function LandingPage() {
       </section>
 
       {/* ===== ESPECIALIDADES ===== */}
-      <section id="especialidades" className="bg-ivory-50 py-20 sm:py-28">
+      <section id="especialidades" className="bg-beige-50 py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="gold-line max-w-xs mx-auto mb-12" />
+          <div className="sage-line max-w-xs mx-auto mb-12" />
           <motion.div className="text-center max-w-2xl mx-auto mb-12" {...fadeInUp}>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-bark-700">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-forest-500">
               Nuestras Especialidades
             </h2>
-            <p className="mt-4 text-bark-500 text-lg font-light">
+            <p className="mt-4 text-forest-400 text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
               Contamos con profesionales especializados en diversas áreas de la
               salud mental para brindarte la mejor atención.
             </p>
@@ -571,9 +575,10 @@ export function LandingPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
                   activeTab === tab.id
-                    ? "bg-bark-700 text-ivory-100 shadow-md"
-                    : "bg-ivory-200 text-bark-600 hover:bg-ivory-300"
+                    ? "bg-forest-500 text-beige-50 shadow-md"
+                    : "bg-beige-200 text-forest-600 hover:bg-beige-300"
                 }`}
+                style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 {tab.label}
               </button>
@@ -594,15 +599,15 @@ export function LandingPage() {
                 return (
                   <div
                     key={idx}
-                    className="specialty-card bg-ivory-100 rounded-xl p-6 cursor-default"
+                    className="specialty-card bg-beige-100 rounded-xl p-6 cursor-default"
                   >
-                    <div className="w-12 h-12 bg-gold-400/15 rounded-xl flex items-center justify-center mb-4">
-                      <spec.icon className="w-6 h-6 text-gold-500" />
+                    <div className="w-12 h-12 bg-sage-300/15 rounded-xl flex items-center justify-center mb-4">
+                      <spec.icon className="w-6 h-6 text-sage-500" />
                     </div>
-                    <h3 className="font-serif font-semibold text-bark-700 text-lg">
+                    <h3 className="font-serif font-semibold text-forest-500 text-lg">
                       {spec.label}
                     </h3>
-                    <p className="text-bark-500 text-sm mt-1.5 font-light">{spec.desc}</p>
+                    <p className="text-forest-400 text-sm mt-1.5 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>{spec.desc}</p>
                   </div>
                 );
               })}
@@ -611,18 +616,18 @@ export function LandingPage() {
       </section>
 
       {/* ===== CÓMO FUNCIONA ===== */}
-      <section className="bg-bark-700 py-20 sm:py-28 relative overflow-hidden">
+      <section className="bg-forest-700 py-20 sm:py-28 relative overflow-hidden">
         {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-64 h-64 bg-gold-400/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-terracotta-400/5 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-0 w-64 h-64 bg-sage-300/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-earth-400/5 rounded-full blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="gold-line max-w-xs mx-auto mb-12" />
+          <div className="sage-line max-w-xs mx-auto mb-12" />
           <motion.div className="text-center max-w-2xl mx-auto mb-16" {...fadeInUp}>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-ivory-100">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-beige-50">
               ¿Cómo Funciona?
             </h2>
-            <p className="mt-4 text-ivory-300 text-lg font-light">
+            <p className="mt-4 text-beige-200 text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
               Un proceso simple y respetuoso para que puedas acceder a la atención que necesitás.
             </p>
           </motion.div>
@@ -662,16 +667,16 @@ export function LandingPage() {
                 transition={{ delay: i * 0.15, duration: 0.6 }}
                 className="text-center"
               >
-                <div className="text-gold-400 font-serif text-4xl font-bold mb-4">
+                <div className="text-sage-300 font-serif text-4xl font-bold mb-4">
                   {item.step}
                 </div>
-                <div className="w-14 h-14 bg-ivory-100/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <item.icon className="w-7 h-7 text-gold-400" />
+                <div className="w-14 h-14 bg-beige-50/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <item.icon className="w-7 h-7 text-sage-300" />
                 </div>
-                <h3 className="font-serif text-lg font-semibold text-ivory-100 mb-2">
+                <h3 className="font-serif text-lg font-semibold text-beige-50 mb-2">
                   {item.title}
                 </h3>
-                <p className="text-ivory-300/80 text-sm font-light leading-relaxed">
+                <p className="text-beige-200/80 text-sm font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
                   {item.desc}
                 </p>
               </motion.div>
@@ -681,7 +686,7 @@ export function LandingPage() {
       </section>
 
       {/* ===== STATS BAR ===== */}
-      <section className="bg-gold-400 py-10">
+      <section className="bg-sage-300 py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
@@ -697,8 +702,8 @@ export function LandingPage() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
               >
-                <p className="text-3xl sm:text-4xl font-serif font-bold text-bark-900">{stat.value}</p>
-                <p className="text-bark-700 text-sm mt-1 font-medium">{stat.label}</p>
+                <p className="text-3xl sm:text-4xl font-serif font-bold text-forest-900">{stat.value}</p>
+                <p className="text-forest-700 text-sm mt-1 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>{stat.label}</p>
               </motion.div>
             ))}
           </div>
@@ -708,9 +713,9 @@ export function LandingPage() {
       {/* ===== TESTIMONIOS ===== */}
       <section className="paper-texture py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="gold-line max-w-xs mx-auto mb-12" />
+          <div className="sage-line max-w-xs mx-auto mb-12" />
           <motion.div className="text-center max-w-2xl mx-auto mb-14" {...fadeInUp}>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-bark-700">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-forest-500">
               Lo que Dicen de Nosotros
             </h2>
           </motion.div>
@@ -724,13 +729,13 @@ export function LandingPage() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15, duration: 0.6 }}
               >
-                <Card className="bg-ivory-50 border-ivory-300/50 h-full">
+                <Card className="bg-beige-50 border-beige-300/50 h-full">
                   <CardContent className="p-6 sm:p-8">
-                    <div className="text-gold-400 text-4xl font-serif leading-none mb-4">&ldquo;</div>
-                    <p className="text-bark-600 font-light leading-relaxed mb-6">{t.text}</p>
-                    <div className="border-t border-ivory-300/50 pt-4">
-                      <p className="font-serif font-semibold text-bark-700">{t.name}</p>
-                      <p className="text-sm text-bark-400 font-light">{t.role}</p>
+                    <div className="text-sage-500 text-4xl font-serif leading-none mb-4">&ldquo;</div>
+                    <p className="text-forest-600 font-light leading-relaxed mb-6" style={{ fontFamily: "Montserrat, sans-serif" }}>{t.text}</p>
+                    <div className="border-t border-beige-300/50 pt-4">
+                      <p className="font-serif font-semibold text-forest-500">{t.name}</p>
+                      <p className="text-sm text-forest-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>{t.role}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -741,17 +746,17 @@ export function LandingPage() {
       </section>
 
       {/* ===== CTA ===== */}
-      <section className="bg-bark-700 py-16 sm:py-20 relative overflow-hidden">
+      <section className="bg-forest-500 py-16 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-1/4 w-48 h-48 bg-gold-400 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-1/4 w-64 h-64 bg-terracotta-400 rounded-full blur-3xl" />
+          <div className="absolute top-10 left-1/4 w-48 h-48 bg-sage-300 rounded-full blur-3xl" />
+          <div className="absolute bottom-10 right-1/4 w-64 h-64 bg-earth-400 rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div {...fadeInUp} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} initial={{ opacity: 0, y: 20 }}>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-ivory-100">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-beige-50">
               ¿Necesitás hablar con alguien?
             </h2>
-            <p className="mt-5 text-ivory-300 text-lg max-w-2xl mx-auto font-light">
+            <p className="mt-5 text-beige-200 text-lg max-w-2xl mx-auto font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
               No estás solo/a. Nuestro equipo de profesionales está listo para
               acompañarte. Sin listas de espera, con turnos disponibles.
             </p>
@@ -759,7 +764,7 @@ export function LandingPage() {
               <Button
                 size="lg"
                 onClick={() => setCurrentView("register")}
-                className="btn-gold text-bark-900 font-semibold text-base px-8 h-12 rounded-full"
+                className="btn-sage text-forest-900 font-semibold text-base px-8 h-12 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Solicitar Turno
                 <ChevronRight className="ml-1 w-5 h-5" />
@@ -767,7 +772,7 @@ export function LandingPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-ivory-300/30 text-ivory-200 hover:bg-ivory-100/10 text-base px-8 h-12 rounded-full bg-transparent"
+                className="border-beige-200/30 text-beige-100 hover:bg-beige-50/10 text-base px-8 h-12 rounded-full bg-transparent" style={{ fontFamily: "Montserrat, sans-serif" }}
                 onClick={() => scrollToSection("contacto")}
               >
                 <Mail className="mr-2 w-5 h-5" />
@@ -781,17 +786,17 @@ export function LandingPage() {
       {/* ===== CONTACT ===== */}
       <section id="contacto" className="paper-texture py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="gold-line max-w-xs mx-auto mb-12" />
+          <div className="sage-line max-w-xs mx-auto mb-12" />
           <div className="grid lg:grid-cols-2 gap-12">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-bark-700">
+              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-forest-500">
                 Contactanos
               </h2>
-              <p className="mt-4 text-bark-500 text-lg font-light">
+              <p className="mt-4 text-forest-400 text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 Completá el formulario y nos comunicaremos con vos a la brevedad.
               </p>
 
@@ -799,16 +804,16 @@ export function LandingPage() {
                 {[
                   { icon: MapPin, title: "Dirección", text: "Av. Corrientes 1234, CABA, Buenos Aires, Argentina" },
                   { icon: Phone, title: "Teléfono", text: "+54 11 4567-8900" },
-                  { icon: Mail, title: "Email", text: "info@ap.com.ar" },
+                  { icon: Mail, title: "Email", text: "info@reescuchapsicologica.com.ar" },
                   { icon: Clock, title: "Horarios", text: "Lunes a Viernes: 9:00 - 20:00\nSábados: 9:00 - 13:00" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-gold-400/15 rounded-lg flex items-center justify-center shrink-0">
-                      <item.icon className="w-5 h-5 text-gold-500" />
+                    <div className="w-10 h-10 bg-sage-300/15 rounded-lg flex items-center justify-center shrink-0">
+                      <item.icon className="w-5 h-5 text-sage-500" />
                     </div>
                     <div>
-                      <p className="font-serif font-semibold text-bark-700">{item.title}</p>
-                      <p className="text-bark-500 text-sm font-light whitespace-pre-line">{item.text}</p>
+                      <p className="font-serif font-semibold text-forest-500">{item.title}</p>
+                      <p className="text-forest-400 text-sm font-light whitespace-pre-line" style={{ fontFamily: "Montserrat, sans-serif" }}>{item.text}</p>
                     </div>
                   </div>
                 ))}
@@ -820,7 +825,7 @@ export function LandingPage() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <Card className="bg-ivory-50 border-ivory-300/50 shadow-lg">
+              <Card className="bg-beige-50 border-beige-300/50 shadow-lg">
                 <CardContent className="p-6 sm:p-8">
                   {contactSent ? (
                     <motion.div
@@ -828,11 +833,11 @@ export function LandingPage() {
                       animate={{ opacity: 1, scale: 1 }}
                       className="text-center py-8"
                     >
-                      <CheckCircle2 className="w-16 h-16 text-gold-500 mx-auto" />
-                      <h3 className="mt-4 font-serif text-xl font-semibold text-bark-700">
+                      <CheckCircle2 className="w-16 h-16 text-sage-500 mx-auto" />
+                      <h3 className="mt-4 font-serif text-xl font-semibold text-forest-500">
                         ¡Consulta enviada!
                       </h3>
-                      <p className="mt-2 text-bark-500 font-light">
+                      <p className="mt-2 text-forest-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                         Nos comunicaremos con vos a la brevedad.
                       </p>
                     </motion.div>
@@ -840,7 +845,7 @@ export function LandingPage() {
                     <form onSubmit={handleContactSubmit} className="space-y-4">
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="contact-name" className="text-bark-700 font-medium">Nombre *</Label>
+                          <Label htmlFor="contact-name" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Nombre *</Label>
                           <Input
                             id="contact-name"
                             required
@@ -849,11 +854,11 @@ export function LandingPage() {
                               setContactForm({ ...contactForm, name: e.target.value })
                             }
                             placeholder="Tu nombre completo"
-                            className="border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
+                            className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="contact-email" className="text-bark-700 font-medium">Email *</Label>
+                          <Label htmlFor="contact-email" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Email *</Label>
                           <Input
                             id="contact-email"
                             type="email"
@@ -863,13 +868,13 @@ export function LandingPage() {
                               setContactForm({ ...contactForm, email: e.target.value })
                             }
                             placeholder="tu@email.com"
-                            className="border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
+                            className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
                           />
                         </div>
                       </div>
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="contact-phone" className="text-bark-700 font-medium">Teléfono</Label>
+                          <Label htmlFor="contact-phone" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Teléfono</Label>
                           <Input
                             id="contact-phone"
                             value={contactForm.phone}
@@ -877,18 +882,18 @@ export function LandingPage() {
                               setContactForm({ ...contactForm, phone: e.target.value })
                             }
                             placeholder="+54 11 xxxx-xxxx"
-                            className="border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
+                            className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="contact-reason" className="text-bark-700 font-medium">Motivo</Label>
+                          <Label htmlFor="contact-reason" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Motivo</Label>
                           <Select
                             value={contactForm.reason}
                             onValueChange={(value) =>
                               setContactForm({ ...contactForm, reason: value })
                             }
                           >
-                            <SelectTrigger className="border-ivory-300 bg-ivory-100 focus:ring-gold-400/20">
+                            <SelectTrigger className="border-beige-300 bg-beige-100 focus:ring-sage-300/20">
                               <SelectValue placeholder="Seleccioná un motivo" />
                             </SelectTrigger>
                             <SelectContent>
@@ -906,7 +911,7 @@ export function LandingPage() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="contact-message" className="text-bark-700 font-medium">Mensaje *</Label>
+                        <Label htmlFor="contact-message" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Mensaje *</Label>
                         <Textarea
                           id="contact-message"
                           required
@@ -916,13 +921,13 @@ export function LandingPage() {
                           }
                           placeholder="Contanos cómo podemos ayudarte..."
                           rows={4}
-                          className="border-ivory-300 bg-ivory-100 focus:border-gold-400 focus:ring-gold-400/20"
+                          className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
                         />
                       </div>
                       <Button
                         type="submit"
                         disabled={contactSending}
-                        className="w-full btn-gold text-bark-900 font-semibold h-11"
+                        className="w-full btn-sage text-forest-900 font-semibold h-11" style={{ fontFamily: "Montserrat, sans-serif" }}
                       >
                         <Send className="mr-2 w-4 h-4" />
                         {contactSending ? "Enviando..." : "Enviar Consulta"}
@@ -937,56 +942,56 @@ export function LandingPage() {
       </section>
 
       {/* ===== FOOTER ===== */}
-      <footer className="bg-bark-900 text-ivory-300 mt-auto">
+      <footer className="bg-forest-900 text-beige-200 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-gold-400 flex items-center justify-center">
-                  <Leaf className="w-4 h-4 text-bark-900" />
+                <div className="w-8 h-8 rounded-lg bg-sage-300 flex items-center justify-center">
+                  <Leaf className="w-4 h-4 text-forest-900" />
                 </div>
-                <span className="font-serif font-bold text-lg text-ivory-100">Red Escucha</span>
+                <span className="font-serif font-bold text-lg text-beige-50">Red Escucha</span>
               </div>
-              <p className="text-ivory-400 text-sm font-light leading-relaxed">
+              <p className="text-beige-300 text-sm font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 Red Escucha Psicológica. Más de 30 años acompañando tu
                 bienestar en Buenos Aires, Argentina.
               </p>
             </div>
             <div>
-              <h4 className="font-serif font-semibold text-ivory-100 mb-3">Navegación</h4>
-              <ul className="space-y-2 text-sm text-ivory-400">
+              <h4 className="font-serif font-semibold text-beige-50 mb-3">Navegación</h4>
+              <ul className="space-y-2 text-sm text-beige-300">
                 <li>
-                  <button onClick={() => scrollToSection("inicio")} className="hover:text-gold-400 transition-colors font-light">
+                  <button onClick={() => scrollToSection("inicio")} className="hover:text-sage-300 transition-colors font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                     Inicio
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => scrollToSection("nosotros")} className="hover:text-gold-400 transition-colors font-light">
+                  <button onClick={() => scrollToSection("nosotros")} className="hover:text-sage-300 transition-colors font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                     Nosotros
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => scrollToSection("especialidades")} className="hover:text-gold-400 transition-colors font-light">
+                  <button onClick={() => scrollToSection("especialidades")} className="hover:text-sage-300 transition-colors font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                     Especialidades
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => scrollToSection("contacto")} className="hover:text-gold-400 transition-colors font-light">
+                  <button onClick={() => scrollToSection("contacto")} className="hover:text-sage-300 transition-colors font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                     Contacto
                   </button>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-serif font-semibold text-ivory-100 mb-3">Contacto</h4>
-              <ul className="space-y-2 text-sm text-ivory-400 font-light">
+              <h4 className="font-serif font-semibold text-beige-50 mb-3">Contacto</h4>
+              <ul className="space-y-2 text-sm text-beige-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 <li>Av. Corrientes 1234, CABA</li>
                 <li>+54 11 4567-8900</li>
-                <li>info@ap.com.ar</li>
+                <li>info@reescuchapsicologica.com.ar</li>
               </ul>
             </div>
           </div>
-          <div className="mt-10 pt-6 border-t border-ivory-100/10 text-center text-sm text-ivory-500 font-light">
+          <div className="mt-10 pt-6 border-t border-beige-50/10 text-center text-sm text-beige-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
             &copy; {new Date().getFullYear()} Red Escucha Psicológica.
             Todos los derechos reservados.
           </div>
