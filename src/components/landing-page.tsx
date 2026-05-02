@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
   Shield,
@@ -16,6 +16,7 @@ import {
   Mail,
   MapPin,
   ChevronRight,
+  ChevronLeft,
   Send,
   CheckCircle2,
   Leaf,
@@ -77,6 +78,45 @@ const testimonials = [
   },
 ];
 
+const heroSlides = [
+  {
+    badge: "MÁS DE 30 AÑOS DE EXPERIENCIA",
+    title: <>Red Escucha <span className="text-gold-400">Psicológica</span></>,
+    description: "Más de tres décadas acompañando tu bienestar. Nuestro equipo de profesionales está aquí para escucharte y ayudarte a transitar los momentos difíciles con respeto y profesionalismo.",
+    cta: "Solicitar Turno",
+    ctaIcon: ArrowRight,
+    secondaryCta: "Contactanos",
+    secondaryIcon: Phone,
+  },
+  {
+    badge: "TERAPIA INDIVIDUAL Y VINCULAR",
+    title: <>Un espacio seguro <span className="text-gold-400">para vos</span></>,
+    description: "Ofrecemos terapia individual, de pareja y familiar con profesionales especializados. Cada proceso es único y respetamos tus tiempos y necesidades.",
+    cta: "Conocer Especialidades",
+    ctaIcon: ArrowRight,
+    secondaryCta: "Contactanos",
+    secondaryIcon: Phone,
+  },
+  {
+    badge: "SIN LISTAS DE ESPERA",
+    title: <>Turnos en <span className="text-gold-400">menos de 48hs</span></>,
+    description: "Accedé a la atención que necesitás sin esperas innecesarias. Nuestra plataforma te permite solicitar un turno de forma rápida y simple desde cualquier dispositivo.",
+    cta: "Solicitar Turno",
+    ctaIcon: CalendarPlus,
+    secondaryCta: "Cómo Funciona",
+    secondaryIcon: MessageCircle,
+  },
+  {
+    badge: "CONFIDENCIALIDAD GARANTIZADA",
+    title: <>Tu privacidad, <span className="text-gold-400">nuestra prioridad</span></>,
+    description: "El secreto profesional es el pilar de nuestra práctica. Garantizamos un espacio donde podés expresarte libremente, sabiendo que tu privacidad está protegida en todo momento.",
+    cta: "Solicitar Turno",
+    ctaIcon: ArrowRight,
+    secondaryCta: "Contactanos",
+    secondaryIcon: Phone,
+  },
+];
+
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
   animate: { opacity: 1, y: 0 },
@@ -105,6 +145,29 @@ export function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("individual");
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Auto-advance carousel
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [isPaused]);
+
+  const goToSlide = useCallback((index: number) => {
+    setCurrentSlide(index);
+  }, []);
+
+  const nextSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+  }, []);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -278,8 +341,13 @@ export function LandingPage() {
         </div>
       </nav>
 
-      {/* ===== HERO ===== */}
-      <section id="inicio" className="relative min-h-screen flex items-center overflow-hidden">
+      {/* ===== HERO CAROUSEL ===== */}
+      <section
+        id="inicio"
+        className="relative min-h-screen flex items-center overflow-hidden"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+      >
         {/* Nature-inspired gradient background */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-br from-bark-900 via-bark-800 to-bark-700" />
@@ -294,79 +362,132 @@ export function LandingPage() {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 w-full">
           <div className="max-w-3xl">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <div className="inline-flex items-center gap-2 border border-gold-400/40 text-gold-300 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider">
-                <Leaf className="w-4 h-4" />
-                MÁS DE 30 AÑOS DE EXPERIENCIA
-              </div>
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.1 }}
-              className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-ivory-100 leading-tight"
-            >
-              Red Escucha{" "}
-              <span className="text-gold-400">Psicológica</span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.25 }}
-              className="mt-6 text-lg sm:text-xl text-ivory-300/90 leading-relaxed max-w-xl font-light"
-            >
-              Más de tres décadas acompañando tu bienestar. Nuestro equipo de
-              profesionales está aquí para escucharte y ayudarte a transitar
-              los momentos difíciles con respeto y profesionalismo.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="mt-10 flex flex-col sm:flex-row gap-4"
-            >
-              <Button
-                size="lg"
-                onClick={() => setCurrentView("register")}
-                className="btn-gold text-bark-900 font-semibold text-base px-8 h-12 rounded-full"
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentSlide}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.5 }}
               >
-                Solicitar Turno
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => scrollToSection("contacto")}
-                className="border-ivory-300/30 text-ivory-200 hover:bg-ivory-100/10 text-base px-8 h-12 rounded-full bg-transparent"
-              >
-                <Phone className="mr-2 w-5 h-5" />
-                Contactanos
-              </Button>
-            </motion.div>
+                {/* Badge */}
+                <div className="inline-flex items-center gap-2 border border-gold-400/40 text-gold-300 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider">
+                  <Leaf className="w-4 h-4" />
+                  {heroSlides[currentSlide].badge}
+                </div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7, duration: 0.5 }}
-              className="mt-12 flex items-center gap-4"
-            >
-              <div className="flex items-center gap-2 text-gold-400">
-                <CheckCircle2 className="w-5 h-5" />
-                <span className="text-sm font-medium text-ivory-200">Sin listas de espera</span>
+                {/* Title */}
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-ivory-100 leading-tight">
+                  {heroSlides[currentSlide].title}
+                </h1>
+
+                {/* Description */}
+                <p className="mt-6 text-lg sm:text-xl text-ivory-300/90 leading-relaxed max-w-xl font-light">
+                  {heroSlides[currentSlide].description}
+                </p>
+
+                {/* CTAs */}
+                <div className="mt-10 flex flex-col sm:flex-row gap-4">
+                  <Button
+                    size="lg"
+                    onClick={() => {
+                      if (heroSlides[currentSlide].cta === "Conocer Especialidades") {
+                        scrollToSection("especialidades");
+                      } else {
+                        setCurrentView("register");
+                      }
+                    }}
+                    className="btn-gold text-bark-900 font-semibold text-base px-8 h-12 rounded-full"
+                  >
+                    {heroSlides[currentSlide].cta}
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => {
+                      if (heroSlides[currentSlide].secondaryCta === "Cómo Funciona") {
+                        scrollToSection("inicio");
+                      } else {
+                        scrollToSection("contacto");
+                      }
+                    }}
+                    className="border-ivory-300/30 text-ivory-200 hover:bg-ivory-100/10 text-base px-8 h-12 rounded-full bg-transparent"
+                  >
+                    <Phone className="mr-2 w-5 h-5" />
+                    {heroSlides[currentSlide].secondaryCta}
+                  </Button>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Carousel controls */}
+            <div className="mt-14 flex items-center gap-6">
+              {/* Dots */}
+              <div className="flex items-center gap-2.5">
+                {heroSlides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goToSlide(i)}
+                    className={`transition-all duration-300 rounded-full ${
+                      i === currentSlide
+                        ? "w-8 h-2.5 bg-gold-400"
+                        : "w-2.5 h-2.5 bg-ivory-300/30 hover:bg-ivory-300/50"
+                    }`}
+                    aria-label={`Slide ${i + 1}`}
+                  />
+                ))}
               </div>
-              <div className="w-px h-4 bg-ivory-300/30" />
-              <div className="flex items-center gap-2 text-gold-400">
-                <Clock className="w-5 h-5" />
-                <span className="text-sm font-medium text-ivory-200">Turnos en menos de 48hs</span>
+
+              {/* Divider */}
+              <div className="w-px h-6 bg-ivory-300/20" />
+
+              {/* Arrows */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={prevSlide}
+                  className="w-9 h-9 rounded-full border border-ivory-300/20 flex items-center justify-center text-ivory-300/60 hover:text-gold-400 hover:border-gold-400/40 transition-colors"
+                  aria-label="Slide anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="w-9 h-9 rounded-full border border-ivory-300/20 flex items-center justify-center text-ivory-300/60 hover:text-gold-400 hover:border-gold-400/40 transition-colors"
+                  aria-label="Siguiente slide"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-            </motion.div>
+
+              {/* Divider */}
+              <div className="w-px h-6 bg-ivory-300/20" />
+
+              {/* Trust badges */}
+              <div className="hidden sm:flex items-center gap-4">
+                <div className="flex items-center gap-2 text-gold-400">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-sm font-medium text-ivory-200">Sin listas de espera</span>
+                </div>
+                <div className="w-px h-4 bg-ivory-300/30" />
+                <div className="flex items-center gap-2 text-gold-400">
+                  <Clock className="w-5 h-5" />
+                  <span className="text-sm font-medium text-ivory-200">Turnos en menos de 48hs</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile trust badges */}
+            <div className="sm:hidden mt-6 flex items-center gap-4">
+              <div className="flex items-center gap-2 text-gold-400">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="text-xs font-medium text-ivory-200">Sin listas de espera</span>
+              </div>
+              <div className="flex items-center gap-2 text-gold-400">
+                <Clock className="w-4 h-4" />
+                <span className="text-xs font-medium text-ivory-200">Turnos en 48hs</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
