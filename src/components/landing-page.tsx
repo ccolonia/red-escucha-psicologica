@@ -92,7 +92,7 @@ const heroSlides = [
   {
     badge: "TERAPIA INDIVIDUAL Y VINCULAR",
     title: <>Un espacio seguro <span className="text-sage-300">para vos</span></>,
-    description: "Ofrecemos terapia individual, de pareja y familiar con profesionales especializados. Cada proceso es único y respetamos tus tiempos y necesidades.",
+    description: "Ofrecemos terapia individual, de pareja, familiar y grupal con profesionales especializados. Cada proceso es único, nos importan tus tiempos, necesidades y confidencialidad.",
     cta: "Conocer Especialidades",
     ctaIcon: ArrowRight,
     secondaryCta: "Contactanos",
