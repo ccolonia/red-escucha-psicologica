@@ -60,3 +60,7 @@ server.log
 # Agent context
 /agent-ctx/
 /worklog.md
+
+# Generated files
+/download/*.png
+/upload/
