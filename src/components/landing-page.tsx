@@ -333,6 +333,19 @@ export function LandingPage() {
                 Solicitar Turno
               </Button>
             </div>
+            {/* Mobile: Professional network CTA */}
+            <div className="mt-4 pt-4 border-t border-beige-50/10 flex flex-col items-center text-center">
+              <p className="text-beige-100 text-sm font-light leading-relaxed mb-3 tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                Querés formar parte de nuestra red de profesionales?
+              </p>
+              <Button
+                onClick={() => { setMobileMenuOpen(false); setCurrentView("register"); }}
+                className="btn-sage text-forest-900 font-semibold text-sm px-6 h-9 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
+              >
+                Pulsar aquí
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
@@ -365,7 +378,9 @@ export function LandingPage() {
         <div className="absolute inset-0 hero-overlay" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 w-full">
-          <div className="max-w-3xl">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:gap-12">
+          {/* Left column - Hero content */}
+          <div className="max-w-3xl flex-1">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentSlide}
@@ -492,6 +507,28 @@ export function LandingPage() {
                 <span className="text-xs font-medium text-beige-100" style={{ fontFamily: "Montserrat, sans-serif" }}>Turnos en 48hs</span>
               </div>
             </div>
+          </div>
+
+          {/* Right column - Professional network CTA */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="hidden lg:flex flex-col items-center text-center bg-forest-900/40 backdrop-blur-md border border-sage-300/20 rounded-2xl px-8 py-8 max-w-xs mt-0"
+          >
+            <Leaf className="w-8 h-8 text-sage-300 mb-4" />
+            <p className="text-beige-100 text-base font-light leading-relaxed mb-6 tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>
+              Querés formar parte de nuestra red de profesionales?
+            </p>
+            <Button
+              onClick={() => setCurrentView("register")}
+              className="btn-sage text-forest-900 font-semibold text-sm px-6 h-10 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
+            >
+              Pulsar aquí
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </motion.div>
+
           </div>
         </div>
       </section>
