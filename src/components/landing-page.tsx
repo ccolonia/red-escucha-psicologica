@@ -507,6 +507,21 @@ export function LandingPage() {
                 <span className="text-xs font-medium text-beige-100" style={{ fontFamily: "Montserrat, sans-serif" }}>Turnos en 48hs</span>
               </div>
             </div>
+
+            {/* Mobile: Professional network CTA in hero */}
+            <div className="lg:hidden mt-8 flex flex-col items-center text-center">
+              <Leaf className="w-6 h-6 text-sage-300 mb-3" />
+              <p className="text-beige-100 text-base font-light leading-relaxed mb-4 tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                Querés formar parte de nuestra red de profesionales?
+              </p>
+              <Button
+                onClick={() => setCurrentView("register")}
+                className="btn-sage text-forest-900 font-semibold text-sm px-6 h-10 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
+              >
+                Pulsar aquí
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Right column - Professional network CTA */}
