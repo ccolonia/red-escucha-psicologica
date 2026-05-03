@@ -509,11 +509,55 @@ export function LandingPage() {
             </div>
 
             {/* Mobile: Professional network CTA in hero */}
-            <div className="lg:hidden mt-8 flex flex-col items-center text-center">
-              <Leaf className="w-6 h-6 text-sage-300 mb-3" />
+            <motion.div
+              className="lg:hidden mt-8 flex flex-col items-center text-center"
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Leaf className="w-6 h-6 text-sage-300 mb-3" />
+              </motion.div>
               <p className="text-beige-100 text-base font-light leading-relaxed mb-4 tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 Querés formar parte de nuestra red de profesionales?
               </p>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  onClick={() => setCurrentView("register")}
+                  className="btn-sage text-forest-900 font-semibold text-sm px-6 h-10 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
+                >
+                  Pulsar aquí
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </motion.div>
+            </motion.div>
+          </div>
+
+          {/* Right column - Professional network CTA */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0, y: [0, -10, 0] }}
+            transition={{ opacity: { duration: 0.8, delay: 0.4 }, y: { duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 } }}
+            className="hidden lg:flex flex-col items-center text-center bg-transparent border-0 rounded-2xl px-8 py-8 max-w-xs mt-0"
+          >
+            <motion.div
+              animate={{ rotate: [0, 12, -12, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Leaf className="w-8 h-8 text-sage-300 mb-4" />
+            </motion.div>
+            <p className="text-beige-100 text-base font-light leading-relaxed mb-6 tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>
+              Querés formar parte de nuestra red de profesionales?
+            </p>
+            <motion.div
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <Button
                 onClick={() => setCurrentView("register")}
                 className="btn-sage text-forest-900 font-semibold text-sm px-6 h-10 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
@@ -521,27 +565,7 @@ export function LandingPage() {
                 Pulsar aquí
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
-            </div>
-          </div>
-
-          {/* Right column - Professional network CTA */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="hidden lg:flex flex-col items-center text-center bg-transparent border-0 rounded-2xl px-8 py-8 max-w-xs mt-0"
-          >
-            <Leaf className="w-8 h-8 text-sage-300 mb-4" />
-            <p className="text-beige-100 text-base font-light leading-relaxed mb-6 tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              Querés formar parte de nuestra red de profesionales?
-            </p>
-            <Button
-              onClick={() => setCurrentView("register")}
-              className="btn-sage text-forest-900 font-semibold text-sm px-6 h-10 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
-            >
-              Pulsar aquí
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
+            </motion.div>
           </motion.div>
 
           </div>
