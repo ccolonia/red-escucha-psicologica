@@ -514,7 +514,7 @@ export function LandingPage() {
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="hidden lg:flex flex-col items-center text-center bg-forest-900/40 backdrop-blur-md border border-sage-300/20 rounded-2xl px-8 py-8 max-w-xs mt-0"
+            className="hidden lg:flex flex-col items-center text-center bg-forest-900/15 backdrop-blur-lg border border-sage-300/15 rounded-2xl px-8 py-8 max-w-xs mt-0"
           >
             <Leaf className="w-8 h-8 text-sage-300 mb-4" />
             <p className="text-beige-100 text-base font-light leading-relaxed mb-6 tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>
