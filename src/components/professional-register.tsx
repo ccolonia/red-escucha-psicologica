@@ -287,26 +287,27 @@ export function ProfessionalRegister() {
   // Success screen
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white flex items-center justify-center px-4">
+      <div className="min-h-screen bg-beige-100 flex items-center justify-center px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full text-center"
         >
-          <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+          <div className="w-20 h-20 rounded-full bg-sage-300/20 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-10 h-10 text-sage-500" />
           </div>
-          <h1 className="text-2xl font-bold text-teal-900 mb-3">
+          <h1 className="text-2xl font-serif font-bold text-forest-500 mb-3">
             ¡Registro enviado!
           </h1>
-          <p className="text-teal-600 mb-2">
+          <p className="text-forest-400 font-light mb-2" style={{ fontFamily: "Montserrat, sans-serif" }}>
             Tu solicitud fue enviada exitosamente. Un administrador la revisará y activará tu cuenta.
           </p>
-          <p className="text-teal-500 text-sm mb-8">
+          <p className="text-forest-300 text-sm mb-8 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
             Recibirás un email de confirmación cuando tu cuenta sea aprobada.
           </p>
           <Button
-            className="bg-teal-600 hover:bg-teal-700 text-white"
+            className="btn-sage text-forest-900 font-semibold px-8 h-11 rounded-full"
+            style={{ fontFamily: "Montserrat, sans-serif" }}
             onClick={() => setCurrentView("landing")}
           >
             <ArrowLeft className="mr-2 w-4 h-4" />
@@ -318,23 +319,19 @@ export function ProfessionalRegister() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white">
+    <div className="min-h-screen bg-beige-100">
       {/* Header */}
-      <div className="bg-white border-b border-teal-100">
+      <div className="bg-forest-900">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => setCurrentView("landing")}
-            className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+            className="p-2 text-beige-200 hover:text-sage-300 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-              <Leaf className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <span className="font-bold text-sm text-teal-800">Red Escucha</span>
-              <p className="text-[10px] text-teal-500 -mt-0.5 leading-tight">Psicológica</p>
+            <div className="w-8 h-8 rounded-lg bg-sage-300 flex items-center justify-center">
+              <Leaf className="w-4 h-4 text-forest-900" />
             </div>
           </div>
         </div>
@@ -347,28 +344,28 @@ export function ProfessionalRegister() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
-            <Stethoscope className="w-8 h-8 text-teal-600" />
+          <div className="w-16 h-16 rounded-full bg-sage-300/15 flex items-center justify-center mx-auto mb-4">
+            <Stethoscope className="w-8 h-8 text-sage-500" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-teal-900">
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-forest-500">
             Sumate a nuestra red
           </h1>
-          <p className="text-teal-600 mt-2">
+          <p className="text-forest-400 mt-2 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
             Completá el formulario para formar parte de Red Escucha Psicológica
           </p>
         </motion.div>
 
         {/* Progress */}
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="flex items-center justify-center gap-2 mb-6">
           {[1, 2, 3, 4].map((s) => (
             <div key={s} className="flex items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                   s === step
-                    ? "bg-teal-600 text-white"
+                    ? "bg-forest-500 text-beige-50"
                     : s < step
-                    ? "bg-emerald-500 text-white"
-                    : "bg-teal-100 text-teal-400"
+                    ? "bg-sage-300 text-forest-900"
+                    : "bg-beige-300 text-forest-300"
                 }`}
               >
                 {s < step ? <CheckCircle2 className="w-4 h-4" /> : s}
@@ -376,7 +373,7 @@ export function ProfessionalRegister() {
               {s < 4 && (
                 <div
                   className={`w-8 sm:w-12 h-0.5 ${
-                    s < step ? "bg-emerald-500" : "bg-teal-100"
+                    s < step ? "bg-sage-300" : "bg-beige-300"
                   }`}
                 />
               )}
@@ -386,16 +383,16 @@ export function ProfessionalRegister() {
 
         {/* Step Labels */}
         <div className="grid grid-cols-4 gap-2 mb-8 text-center">
-          <span className={`text-xs ${step === 1 ? "text-teal-700 font-medium" : "text-teal-400"}`}>
+          <span className={`text-xs ${step === 1 ? "text-forest-500 font-medium" : "text-forest-300"}`} style={{ fontFamily: "Montserrat, sans-serif" }}>
             Cuenta
           </span>
-          <span className={`text-xs ${step === 2 ? "text-teal-700 font-medium" : "text-teal-400"}`}>
+          <span className={`text-xs ${step === 2 ? "text-forest-500 font-medium" : "text-forest-300"}`} style={{ fontFamily: "Montserrat, sans-serif" }}>
             Personal
           </span>
-          <span className={`text-xs ${step === 3 ? "text-teal-700 font-medium" : "text-teal-400"}`}>
+          <span className={`text-xs ${step === 3 ? "text-forest-500 font-medium" : "text-forest-300"}`} style={{ fontFamily: "Montserrat, sans-serif" }}>
             Profesional
           </span>
-          <span className={`text-xs ${step === 4 ? "text-teal-700 font-medium" : "text-teal-400"}`}>
+          <span className={`text-xs ${step === 4 ? "text-forest-500 font-medium" : "text-forest-300"}`} style={{ fontFamily: "Montserrat, sans-serif" }}>
             Atención
           </span>
         </div>
@@ -409,78 +406,78 @@ export function ProfessionalRegister() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
           >
-            <Card className="border-teal-100 shadow-lg">
+            <Card className="border-beige-300/50 shadow-lg bg-white">
               <CardHeader>
-                <CardTitle className="text-teal-900 flex items-center gap-2">
-                  {step === 1 && <><Mail className="w-5 h-5" /> Datos de Cuenta</>}
-                  {step === 2 && <><UserPlus className="w-5 h-5" /> Datos Personales</>}
-                  {step === 3 && <><Award className="w-5 h-5" /> Datos Profesionales</>}
-                  {step === 4 && <><MapPin className="w-5 h-5" /> Zonas y Atención</>}
+                <CardTitle className="text-forest-500 font-serif flex items-center gap-2">
+                  {step === 1 && <><Mail className="w-5 h-5 text-sage-500" /> Datos de Cuenta</>}
+                  {step === 2 && <><UserPlus className="w-5 h-5 text-sage-500" /> Datos Personales</>}
+                  {step === 3 && <><Award className="w-5 h-5 text-sage-500" /> Datos Profesionales</>}
+                  {step === 4 && <><MapPin className="w-5 h-5 text-sage-500" /> Zonas y Atención</>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* STEP 1: Cuenta */}
                 {step === 1 && (
                   <div className="space-y-4">
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800" style={{ fontFamily: "Montserrat, sans-serif" }}>
                       Si tu cuenta es Hotmail, Live o Outlook los correos pueden llegar como no deseado (spam).
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Email *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Email *</Label>
                         <Input
                           type="email"
                           value={form.email}
                           onChange={(e) => updateForm("email", e.target.value)}
-                          className="border-teal-200"
+                          className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
                           placeholder="tu@email.com"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Repetir email *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Repetir email *</Label>
                         <Input
                           type="email"
                           value={form.confirmEmail}
                           onChange={(e) => updateForm("confirmEmail", e.target.value)}
-                          className="border-teal-200"
+                          className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
                           placeholder="repetir@email.com"
                         />
                       </div>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Contraseña *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Contraseña *</Label>
                         <div className="relative">
                           <Input
                             type={showPassword ? "text" : "password"}
                             value={form.password}
                             onChange={(e) => updateForm("password", e.target.value)}
-                            className="border-teal-200 pr-10"
+                            className="border-beige-300 bg-beige-50 pr-10 focus:ring-sage-300/20"
                             placeholder="Mínimo 6 caracteres"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 hover:text-teal-600"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-300 hover:text-forest-500"
                           >
                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label>Repetir contraseña *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Repetir contraseña *</Label>
                         <div className="relative">
                           <Input
                             type={showConfirmPassword ? "text" : "password"}
                             value={form.confirmPassword}
                             onChange={(e) => updateForm("confirmPassword", e.target.value)}
-                            className="border-teal-200 pr-10"
+                            className="border-beige-300 bg-beige-50 pr-10 focus:ring-sage-300/20"
                             placeholder="Repetir contraseña"
                           />
                           <button
                             type="button"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 hover:text-teal-600"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-300 hover:text-forest-500"
                           >
                             {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
@@ -495,9 +492,9 @@ export function ProfessionalRegister() {
                   <div className="space-y-4">
                     <div className="grid sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label>Título *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Título *</Label>
                         <Select value={form.title} onValueChange={(v) => updateForm("title", v)}>
-                          <SelectTrigger className="border-teal-200">
+                          <SelectTrigger className="border-beige-300 bg-beige-50">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -508,54 +505,54 @@ export function ProfessionalRegister() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Nombre *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Nombre *</Label>
                         <Input
                           value={form.firstName}
                           onChange={(e) => updateForm("firstName", e.target.value)}
-                          className="border-teal-200"
+                          className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
                           placeholder="Tu nombre"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Apellido *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Apellido *</Label>
                         <Input
                           value={form.lastName}
                           onChange={(e) => updateForm("lastName", e.target.value)}
-                          className="border-teal-200"
+                          className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
                           placeholder="Tu apellido"
                         />
                       </div>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Teléfono *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Teléfono *</Label>
                         <Input
                           value={form.phone}
                           onChange={(e) => updateForm("phone", e.target.value)}
-                          className="border-teal-200"
+                          className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
                           placeholder="1149999999 (sin 0 ni 15)"
                         />
-                        <p className="text-xs text-teal-400">
+                        <p className="text-xs text-forest-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                           Ingresá tu número con código de área sin el 0 y sin el 15
                         </p>
                       </div>
                       <div className="space-y-2">
-                        <Label>CUIT / CUIL</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>CUIT / CUIL</Label>
                         <div className="relative">
-                          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+                          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300" />
                           <Input
                             value={form.cuil}
                             onChange={(e) => updateForm("cuil", e.target.value)}
-                            className="border-teal-200 pl-10"
+                            className="border-beige-300 bg-beige-50 pl-10 focus:ring-sage-300/20"
                             placeholder="20-12345678-9"
                           />
                         </div>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Sexo</Label>
+                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Sexo</Label>
                       <Select value={form.gender} onValueChange={(v) => updateForm("gender", v)}>
-                        <SelectTrigger className="border-teal-200 w-full sm:w-48">
+                        <SelectTrigger className="border-beige-300 bg-beige-50 w-full sm:w-48">
                           <SelectValue placeholder="Seleccionar" />
                         </SelectTrigger>
                         <SelectContent>
@@ -573,9 +570,9 @@ export function ProfessionalRegister() {
                   <div className="space-y-5">
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Profesión *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Profesión *</Label>
                         <Select value={form.profession} onValueChange={(v) => updateForm("profession", v)}>
-                          <SelectTrigger className="border-teal-200">
+                          <SelectTrigger className="border-beige-300 bg-beige-50">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -587,19 +584,19 @@ export function ProfessionalRegister() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Nº de matrícula *</Label>
+                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Nº de matrícula *</Label>
                         <Input
                           value={form.license}
                           onChange={(e) => updateForm("license", e.target.value)}
-                          className="border-teal-200"
+                          className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
                           placeholder="MN-XXXXX"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Especialidad *</Label>
+                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Especialidad *</Label>
                       <Select value={form.specialty} onValueChange={(v) => updateForm("specialty", v)}>
-                        <SelectTrigger className="border-teal-200">
+                        <SelectTrigger className="border-beige-300 bg-beige-50">
                           <SelectValue placeholder="Seleccionar especialidad" />
                         </SelectTrigger>
                         <SelectContent>
@@ -610,52 +607,52 @@ export function ProfessionalRegister() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Tipo de Terapia * (seleccioná al menos uno)</Label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto border border-teal-100 rounded-lg p-3">
+                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Tipo de Terapia * (seleccioná al menos uno)</Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto border border-beige-300 rounded-lg p-3 bg-beige-50">
                         {THERAPY_TYPES.map((t) => (
                           <label
                             key={t}
-                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-teal-50 rounded px-1 py-0.5"
+                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-1 py-0.5 transition-colors"
                           >
                             <Checkbox
                               checked={form.therapyTypes.includes(t)}
                               onCheckedChange={() => toggleArrayItem("therapyTypes", t)}
                             />
-                            <span className="text-teal-700">{t}</span>
+                            <span className="text-forest-500">{t}</span>
                           </label>
                         ))}
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Dirigido a * (seleccioná al menos uno)</Label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border border-teal-100 rounded-lg p-3">
+                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Dirigido a * (seleccioná al menos uno)</Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border border-beige-300 rounded-lg p-3 bg-beige-50">
                         {TARGET_AUDIENCES.map((t) => (
                           <label
                             key={t}
-                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-teal-50 rounded px-1 py-0.5"
+                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-1 py-0.5 transition-colors"
                           >
                             <Checkbox
                               checked={form.targetAudience.includes(t)}
                               onCheckedChange={() => toggleArrayItem("targetAudience", t)}
                             />
-                            <span className="text-teal-700">{t}</span>
+                            <span className="text-forest-500">{t}</span>
                           </label>
                         ))}
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Modalidad de Terapia</Label>
-                      <div className="grid grid-cols-2 gap-2 border border-teal-100 rounded-lg p-3">
+                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Modalidad de Terapia</Label>
+                      <div className="grid grid-cols-2 gap-2 border border-beige-300 rounded-lg p-3 bg-beige-50">
                         {["Individual", "Grupal"].map((m) => (
                           <label
                             key={m}
-                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-teal-50 rounded px-1 py-0.5"
+                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-1 py-0.5 transition-colors"
                           >
                             <Checkbox
                               checked={form.therapyModality.includes(m)}
                               onCheckedChange={() => toggleArrayItem("therapyModality", m)}
                             />
-                            <span className="text-teal-700">{m}</span>
+                            <span className="text-forest-500">{m}</span>
                           </label>
                         ))}
                       </div>
@@ -667,92 +664,92 @@ export function ProfessionalRegister() {
                 {step === 4 && (
                   <div className="space-y-5">
                     <div className="space-y-3">
-                      <Label className="text-base font-medium">Modalidad de atención *</Label>
+                      <Label className="text-forest-500 font-medium text-base" style={{ fontFamily: "Montserrat, sans-serif" }}>Modalidad de atención *</Label>
                       <div className="grid sm:grid-cols-3 gap-3">
                         <label
                           className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
                             form.onlineAttention
-                              ? "border-teal-500 bg-teal-50"
-                              : "border-teal-100 hover:border-teal-200"
+                              ? "border-sage-300 bg-sage-300/10"
+                              : "border-beige-300 hover:border-sage-300/50"
                           }`}
                         >
                           <Checkbox
                             checked={form.onlineAttention}
                             onCheckedChange={(v) => updateForm("onlineAttention", v)}
                           />
-                          <Monitor className="w-5 h-5 text-teal-600" />
-                          <span className="text-sm font-medium text-teal-800">Online</span>
+                          <Monitor className="w-5 h-5 text-sage-500" />
+                          <span className="text-sm font-medium text-forest-500" style={{ fontFamily: "Montserrat, sans-serif" }}>Online</span>
                         </label>
                         <label
                           className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
                             form.presentialAttention
-                              ? "border-teal-500 bg-teal-50"
-                              : "border-teal-100 hover:border-teal-200"
+                              ? "border-sage-300 bg-sage-300/10"
+                              : "border-beige-300 hover:border-sage-300/50"
                           }`}
                         >
                           <Checkbox
                             checked={form.presentialAttention}
                             onCheckedChange={(v) => updateForm("presentialAttention", v)}
                           />
-                          <Home className="w-5 h-5 text-teal-600" />
-                          <span className="text-sm font-medium text-teal-800">Presencial</span>
+                          <Home className="w-5 h-5 text-sage-500" />
+                          <span className="text-sm font-medium text-forest-500" style={{ fontFamily: "Montserrat, sans-serif" }}>Presencial</span>
                         </label>
                         <label
                           className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
                             form.homeAttention
-                              ? "border-teal-500 bg-teal-50"
-                              : "border-teal-100 hover:border-teal-200"
+                              ? "border-sage-300 bg-sage-300/10"
+                              : "border-beige-300 hover:border-sage-300/50"
                           }`}
                         >
                           <Checkbox
                             checked={form.homeAttention}
                             onCheckedChange={(v) => updateForm("homeAttention", v)}
                           />
-                          <Heart className="w-5 h-5 text-teal-600" />
-                          <span className="text-sm font-medium text-teal-800">Domicilio</span>
+                          <Heart className="w-5 h-5 text-sage-500" />
+                          <span className="text-sm font-medium text-forest-500" style={{ fontFamily: "Montserrat, sans-serif" }}>Domicilio</span>
                         </label>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Zonas de atención * (seleccioná al menos una)</Label>
-                      <div className="grid grid-cols-2 gap-2 border border-teal-100 rounded-lg p-3 max-h-56 overflow-y-auto">
+                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Zonas de atención * (seleccioná al menos una)</Label>
+                      <div className="grid grid-cols-2 gap-2 border border-beige-300 rounded-lg p-3 bg-beige-50 max-h-56 overflow-y-auto">
                         {ZONES.map((z) => (
                           <label
                             key={z}
-                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-teal-50 rounded px-1 py-0.5"
+                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-1 py-0.5 transition-colors"
                           >
                             <Checkbox
                               checked={form.zones.includes(z)}
                               onCheckedChange={() => toggleArrayItem("zones", z)}
                             />
-                            <span className="text-teal-700">{z}</span>
+                            <span className="text-forest-500">{z}</span>
                           </label>
                         ))}
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Acerca de tu práctica (opcional)</Label>
+                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Acerca de tu práctica (opcional)</Label>
                       <textarea
                         value={form.bio}
                         onChange={(e) => updateForm("bio", e.target.value)}
-                        className="w-full min-h-[80px] p-3 border border-teal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 resize-y"
+                        className="w-full min-h-[80px] p-3 border border-beige-300 bg-beige-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage-300/20 focus:border-sage-300 resize-y text-forest-600"
                         placeholder="Contanos brevemente sobre tu enfoque terapéutico, experiencia o lo que consideres relevante..."
                       />
                     </div>
 
                     {/* Terms */}
-                    <div className="border border-teal-100 rounded-lg p-4 bg-teal-50/50">
+                    <div className="border border-beige-300 rounded-lg p-4 bg-sage-300/5">
                       <label className="flex items-start gap-3 cursor-pointer">
                         <Checkbox
                           checked={acceptedTerms}
                           onCheckedChange={(v) => setAcceptedTerms(v as boolean)}
                           className="mt-0.5"
                         />
-                        <span className="text-sm text-teal-700">
+                        <span className="text-sm text-forest-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                           Acepto cumplir con todos los{" "}
-                          <span className="font-medium text-teal-800">
+                          <span className="font-medium text-forest-500">
                             Términos y Condiciones
                           </span>{" "}
                           de Red Escucha Psicológica, incluyendo las normas de confidencialidad y ética profesional.
@@ -763,11 +760,12 @@ export function ProfessionalRegister() {
                 )}
 
                 {/* Navigation */}
-                <div className="flex justify-between pt-4 border-t border-teal-50">
+                <div className="flex justify-between pt-4 border-t border-beige-200">
                   <Button
                     variant="outline"
                     onClick={step === 1 ? () => setCurrentView("landing") : prevStep}
-                    className="border-teal-200 text-teal-600"
+                    className="border-beige-300 text-forest-400 hover:text-forest-600 hover:bg-beige-50"
+                    style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
                     <ArrowLeft className="mr-2 w-4 h-4" />
                     {step === 1 ? "Volver" : "Anterior"}
@@ -776,7 +774,8 @@ export function ProfessionalRegister() {
                   {step < totalSteps ? (
                     <Button
                       onClick={nextStep}
-                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                      className="btn-sage text-forest-900 font-semibold"
+                      style={{ fontFamily: "Montserrat, sans-serif" }}
                     >
                       Siguiente
                       <ArrowRight className="ml-2 w-4 h-4" />
@@ -785,7 +784,8 @@ export function ProfessionalRegister() {
                     <Button
                       onClick={handleSubmit}
                       disabled={submitting}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="bg-forest-500 hover:bg-forest-600 text-beige-50 font-semibold"
+                      style={{ fontFamily: "Montserrat, sans-serif" }}
                     >
                       <CheckCircle2 className="mr-2 w-4 h-4" />
                       {submitting ? "Enviando..." : "Completar Registro"}
