@@ -229,17 +229,11 @@ export function LandingPage() {
           <div className="flex items-center justify-between h-16 md:h-18">
             {/* Logo */}
             <div className="flex items-center gap-2.5">
-              <div className="relative w-12 h-12 flex items-center justify-center">
-                <img
-                  src="/images/logo.png"
-                  alt="Red Escucha Psicológica"
-                  className="w-10 h-10 rounded-lg object-contain relative z-10"
-                />
-                {/* REP letters around the logo */}
-                <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 text-[7px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">R</span>
-                <span className="absolute bottom-0 -left-0.5 text-[7px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">E</span>
-                <span className="absolute bottom-0 -right-0.5 text-[7px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">P</span>
-              </div>
+              <img
+                src="/images/logo.png"
+                alt="Red Escucha Psicológica"
+                className="w-12 h-12 rounded-lg object-contain"
+              />
               <div className="flex items-baseline gap-1">
                 <span className="font-serif font-bold text-base text-beige-50 tracking-wide">Red Escucha</span>
                 <span className="text-sm text-sage-300 font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>Psicológica</span>
@@ -1025,17 +1019,11 @@ export function LandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="relative w-11 h-11 flex items-center justify-center">
-                  <img
-                    src="/images/logo.png"
-                    alt="Red Escucha Psicológica"
-                    className="w-9 h-9 rounded-lg object-contain relative z-10"
-                  />
-                  {/* REP letters around the logo */}
-                  <span className="absolute -top-0 left-1/2 -translate-x-1/2 text-[6px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">R</span>
-                  <span className="absolute bottom-0 -left-0 text-[6px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">E</span>
-                  <span className="absolute bottom-0 -right-0 text-[6px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">P</span>
-                </div>
+                <img
+                  src="/images/logo.png"
+                  alt="Red Escucha Psicológica"
+                  className="w-10 h-10 rounded-lg object-contain"
+                />
                 <div className="flex items-baseline gap-1">
                   <span className="font-serif font-bold text-lg text-beige-50">Red Escucha</span>
                   <span className="text-xs text-sage-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>Psicológica</span>
