@@ -113,17 +113,7 @@ export function AuthLogin() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-bark-500 font-light">
-                ¿No tenés cuenta?{" "}
-                <button
-                  onClick={() => setCurrentView("register")}
-                  className="text-gold-600 font-semibold hover:text-gold-700 transition-colors"
-                >
-                  Registrate
-                </button>
-              </p>
-            </div>
+            {/* "¿No tenés cuenta? Registrate" deshabilitado temporalmente */}
           </CardContent>
         </Card>
 
