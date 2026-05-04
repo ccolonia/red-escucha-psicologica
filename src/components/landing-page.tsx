@@ -83,10 +83,10 @@ const heroSlides = [
     badge: "MÁS DE 30 AÑOS DE EXPERIENCIA",
     title: <>Red Escucha <span className="text-sage-300">Psicológica</span></>,
     description: "Más de tres décadas acompañando tu bienestar. Nuestro equipo de profesionales está aquí para escucharte y ayudarte a transitar los momentos difíciles con respeto y profesionalismo.",
-    cta: "Solicitar Turno",
-    ctaIcon: ArrowRight,
-    secondaryCta: "Contactanos",
-    secondaryIcon: Phone,
+    cta: "Contactanos",
+    ctaIcon: Phone,
+    secondaryCta: "Conocer Especialidades",
+    secondaryIcon: ArrowRight,
     image: "/images/carousel/nature.png",
   },
   {
@@ -103,8 +103,8 @@ const heroSlides = [
     badge: "SIN LISTAS DE ESPERA",
     title: <>Turnos en <span className="text-sage-300">menos de 48hs</span></>,
     description: "Accedé a la atención que necesitás sin esperas innecesarias. Nuestra plataforma te permite solicitar un turno de forma rápida y simple desde cualquier dispositivo.",
-    cta: "Solicitar Turno",
-    ctaIcon: CalendarPlus,
+    cta: "Contactanos",
+    ctaIcon: Phone,
     secondaryCta: "Cómo Funciona",
     secondaryIcon: MessageCircle,
     image: "/images/carousel/jovenes.png",
@@ -113,10 +113,10 @@ const heroSlides = [
     badge: "CONFIDENCIALIDAD GARANTIZADA",
     title: <>Tu privacidad, <span className="text-sage-300">nuestra prioridad</span></>,
     description: "El secreto profesional es el pilar de nuestra práctica. Garantizamos un espacio donde podés expresarte libremente, sabiendo que tu privacidad está protegida en todo momento.",
-    cta: "Solicitar Turno",
-    ctaIcon: ArrowRight,
-    secondaryCta: "Contactanos",
-    secondaryIcon: Phone,
+    cta: "Contactanos",
+    ctaIcon: Phone,
+    secondaryCta: "Conocer Especialidades",
+    secondaryIcon: ArrowRight,
     image: "/images/carousel/ninos.png",
   },
 ];
@@ -272,12 +272,7 @@ export function LandingPage() {
               >
                 Ingresar
               </button>
-              <Button
-                onClick={() => setCurrentView("register")}
-                className="btn-sage text-forest-900 font-semibold text-sm px-5 h-9 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
-              >
-                Solicitar Turno
-              </Button>
+              {/* Botón "Solicitar Turno" deshabilitado temporalmente */}
             </div>
 
             {/* Mobile menu button */}
@@ -330,12 +325,7 @@ export function LandingPage() {
               >
                 Ingresar
               </button>
-              <Button
-                onClick={() => { setMobileMenuOpen(false); setCurrentView("register"); }}
-                className="w-full btn-sage text-forest-900 font-semibold text-base py-3 rounded-full min-h-[44px]" style={{ fontFamily: "Montserrat, sans-serif" }}
-              >
-                Solicitar Turno
-              </Button>
+              {/* Botón "Solicitar Turno" deshabilitado temporalmente */}
             </div>
             {/* Mobile: Professional network CTA */}
             <div className="mt-4 pt-4 border-t border-beige-50/10 flex flex-col items-center text-center">
@@ -414,30 +404,36 @@ export function LandingPage() {
                   <Button
                     size="lg"
                     onClick={() => {
-                      if (heroSlides[currentSlide].cta === "Conocer Especialidades") {
+                      const cta = heroSlides[currentSlide].cta;
+                      if (cta === "Conocer Especialidades") {
                         scrollToSection("especialidades");
-                      } else {
-                        setCurrentView("register");
+                      } else if (cta === "Contactanos") {
+                        scrollToSection("contacto");
                       }
                     }}
                     className="btn-sage text-forest-900 font-semibold text-base px-8 h-12 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
+                    {heroSlides[currentSlide].cta === "Contactanos" && <Phone className="mr-2 w-5 h-5" />}
+                    {heroSlides[currentSlide].cta === "Conocer Especialidades" && <ArrowRight className="mr-2 w-5 h-5" />}
                     {heroSlides[currentSlide].cta}
-                    <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
                     onClick={() => {
-                      if (heroSlides[currentSlide].secondaryCta === "Cómo Funciona") {
+                      const sCta = heroSlides[currentSlide].secondaryCta;
+                      if (sCta === "Cómo Funciona") {
                         scrollToSection("inicio");
+                      } else if (sCta === "Conocer Especialidades") {
+                        scrollToSection("especialidades");
                       } else {
                         scrollToSection("contacto");
                       }
                     }}
                     className="border-beige-200/30 text-beige-100 hover:bg-beige-50/10 text-base px-8 h-12 rounded-full bg-transparent" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
-                    <Phone className="mr-2 w-5 h-5" />
+                    {heroSlides[currentSlide].secondaryCta === "Conocer Especialidades" && <ArrowRight className="mr-2 w-5 h-5" />}
+                    {heroSlides[currentSlide].secondaryCta === "Contactanos" && <Phone className="mr-2 w-5 h-5" />}
                     {heroSlides[currentSlide].secondaryCta}
                   </Button>
                 </div>
@@ -770,7 +766,7 @@ export function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
               { value: "30+", label: "Años de experiencia" },
-              { value: "4", label: "Profesionales" },
+              { value: "50+", label: "Profesionales" },
               { value: "9", label: "Especialidades" },
               { value: "0", label: "Listas de espera" },
             ].map((stat, i) => (
@@ -842,14 +838,7 @@ export function LandingPage() {
               acompañarte. Sin listas de espera, con turnos disponibles.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                onClick={() => setCurrentView("register")}
-                className="btn-sage text-forest-900 font-semibold text-base px-8 h-12 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
-              >
-                Solicitar Turno
-                <ChevronRight className="ml-1 w-5 h-5" />
-              </Button>
+              {/* Botón "Solicitar Turno" deshabilitado temporalmente */}
               <Button
                 size="lg"
                 variant="outline"
@@ -883,9 +872,9 @@ export function LandingPage() {
 
               <div className="mt-8 space-y-6">
                 {[
-                  { icon: MapPin, title: "Dirección", text: "Av. Corrientes 1234, CABA, Buenos Aires, Argentina" },
-                  { icon: Phone, title: "Teléfono", text: "+54 11 4567-8900" },
-                  { icon: Mail, title: "Email", text: "info@reescuchapsicologica.com.ar" },
+                  { icon: MapPin, title: "Dirección", text: "Av. Sanabria 1616, CABA, Buenos Aires, Argentina" },
+                  { icon: Phone, title: "Teléfono", text: "+54 11 7668-3429" },
+                  { icon: Mail, title: "Email", text: "info@redescuchapsicologica.com" },
                   { icon: Clock, title: "Horarios", text: "Lunes a Viernes: 9:00 - 20:00\nSábados: 9:00 - 13:00" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
@@ -978,9 +967,6 @@ export function LandingPage() {
                               <SelectValue placeholder="Seleccioná un motivo" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="solicitar_turno">
-                                Solicitar Turno
-                              </SelectItem>
                               <SelectItem value="consulta_general">
                                 Consulta General
                               </SelectItem>
@@ -1071,9 +1057,9 @@ export function LandingPage() {
             <div>
               <h4 className="font-serif font-semibold text-beige-50 mb-3">Contacto</h4>
               <ul className="space-y-2 text-sm text-beige-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                <li>Av. Corrientes 1234, CABA</li>
-                <li>+54 11 4567-8900</li>
-                <li>info@reescuchapsicologica.com.ar</li>
+                <li>Av. Sanabria 1616, CABA</li>
+                <li>+54 11 7668-3429</li>
+                <li>info@redescuchapsicologica.com</li>
               </ul>
             </div>
           </div>
