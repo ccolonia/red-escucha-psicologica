@@ -229,33 +229,17 @@ export function LandingPage() {
           <div className="flex items-center justify-between h-16 md:h-18">
             {/* Logo */}
             <div className="flex items-center gap-2.5">
-              <svg viewBox="0 0 200 200" className="w-10 h-10" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <path id="repArcNav" d="M 17,100 A 83,83 0 0,0 183,100" fill="none" />
-                </defs>
-                {/* Outer circle - deep forest green */}
-                <circle cx="100" cy="100" r="97" fill="#2e4230" />
-                {/* Inner circle - darker center */}
-                <circle cx="100" cy="100" r="68" fill="#162216" />
-                {/* Subtle ring separator */}
-                <circle cx="100" cy="100" r="68" fill="none" stroke="#A8C3A0" strokeWidth="0.5" opacity="0.5" />
-                {/* REP text along top arc */}
-                <text fill="#A8C3A0" fontFamily="Georgia, 'Times New Roman', serif" fontSize="18" fontWeight="700" letterSpacing="16">
-                  <textPath href="#repArcNav" startOffset="50%" textAnchor="middle">R E P</textPath>
-                </text>
-                {/* Small decorative dot at bottom of band */}
-                <circle cx="100" cy="152" r="3" fill="#A8C3A0" opacity="0.35" />
-                {/* Main stem */}
-                <path d="M100,118 C100,105 100,82 100,60" stroke="#A8C3A0" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                {/* Left leaf - sage green */}
-                <path d="M100,93 C88,87 76,76 80,62 C84,74 91,86 100,93" fill="#A8C3A0" />
-                {/* Right leaf - forest green */}
-                <path d="M100,76 C112,70 124,58 120,45 C116,57 109,69 100,76" fill="#7a9d72" />
-                {/* Top bud */}
-                <path d="M100,62 C97,58 97,52 100,48 C103,52 103,58 100,62" fill="#A8C3A0" opacity="0.85" />
-                {/* Subtle ground line */}
-                <line x1="88" y1="128" x2="112" y2="128" stroke="#4F6F52" strokeWidth="0.75" opacity="0.3" strokeLinecap="round" />
-              </svg>
+              <div className="relative w-11 h-11 flex items-center justify-center">
+                <img
+                  src="/images/logo.png"
+                  alt="Red Escucha Psicológica"
+                  className="w-9 h-9 rounded-lg object-contain relative z-10"
+                />
+                {/* REP letters around the logo */}
+                <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 text-[7px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">R</span>
+                <span className="absolute bottom-0 -left-0.5 text-[7px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">E</span>
+                <span className="absolute bottom-0 -right-0.5 text-[7px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">P</span>
+              </div>
               <div className="flex items-baseline gap-1">
                 <span className="font-serif font-bold text-base text-beige-50 tracking-wide">Red Escucha</span>
                 <span className="text-sm text-sage-300 font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>Psicológica</span>
@@ -1041,23 +1025,17 @@ export function LandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2.5 mb-4">
-                <svg viewBox="0 0 200 200" className="w-9 h-9" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <path id="repArcFooter" d="M 17,100 A 83,83 0 0,0 183,100" fill="none" />
-                  </defs>
-                  <circle cx="100" cy="100" r="97" fill="#2e4230" />
-                  <circle cx="100" cy="100" r="68" fill="#162216" />
-                  <circle cx="100" cy="100" r="68" fill="none" stroke="#A8C3A0" strokeWidth="0.5" opacity="0.5" />
-                  <text fill="#A8C3A0" fontFamily="Georgia, 'Times New Roman', serif" fontSize="18" fontWeight="700" letterSpacing="16">
-                    <textPath href="#repArcFooter" startOffset="50%" textAnchor="middle">R E P</textPath>
-                  </text>
-                  <circle cx="100" cy="152" r="3" fill="#A8C3A0" opacity="0.35" />
-                  <path d="M100,118 C100,105 100,82 100,60" stroke="#A8C3A0" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                  <path d="M100,93 C88,87 76,76 80,62 C84,74 91,86 100,93" fill="#A8C3A0" />
-                  <path d="M100,76 C112,70 124,58 120,45 C116,57 109,69 100,76" fill="#7a9d72" />
-                  <path d="M100,62 C97,58 97,52 100,48 C103,52 103,58 100,62" fill="#A8C3A0" opacity="0.85" />
-                  <line x1="88" y1="128" x2="112" y2="128" stroke="#4F6F52" strokeWidth="0.75" opacity="0.3" strokeLinecap="round" />
-                </svg>
+                <div className="relative w-10 h-10 flex items-center justify-center">
+                  <img
+                    src="/images/logo.png"
+                    alt="Red Escucha Psicológica"
+                    className="w-8 h-8 rounded-lg object-contain relative z-10"
+                  />
+                  {/* REP letters around the logo */}
+                  <span className="absolute -top-0 left-1/2 -translate-x-1/2 text-[6px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">R</span>
+                  <span className="absolute bottom-0 -left-0 text-[6px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">E</span>
+                  <span className="absolute bottom-0 -right-0 text-[6px] font-serif font-bold text-sage-300 tracking-[0.2em] leading-none">P</span>
+                </div>
                 <div className="flex items-baseline gap-1">
                   <span className="font-serif font-bold text-lg text-beige-50">Red Escucha</span>
                   <span className="text-xs text-sage-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>Psicológica</span>
