@@ -330,8 +330,14 @@ export function ProfessionalRegister() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-sage-300 flex items-center justify-center">
-              <Leaf className="w-4 h-4 text-forest-900" />
+            <img
+              src="/images/logo.png"
+              alt="Red Escucha Psicológica"
+              className="w-8 h-8 rounded-lg object-contain"
+            />
+            <div className="flex items-baseline gap-1">
+              <span className="font-serif font-bold text-sm text-beige-50">Red Escucha</span>
+              <span className="text-[10px] text-sage-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>Psicológica</span>
             </div>
           </div>
         </div>

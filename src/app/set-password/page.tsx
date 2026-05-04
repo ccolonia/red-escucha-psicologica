@@ -160,9 +160,11 @@ function SetPasswordContent() {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {/* Header */}
           <div className="bg-forest-900 px-8 py-8 text-center">
-            <div className="w-14 h-14 bg-sage-300/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Leaf className="w-7 h-7 text-sage-300" />
-            </div>
+            <img
+              src="/images/logo.png"
+              alt="Red Escucha Psicológica"
+              className="w-14 h-14 rounded-full mx-auto mb-4 object-contain"
+            />
             <h1 className="text-xl font-serif font-bold text-beige-50">
               Establecer Contraseña
             </h1>
