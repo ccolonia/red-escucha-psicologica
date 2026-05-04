@@ -26,6 +26,7 @@ import {
   AdminContacts,
   AdminProfile,
 } from "@/components/admin-dashboard";
+import { ProfessionalRegister } from "@/components/professional-register";
 import { AppNavigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
 import { useEffect } from "react";
@@ -90,12 +91,16 @@ function AppContent() {
       if (
         currentView !== "landing" &&
         currentView !== "login" &&
-        currentView !== "register"
+        currentView !== "register" &&
+        currentView !== "professional-register"
       ) {
         setCurrentView("landing");
       }
     }
   }, [status, session, currentView, setCurrentView]);
+
+  // Show professional registration (accessible even when unauthenticated)
+  if (currentView === "professional-register") return <ProfessionalRegister />;
 
   // Show landing/auth when not logged in
   if (status === "unauthenticated" || (!session && status === "loading")) {

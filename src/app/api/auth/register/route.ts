@@ -6,11 +6,22 @@ import { authOptions } from "@/lib/auth";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, phone, password, role, license, specialty, bio } = body;
+    const {
+      name, email, phone, password, role, license, specialty, bio,
+      title, cuil, gender, therapyTypes, targetAudience, therapyModality,
+      onlineAttention, presentialAttention, homeAttention, zones,
+    } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: "Nombre, email y contraseña son obligatorios" },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "La contraseña debe tener al menos 6 caracteres" },
         { status: 400 }
       );
     }
@@ -26,19 +37,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If role is "professional", verify admin session
+    // If role is "professional"
     if (role === "professional") {
-      const session = await getServerSession(authOptions);
-      if (!session?.user || (session.user as { role: string }).role !== "admin") {
-        return NextResponse.json(
-          { error: "No autorizado para crear profesionales" },
-          { status: 403 }
-        );
-      }
-
       if (!license || !specialty) {
         return NextResponse.json(
-          { error: "Licencia y especialidad son obligatorias para profesionales" },
+          { error: "Matrícula y especialidad son obligatorias para profesionales" },
           { status: 400 }
         );
       }
@@ -50,18 +53,23 @@ export async function POST(request: NextRequest) {
 
       if (existingLicense) {
         return NextResponse.json(
-          { error: "Ya existe un profesional con esta licencia" },
+          { error: "Ya existe un profesional con esta matrícula" },
           { status: 409 }
         );
       }
+
+      // Public registration: professional starts as inactive until admin approves
+      const session = await getServerSession(authOptions);
+      const isAdmin = session?.user && (session.user as { role: string }).role === "admin";
 
       const user = await db.user.create({
         data: {
           name,
           email,
           phone: phone || null,
-          password, // In production, hash with bcrypt
+          password,
           role: "professional",
+          active: isAdmin ? true : false, // Inactive until admin approves
         },
       });
 
@@ -74,8 +82,12 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      const message = isAdmin
+        ? "Profesional creado exitosamente"
+        : "Tu registro fue enviado exitosamente. Un administrador lo revisará y activará tu cuenta.";
+
       return NextResponse.json(
-        { message: "Profesional creado exitosamente", userId: user.id },
+        { message, userId: user.id },
         { status: 201 }
       );
     }
@@ -86,7 +98,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         phone: phone || null,
-        password, // In production, hash with bcrypt
+        password,
         role: "patient",
       },
     });

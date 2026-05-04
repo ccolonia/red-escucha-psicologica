@@ -343,7 +343,7 @@ export function LandingPage() {
                 Querés formar parte de nuestra red de profesionales?
               </p>
               <Button
-                onClick={() => { setMobileMenuOpen(false); setCurrentView("register"); }}
+                onClick={() => { setMobileMenuOpen(false); setCurrentView("professional-register"); }}
                 className="btn-sage text-forest-900 font-semibold text-sm px-6 h-9 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Pulsar aquí
@@ -532,7 +532,7 @@ export function LandingPage() {
                 whileTap={{ scale: 0.95 }}
               >
                 <Button
-                  onClick={() => setCurrentView("register")}
+                  onClick={() => setCurrentView("professional-register")}
                   className="btn-sage text-forest-900 font-semibold text-sm px-6 h-10 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
                 >
                   Pulsar aquí
@@ -563,7 +563,7 @@ export function LandingPage() {
               whileTap={{ scale: 0.95 }}
             >
               <Button
-                onClick={() => setCurrentView("register")}
+                onClick={() => setCurrentView("professional-register")}
                 className="btn-sage text-forest-900 font-semibold text-sm px-6 h-10 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Pulsar aquí
