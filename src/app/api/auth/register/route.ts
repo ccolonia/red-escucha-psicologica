@@ -79,6 +79,17 @@ export async function POST(request: NextRequest) {
           license,
           specialty,
           bio: bio || null,
+          title: title || null,
+          profession: body.profession || null,
+          cuil: cuil || null,
+          gender: gender || null,
+          therapyTypes: therapyTypes ? JSON.stringify(therapyTypes) : null,
+          targetAudience: targetAudience ? JSON.stringify(targetAudience) : null,
+          therapyModality: therapyModality ? JSON.stringify(therapyModality) : null,
+          onlineAttention: onlineAttention ?? false,
+          presentialAttention: presentialAttention ?? false,
+          homeAttention: homeAttention ?? false,
+          zones: zones ? JSON.stringify(zones) : null,
         },
       });
 

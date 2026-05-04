@@ -86,7 +86,19 @@ interface Professional {
   license: string;
   specialty: string;
   available: boolean;
-  user: { name: string; email: string; phone: string };
+  title: string | null;
+  profession: string | null;
+  cuil: string | null;
+  gender: string | null;
+  therapyTypes: string | null;
+  targetAudience: string | null;
+  therapyModality: string | null;
+  onlineAttention: boolean;
+  presentialAttention: boolean;
+  homeAttention: boolean;
+  zones: string | null;
+  bio: string | null;
+  user: { name: string; email: string; phone: string; active: boolean };
 }
 
 interface ContactRequest {
@@ -401,6 +413,7 @@ export function AdminProfessionals() {
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addForm, setAddForm] = useState({
     name: "",
     email: "",
@@ -434,6 +447,32 @@ export function AdminProfessionals() {
   useEffect(() => {
     loadProfessionals();
   }, []);
+
+  const pendingCount = professionals.filter((p) => !p.user.active).length;
+
+  const handleToggleActive = async (userId: string, currentActive: boolean) => {
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !currentActive }),
+      });
+      if (res.ok) {
+        setProfessionals((prev) =>
+          prev.map((p) =>
+            p.userId === userId
+              ? { ...p, user: { ...p.user, active: !currentActive } }
+              : p
+          )
+        );
+        toast.success(currentActive ? "Cuenta desactivada" : "Cuenta activada");
+      } else {
+        toast.error("Error al actualizar cuenta");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    }
+  };
 
   const handleToggleAvailable = async (id: string, available: boolean) => {
     try {
@@ -579,7 +618,14 @@ export function AdminProfessionals() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-teal-900">Profesionales</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-teal-900">Profesionales</h2>
+          {pendingCount > 0 && (
+            <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {pendingCount} {pendingCount === 1 ? "pendiente" : "pendientes"}
+            </span>
+          )}
+        </div>
         <Button
           className="bg-teal-600 hover:bg-teal-700 text-white"
           onClick={() => setShowAdd(!showAdd)}
@@ -729,144 +775,279 @@ export function AdminProfessionals() {
         </div>
       ) : (
         <div className="space-y-3">
-          {professionals.map((prof) => (
-            <Card key={prof.id} className="border-teal-100">
-              <CardContent className="p-4">
-                {editingId === prof.id ? (
-                  <div className="space-y-4">
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Nombre completo</Label>
-                        <Input
-                          value={editForm.name}
-                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                          className="border-teal-200"
-                        />
+          {professionals.map((prof) => {
+            const isActive = prof.user.active;
+            const isExpanded = expandedId === prof.id;
+            const parsedTherapyTypes = prof.therapyTypes ? JSON.parse(prof.therapyTypes) : [];
+            const parsedTargetAudience = prof.targetAudience ? JSON.parse(prof.targetAudience) : [];
+            const parsedTherapyModality = prof.therapyModality ? JSON.parse(prof.therapyModality) : [];
+            const parsedZones = prof.zones ? JSON.parse(prof.zones) : [];
+            return (
+              <Card key={prof.id} className={`border-teal-100 ${!isActive ? "border-l-4 border-l-amber-400" : ""}`}>
+                <CardContent className="p-4">
+                  {editingId === prof.id ? (
+                    <div className="space-y-4">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Nombre completo</Label>
+                          <Input
+                            value={editForm.name}
+                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            className="border-teal-200"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Email</Label>
+                          <Input
+                            value={editForm.email}
+                            disabled
+                            className="border-teal-200 bg-teal-50/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Teléfono</Label>
+                          <Input
+                            value={editForm.phone}
+                            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                            className="border-teal-200"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Matrícula</Label>
+                          <Input
+                            value={editForm.license}
+                            onChange={(e) => setEditForm({ ...editForm, license: e.target.value })}
+                            className="border-teal-200"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Especialidad</Label>
+                          <Select
+                            value={editForm.specialty}
+                            onValueChange={(value) => setEditForm({ ...editForm, specialty: value })}
+                          >
+                            <SelectTrigger className="border-teal-200">
+                              <SelectValue placeholder="Seleccionar" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Psicología Clínica">Psicología Clínica</SelectItem>
+                              <SelectItem value="Terapia de Pareja y Familia">Terapia de Pareja y Familia</SelectItem>
+                              <SelectItem value="Psicología Infanto-Juvenil">Psicología Infanto-Juvenil</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Email</Label>
-                        <Input
-                          value={editForm.email}
-                          disabled
-                          className="border-teal-200 bg-teal-50/50"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Teléfono</Label>
-                        <Input
-                          value={editForm.phone}
-                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                          className="border-teal-200"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Matrícula</Label>
-                        <Input
-                          value={editForm.license}
-                          onChange={(e) => setEditForm({ ...editForm, license: e.target.value })}
-                          className="border-teal-200"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Especialidad</Label>
-                        <Select
-                          value={editForm.specialty}
-                          onValueChange={(value) => setEditForm({ ...editForm, specialty: value })}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-teal-600 hover:bg-teal-700 text-white h-8"
+                          disabled={saving}
+                          onClick={() => handleSaveEdit(prof.id)}
                         >
-                          <SelectTrigger className="border-teal-200">
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Psicología Clínica">Psicología Clínica</SelectItem>
-                            <SelectItem value="Terapia de Pareja y Familia">Terapia de Pareja y Familia</SelectItem>
-                            <SelectItem value="Psicología Infanto-Juvenil">Psicología Infanto-Juvenil</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <Save className="mr-1 w-3 h-3" />
+                          {saving ? "Guardando..." : "Guardar"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 border-teal-200"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Cancelar
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        className="bg-teal-600 hover:bg-teal-700 text-white h-8"
-                        disabled={saving}
-                        onClick={() => handleSaveEdit(prof.id)}
-                      >
-                        <Save className="mr-1 w-3 h-3" />
-                        {saving ? "Guardando..." : "Guardar"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 border-teal-200"
-                        onClick={() => setEditingId(null)}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          prof.available ? "bg-teal-100" : "bg-gray-100"
-                        }`}
-                      >
-                        <Stethoscope
-                          className={`w-5 h-5 ${
-                            prof.available ? "text-teal-600" : "text-gray-400"
-                          }`}
-                        />
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              isActive ? "bg-teal-100" : "bg-amber-100"
+                            }`}
+                          >
+                            <Stethoscope
+                              className={`w-5 h-5 ${
+                                isActive ? "text-teal-600" : "text-amber-500"
+                              }`}
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium text-teal-900">{prof.user.name}</p>
+                              {!isActive && (
+                                <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">
+                                  Pendiente de aprobación
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-teal-600">
+                              {prof.specialty} • MP: {prof.license}
+                            </p>
+                            <p className="text-sm text-teal-500">{prof.user.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!isActive && (
+                            <Button
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs"
+                              onClick={() => handleToggleActive(prof.userId, false)}
+                            >
+                              <CheckCircle2 className="mr-1 w-3.5 h-3.5" />
+                              Aprobar
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-teal-200 text-teal-600 hover:text-teal-800 hover:bg-teal-50"
+                            onClick={() => setExpandedId(isExpanded ? null : prof.id)}
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </Button>
+                          {isActive && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 border-teal-200"
+                              onClick={() => handleToggleAvailable(prof.id, prof.available)}
+                            >
+                              {prof.available ? "Desactivar" : "Activar"}
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-teal-200 text-teal-600 hover:text-teal-800 hover:bg-teal-50"
+                            onClick={() => handleEdit(prof)}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-red-200 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDelete(prof.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-teal-900">{prof.user.name}</p>
-                        <p className="text-sm text-teal-600">
-                          {prof.specialty} • MP: {prof.license}
-                        </p>
-                        <p className="text-sm text-teal-500">{prof.user.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={prof.available ? "default" : "secondary"}
-                        className={
-                          prof.available
-                            ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
-                            : ""
-                        }
-                      >
-                        {prof.available ? "Activo" : "Inactivo"}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 border-teal-200"
-                        onClick={() => handleToggleAvailable(prof.id, prof.available)}
-                      >
-                        {prof.available ? "Desactivar" : "Activar"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 border-teal-200 text-teal-600 hover:text-teal-800 hover:bg-teal-50"
-                        onClick={() => handleEdit(prof)}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 border-red-200 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleDelete(prof.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+
+                      {/* Expanded details */}
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          className="mt-4 pt-4 border-t border-teal-100 space-y-3"
+                        >
+                          <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                            {prof.profession && (
+                              <div>
+                                <span className="text-teal-500">Profesión:</span>{" "}
+                                <span className="text-teal-800">{prof.profession}</span>
+                              </div>
+                            )}
+                            {prof.cuil && (
+                              <div>
+                                <span className="text-teal-500">CUIT/CUIL:</span>{" "}
+                                <span className="text-teal-800">{prof.cuil}</span>
+                              </div>
+                            )}
+                            {prof.gender && (
+                              <div>
+                                <span className="text-teal-500">Sexo:</span>{" "}
+                                <span className="text-teal-800">{prof.gender}</span>
+                              </div>
+                            )}
+                            {prof.user.phone && (
+                              <div>
+                                <span className="text-teal-500">Teléfono:</span>{" "}
+                                <span className="text-teal-800">{prof.user.phone}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 text-sm">
+                            <span className="text-teal-500">Modalidad de atención:</span>
+                            {prof.onlineAttention && (
+                              <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">Online</Badge>
+                            )}
+                            {prof.presentialAttention && (
+                              <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">Presencial</Badge>
+                            )}
+                            {prof.homeAttention && (
+                              <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200 text-purple-700">Domicilio</Badge>
+                            )}
+                          </div>
+
+                          {parsedTherapyTypes.length > 0 && (
+                            <div>
+                              <p className="text-teal-500 text-sm mb-1">Tipos de terapia:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {parsedTherapyTypes.map((t: string) => (
+                                  <Badge key={t} variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{t}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {parsedTargetAudience.length > 0 && (
+                            <div>
+                              <p className="text-teal-500 text-sm mb-1">Dirigido a:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {parsedTargetAudience.map((t: string) => (
+                                  <Badge key={t} variant="outline" className="text-xs bg-sage-50 border-sage-200 text-sage-700">{t}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {parsedTherapyModality.length > 0 && (
+                            <div>
+                              <p className="text-teal-500 text-sm mb-1">Modalidad de terapia:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {parsedTherapyModality.map((m: string) => (
+                                  <Badge key={m} variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">{m}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {parsedZones.length > 0 && (
+                            <div>
+                              <p className="text-teal-500 text-sm mb-1">Zonas de atención:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {parsedZones.map((z: string) => (
+                                  <Badge key={z} variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">{z}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {prof.bio && (
+                            <div>
+                              <p className="text-teal-500 text-sm mb-1">Sobre su práctica:</p>
+                              <p className="text-teal-700 text-sm bg-teal-50 p-2 rounded">{prof.bio}</p>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-3 text-xs text-teal-400 pt-1">
+                            <span>Cuenta: {isActive ? "Activada" : "Pendiente"}</span>
+                            <span>•</span>
+                            <span>Disponibilidad: {prof.available ? "Disponible" : "No disponible"}</span>
+                            <span>•</span>
+                            <span>Registrado: {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR")}</span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

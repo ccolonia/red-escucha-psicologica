@@ -24,7 +24,7 @@ export async function GET(
 
     const user = await db.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, phone: true, role: true, active: true },
+      select: { id: true, name: true, email: true, phone: true, role: true, active: true, createdAt: true },
     });
 
     if (!user) {
@@ -50,7 +50,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, email, phone } = body;
+    const { name, email, phone, active } = body;
 
     const existing = await db.user.findUnique({
       where: { id },
@@ -76,15 +76,24 @@ export async function PATCH(
       }
     }
 
-    const data: { name?: string; email?: string; phone?: string | null } = {};
+    // Only admin can change active status
+    if (active !== undefined && (session.user as { role: string }).role !== "admin") {
+      return NextResponse.json(
+        { error: "No autorizado para cambiar el estado de la cuenta" },
+        { status: 403 }
+      );
+    }
+
+    const data: { name?: string; email?: string; phone?: string | null; active?: boolean } = {};
     if (name !== undefined) data.name = name;
     if (email !== undefined) data.email = email;
     if (phone !== undefined) data.phone = phone;
+    if (active !== undefined) data.active = active;
 
     const user = await db.user.update({
       where: { id },
       data,
-      select: { id: true, name: true, email: true, phone: true, role: true },
+      select: { id: true, name: true, email: true, phone: true, role: true, active: true },
     });
 
     return NextResponse.json(user);

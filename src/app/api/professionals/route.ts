@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         user: {
-          select: { id: true, name: true, email: true, phone: true },
+          select: { id: true, name: true, email: true, phone: true, active: true, createdAt: true },
         },
       },
       orderBy: { user: { name: "asc" } },
