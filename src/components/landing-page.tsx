@@ -232,12 +232,6 @@ export function LandingPage() {
               <div className="w-9 h-9 rounded-lg bg-sage-300 flex items-center justify-center">
                 <Leaf className="w-5 h-5 text-forest-900" />
               </div>
-              <div>
-                <span className="font-serif font-bold text-lg text-beige-50 tracking-wide">Red Escucha</span>
-                <span className="hidden sm:inline text-xs text-beige-200 ml-2 font-light tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                  Red Escucha Psicológica
-                </span>
-              </div>
             </div>
 
             {/* Desktop nav links */}
