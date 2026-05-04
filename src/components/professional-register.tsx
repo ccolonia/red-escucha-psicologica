@@ -412,10 +412,10 @@ export function ProfessionalRegister() {
             <Card className="border-teal-100 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-teal-900 flex items-center gap-2">
-                  {step === 1 && <><Mail className="w-5 h-5" /> Datos de Cuenta</>)}
-                  {step === 2 && <><UserPlus className="w-5 h-5" /> Datos Personales</>)}
-                  {step === 3 && <><Award className="w-5 h-5" /> Datos Profesionales</>)}
-                  {step === 4 && <><MapPin className="w-5 h-5" /> Zonas y Atención</>)}
+                  {step === 1 && <><Mail className="w-5 h-5" /> Datos de Cuenta</>}
+                  {step === 2 && <><UserPlus className="w-5 h-5" /> Datos Personales</>}
+                  {step === 3 && <><Award className="w-5 h-5" /> Datos Profesionales</>}
+                  {step === 4 && <><MapPin className="w-5 h-5" /> Zonas y Atención</>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
