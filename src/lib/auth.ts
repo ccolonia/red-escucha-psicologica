@@ -38,10 +38,26 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.role = (user as { role: string }).role;
         token.id = user.id;
+      }
+      // When session is updated (e.g. user changed email/name), refresh from DB
+      if (trigger === "update" && token.id) {
+        try {
+          const dbUser = await db.user.findUnique({
+            where: { id: token.id as string },
+            select: { id: true, name: true, email: true, role: true },
+          });
+          if (dbUser) {
+            token.email = dbUser.email;
+            token.name = dbUser.name;
+            token.role = dbUser.role;
+          }
+        } catch {
+          // If DB fetch fails, keep existing token data
+        }
       }
       return token;
     },
