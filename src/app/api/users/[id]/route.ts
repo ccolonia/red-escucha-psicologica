@@ -3,6 +3,41 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    // Only allow users to fetch their own data (or admin can fetch anyone)
+    const currentUserId = (session.user as { id: string }).id;
+    const currentRole = (session.user as { role: string }).role;
+    if (id !== currentUserId && currentRole !== "admin") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+
+    const user = await db.user.findUnique({
+      where: { id },
+      select: { id: true, name: true, email: true, phone: true, role: true, active: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (error) {
+    console.error("Get user error:", error);
+    return NextResponse.json({ error: "Error al obtener usuario" }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

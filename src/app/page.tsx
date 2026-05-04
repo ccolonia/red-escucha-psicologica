@@ -24,6 +24,7 @@ import {
   AdminProfessionals,
   AdminPatients,
   AdminContacts,
+  AdminProfile,
 } from "@/components/admin-dashboard";
 import { AppNavigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
@@ -46,6 +47,7 @@ function DashboardContent() {
     "admin-professionals": <AdminProfessionals />,
     "admin-patients": <AdminPatients />,
     "admin-contacts": <AdminContacts />,
+    "admin-profile": <AdminProfile />,
   };
 
   return (

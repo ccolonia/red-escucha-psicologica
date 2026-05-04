@@ -17,6 +17,7 @@ import {
   Leaf,
   Menu,
   X,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ const ADMIN_NAV: NavItem[] = [
   { view: "admin-professionals", label: "Profesionales", icon: Stethoscope },
   { view: "admin-patients", label: "Pacientes", icon: Users },
   { view: "admin-contacts", label: "Consultas", icon: MessageSquare },
+  { view: "admin-profile", label: "Mi Perfil", icon: Shield },
 ];
 
 export function AppNavigation() {

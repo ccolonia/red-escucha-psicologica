@@ -16,7 +16,8 @@ export type AppView =
   | "admin-appointments"
   | "admin-professionals"
   | "admin-patients"
-  | "admin-contacts";
+  | "admin-contacts"
+  | "admin-profile";
 
 interface AppState {
   currentView: AppView;

@@ -52,6 +52,7 @@ import {
 } from "recharts";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 // ---- Admin Stats / Dashboard ----
 
@@ -1115,6 +1116,313 @@ export function AdminContacts() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---- Admin Profile ----
+
+export function AdminProfile() {
+  const { data: session, update: updateSession } = useSession();
+  const userId = (session?.user as { id?: string })?.id;
+
+  const [profileForm, setProfileForm] = useState({
+    name: session?.user?.name || "",
+    email: (session?.user as { email?: string })?.email || "",
+    phone: "",
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  // Load current phone from DB
+  useEffect(() => {
+    if (userId) {
+      fetch(`/api/users/${userId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.phone !== undefined) {
+            setProfileForm((prev) => ({
+              ...prev,
+              phone: data.phone || "",
+              name: data.name || prev.name,
+              email: data.email || prev.email,
+            }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [userId]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId) return;
+
+    if (!profileForm.name.trim()) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+    if (!profileForm.email.trim() || !profileForm.email.includes("@")) {
+      toast.error("Ingresá un email válido");
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profileForm.name,
+          email: profileForm.email,
+          phone: profileForm.phone || null,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("Datos actualizados exitosamente");
+        // Update session so the sidebar shows the new name
+        await updateSession();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al actualizar datos");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!passwordForm.currentPassword) {
+      toast.error("Ingresá tu contraseña actual");
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("Las contraseñas nuevas no coinciden");
+      return;
+    }
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      toast.error("La nueva contraseña debe ser diferente a la actual");
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("Contraseña actualizada exitosamente");
+        setPasswordForm({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al cambiar la contraseña");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-teal-900">Mi Perfil</h2>
+
+      {/* Profile Info Card */}
+      <Card className="border-teal-100">
+        <CardHeader>
+          <CardTitle className="text-teal-900 flex items-center gap-2">
+            <Mail className="w-5 h-5" />
+            Datos del Administrador
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveProfile} className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-name">Nombre completo *</Label>
+                <Input
+                  id="admin-name"
+                  value={profileForm.name}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, name: e.target.value })
+                  }
+                  className="border-teal-200"
+                  placeholder="Tu nombre"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-email">Email *</Label>
+                <Input
+                  id="admin-email"
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, email: e.target.value })
+                  }
+                  className="border-teal-200"
+                  placeholder="tu@email.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-phone">Teléfono</Label>
+                <Input
+                  id="admin-phone"
+                  value={profileForm.phone}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, phone: e.target.value })
+                  }
+                  className="border-teal-200"
+                  placeholder="+54 11 xxxx-xxxx"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Rol</Label>
+                <Input
+                  value="Administrador"
+                  disabled
+                  className="border-teal-200 bg-teal-50/50 text-teal-700"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={savingProfile}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                <Save className="mr-2 w-4 h-4" />
+                {savingProfile ? "Guardando..." : "Guardar Cambios"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Change Password Card */}
+      <Card className="border-teal-100">
+        <CardHeader>
+          <CardTitle className="text-teal-900 flex items-center gap-2">
+            <Lock className="w-5 h-5" />
+            Cambiar Contraseña
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="current-pass">Contraseña actual *</Label>
+                <div className="relative">
+                  <Input
+                    id="current-pass"
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) =>
+                      setPasswordForm({
+                        ...passwordForm,
+                        currentPassword: e.target.value,
+                      })
+                    }
+                    className="border-teal-200 pr-10"
+                    placeholder="Contraseña actual"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 hover:text-teal-600"
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-pass">Nueva contraseña *</Label>
+                <div className="relative">
+                  <Input
+                    id="new-pass"
+                    type={showNewPassword ? "text" : "password"}
+                    value={passwordForm.newPassword}
+                    onChange={(e) =>
+                      setPasswordForm({
+                        ...passwordForm,
+                        newPassword: e.target.value,
+                      })
+                    }
+                    className="border-teal-200 pr-10"
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 hover:text-teal-600"
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-pass">Confirmar contraseña *</Label>
+                <Input
+                  id="confirm-pass"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  className="border-teal-200"
+                  placeholder="Repetir nueva contraseña"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={savingPassword}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                <Lock className="mr-2 w-4 h-4" />
+                {savingPassword ? "Cambiando..." : "Cambiar Contraseña"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
