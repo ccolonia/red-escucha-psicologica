@@ -638,8 +638,7 @@ export function LandingPage() {
               Nuestras Especialidades
             </h2>
             <p className="mt-4 text-forest-400 text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              Contamos con profesionales especializados en diversas áreas de la
-              salud mental para brindarte la mejor atención.
+              Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos, atendemos tus necesidades y garantizamos absoluta confidencialidad en cada acompañamiento.
             </p>
           </motion.div>
 
