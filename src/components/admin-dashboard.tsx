@@ -465,7 +465,28 @@ export function AdminProfessionals() {
               : p
           )
         );
-        toast.success(currentActive ? "Cuenta desactivada" : "Cuenta activada");
+
+        // If approving (activating), send approval email with password setup link
+        if (!currentActive) {
+          toast.success("Cuenta activada. Enviando email de bienvenida...");
+          try {
+            const emailRes = await fetch("/api/auth/approve-email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId }),
+            });
+            if (emailRes.ok) {
+              toast.success("Email de bienvenida enviado exitosamente");
+            } else {
+              const emailData = await emailRes.json();
+              toast.error(emailData.error || "Error al enviar el email de bienvenida");
+            }
+          } catch {
+            toast.error("Error al enviar el email de bienvenida");
+          }
+        } else {
+          toast.success("Cuenta desactivada");
+        }
       } else {
         toast.error("Error al actualizar cuenta");
       }
