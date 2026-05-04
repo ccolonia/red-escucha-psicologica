@@ -767,7 +767,7 @@ export function LandingPage() {
             {[
               { value: "30+", label: "Años de experiencia" },
               { value: "50+", label: "Profesionales" },
-              { value: "9", label: "Especialidades" },
+              { value: "15+", label: "Especialidades" },
               { value: "0", label: "Listas de espera" },
             ].map((stat, i) => (
               <motion.div
