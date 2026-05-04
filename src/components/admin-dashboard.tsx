@@ -95,7 +95,9 @@ interface ContactRequest {
   phone: string | null;
   message: string;
   reason: string | null;
+  status: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -935,11 +937,25 @@ export function AdminPatients() {
 
 // ---- Admin Contact Requests ----
 
+const CONTACT_STATUS_MAP: Record<string, { label: string; color: string; bgColor: string }> = {
+  nuevo: { label: "Nuevo", color: "text-amber-700", bgColor: "bg-amber-50 border-amber-200" },
+  leido: { label: "Leído", color: "text-blue-700", bgColor: "bg-blue-50 border-blue-200" },
+  respondido: { label: "Respondido", color: "text-teal-700", bgColor: "bg-teal-50 border-teal-200" },
+  resuelto: { label: "Resuelto", color: "text-emerald-700", bgColor: "bg-emerald-50 border-emerald-200" },
+};
+
+const NEXT_STATUS: Record<string, string> = {
+  nuevo: "leido",
+  leido: "respondido",
+  respondido: "resuelto",
+};
+
 export function AdminContacts() {
   const [contacts, setContacts] = useState<ContactRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  useEffect(() => {
+  const loadContacts = () => {
     fetch("/api/contact")
       .then((res) => res.json())
       .then((data) => {
@@ -947,6 +963,10 @@ export function AdminContacts() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadContacts();
   }, []);
 
   const REASON_MAP: Record<string, string> = {
@@ -955,18 +975,80 @@ export function AdminContacts() {
     informacion: "Información",
   };
 
+  const handleStatusUpdate = async (id: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/contact/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setContacts((prev) =>
+          prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
+        );
+        toast.success(`Estado actualizado a "${CONTACT_STATUS_MAP[newStatus]?.label || newStatus}"`);
+      } else {
+        toast.error("Error al actualizar estado");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Estás seguro de que querés eliminar esta consulta?")) return;
+    try {
+      const res = await fetch(`/api/contact/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Consulta eliminada");
+        loadContacts();
+      } else {
+        toast.error("Error al eliminar");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    }
+  };
+
+  const filtered =
+    statusFilter === "all"
+      ? contacts
+      : contacts.filter((c) => c.status === statusFilter);
+
+  const newCount = contacts.filter((c) => c.status === "nuevo").length;
+
   return (
     <div>
-      <h2 className="text-2xl font-bold text-teal-900 mb-6">
-        Consultas de Contacto
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-teal-900">Consultas de Contacto</h2>
+          {newCount > 0 && (
+            <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {newCount} {newCount === 1 ? "nueva" : "nuevas"}
+            </span>
+          )}
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40 border-teal-200">
+            <SelectValue placeholder="Filtrar estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos ({contacts.length})</SelectItem>
+            <SelectItem value="nuevo">Nuevos</SelectItem>
+            <SelectItem value="leido">Leídos</SelectItem>
+            <SelectItem value="respondido">Respondidos</SelectItem>
+            <SelectItem value="resuelto">Resueltos</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 bg-teal-50 animate-pulse rounded-lg" />
           ))}
         </div>
-      ) : contacts.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Card className="border-teal-100">
           <CardContent className="py-12 text-center">
             <MessageSquare className="w-12 h-12 text-teal-200 mx-auto" />
@@ -974,37 +1056,63 @@ export function AdminContacts() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto custom-scrollbar">
-          {contacts.map((contact) => (
-            <Card key={contact.id} className="border-teal-100">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-teal-900">
-                        {contact.name}
-                      </p>
-                      {contact.reason && (
-                        <Badge variant="outline" className="text-xs">
-                          {REASON_MAP[contact.reason] || contact.reason}
+        <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto custom-scrollbar">
+          {filtered.map((contact) => {
+            const statusInfo = CONTACT_STATUS_MAP[contact.status] || CONTACT_STATUS_MAP.nuevo;
+            const nextStatus = NEXT_STATUS[contact.status];
+            return (
+              <Card key={contact.id} className="border-teal-100">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-teal-900">{contact.name}</p>
+                        <Badge variant="outline" className={`text-xs ${statusInfo.bgColor} ${statusInfo.color} border`}>
+                          {statusInfo.label}
                         </Badge>
+                        {contact.reason && (
+                          <Badge variant="outline" className="text-xs">
+                            {REASON_MAP[contact.reason] || contact.reason}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-teal-600">{contact.email}</p>
+                      {contact.phone && (
+                        <p className="text-sm text-teal-500">{contact.phone}</p>
                       )}
+                      <p className="text-sm text-teal-700 mt-2 bg-teal-50 p-2 rounded">
+                        {contact.message}
+                      </p>
+                      <p className="text-xs text-teal-400 mt-1">
+                        {new Date(contact.createdAt).toLocaleString("es-AR")}
+                      </p>
                     </div>
-                    <p className="text-sm text-teal-600">{contact.email}</p>
-                    {contact.phone && (
-                      <p className="text-sm text-teal-500">{contact.phone}</p>
-                    )}
-                    <p className="text-sm text-teal-700 mt-2 bg-teal-50 p-2 rounded">
-                      {contact.message}
-                    </p>
-                    <p className="text-xs text-teal-400 mt-1">
-                      {new Date(contact.createdAt).toLocaleString("es-AR")}
-                    </p>
+                    <div className="flex items-center gap-1 ml-3 shrink-0">
+                      {nextStatus && (
+                        <Button
+                          size="sm"
+                          className="bg-teal-600 hover:bg-teal-700 text-white h-7 text-xs"
+                          onClick={() => handleStatusUpdate(contact.id, nextStatus)}
+                        >
+                          {contact.status === "nuevo" && "Marcar leído"}
+                          {contact.status === "leido" && "Respondido"}
+                          {contact.status === "respondido" && "Resolver"}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-7 p-0 border-red-200 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDelete(contact.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

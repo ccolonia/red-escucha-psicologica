@@ -138,6 +138,7 @@ export function LandingPage() {
   });
   const [contactSent, setContactSent] = useState(false);
   const [contactSending, setContactSending] = useState(false);
+  const [contactError, setContactError] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("individual");
@@ -187,6 +188,7 @@ export function LandingPage() {
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setContactSending(true);
+    setContactError(false);
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -197,9 +199,11 @@ export function LandingPage() {
         setContactSent(true);
         setContactForm({ name: "", email: "", phone: "", message: "", reason: "" });
         setTimeout(() => setContactSent(false), 4000);
+      } else {
+        setContactError(true);
       }
     } catch {
-      // silent
+      setContactError(true);
     } finally {
       setContactSending(false);
     }
@@ -1009,6 +1013,11 @@ export function LandingPage() {
                         <Send className="mr-2 w-4 h-4" />
                         {contactSending ? "Enviando..." : "Enviar Consulta"}
                       </Button>
+                      {contactError && (
+                        <p className="text-sm text-red-500 text-center mt-2" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                          Ocurrió un error al enviar. Por favor, intentá nuevamente.
+                        </p>
+                      )}
                     </form>
                   )}
                 </CardContent>

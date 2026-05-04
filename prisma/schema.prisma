@@ -69,5 +69,7 @@ model ContactRequest {
   phone     String?
   message   String
   reason    String? // "consulta_general", "solicitar_turno", "informacion"
+  status    String   @default("nuevo") // "nuevo", "leido", "respondido", "resuelto"
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

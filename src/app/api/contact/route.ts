@@ -15,18 +15,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await db.contactRequest.create({
-      data: {
-        name,
-        email,
-        phone: phone || null,
-        message,
-        reason: reason || null,
-      },
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: "El formato del email no es válido" },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize inputs (trim whitespace)
+    const sanitizedData = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone?.trim() || null,
+      message: message.trim(),
+      reason: reason || null,
+    };
+
+    const contact = await db.contactRequest.create({
+      data: sanitizedData,
     });
 
+    // Log notification for server monitoring
+    console.log(`📧 Nueva consulta de contacto: ${sanitizedData.name} (${sanitizedData.email}) - Motivo: ${sanitizedData.reason || "No especificado"}`);
+
     return NextResponse.json(
-      { message: "Consulta enviada exitosamente" },
+      { message: "Consulta enviada exitosamente", id: contact.id },
       { status: 201 }
     );
   } catch (error) {
