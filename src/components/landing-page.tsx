@@ -228,17 +228,11 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-18">
             {/* Logo */}
-            <div className="flex items-center gap-2.5">
-              <img
-                src="/images/logo.png"
-                alt="Red Escucha Psicológica"
-                className="w-12 h-12 rounded-lg object-contain"
-              />
-              <div className="flex items-baseline gap-1">
-                <span className="font-serif font-bold text-base text-beige-50 tracking-wide">Red Escucha</span>
-                <span className="text-sm text-sage-300 font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>Psicológica</span>
-              </div>
-            </div>
+            <img
+              src="/images/logo.png"
+              alt="Red Escucha Psicológica"
+              className="h-10 sm:h-11 w-auto object-contain"
+            />
 
             {/* Desktop nav links */}
             <div className="hidden md:flex items-center gap-8">
@@ -1018,16 +1012,12 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             <div>
-              <div className="flex items-center gap-2.5 mb-4">
+              <div className="mb-4">
                 <img
                   src="/images/logo.png"
                   alt="Red Escucha Psicológica"
-                  className="w-10 h-10 rounded-lg object-contain"
+                  className="h-9 w-auto object-contain"
                 />
-                <div className="flex items-baseline gap-1">
-                  <span className="font-serif font-bold text-lg text-beige-50">Red Escucha</span>
-                  <span className="text-xs text-sage-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>Psicológica</span>
-                </div>
               </div>
               <p className="text-beige-300 text-sm font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 Red Escucha Psicológica. Más de 30 años acompañando tu
