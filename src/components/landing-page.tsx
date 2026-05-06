@@ -226,12 +226,12 @@ export function LandingPage() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-18">
+          <div className="flex items-center justify-between h-20 md:h-22">
             {/* Logo */}
             <img
               src="/images/logo.png"
               alt="Red Escucha Psicológica"
-              className="h-10 sm:h-12 w-auto object-contain"
+              className="h-14 sm:h-16 md:h-18 w-auto object-contain"
             />
 
             {/* Desktop nav links */}
@@ -1016,7 +1016,7 @@ export function LandingPage() {
                 <img
                   src="/images/logo.png"
                   alt="Red Escucha Psicológica"
-                  className="h-14 w-auto object-contain"
+                  className="h-20 w-auto object-contain"
                 />
               </div>
               <p className="text-beige-300 text-sm font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
