@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 320" width="880" height="320">
+
+  <!-- ===== R/EAR SYMBOL ===== -->
+  <g transform="translate(30, 20)">
+    
+    <!-- R vertical stroke -->
+    <line x1="35" y1="260" x2="35" y2="35" 
+          stroke="#2e4230" stroke-width="9" stroke-linecap="round"/>
+    
+    <!-- R bowl / ear helix - the outer curve of R that looks like an ear -->
+    <path d="M 35 35 C 35 20 50 10 65 10 L 105 10 C 140 10 160 32 160 65 C 160 92 142 112 115 118" 
+          fill="none" stroke="#2e4230" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- R leg (diagonal) -->
+    <line x1="105" y1="105" x2="155" y2="260" 
+          stroke="#2e4230" stroke-width="9" stroke-linecap="round"/>
+    
+    <!-- Inner ear detail - smaller curve inside the R bowl suggesting ear canal -->
+    <path d="M 60 50 C 58 42 68 35 82 35 L 95 35 C 112 35 120 48 120 65 C 120 82 108 90 95 90 L 60 90" 
+          fill="none" stroke="#2e4230" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Subtle ear canal accent in sage green -->
+    <path d="M 72 55 C 78 48 90 47 96 52" 
+          fill="none" stroke="#A8C3A0" stroke-width="3.5" stroke-linecap="round"/>
+
+    <!-- Sound wave 1 - closest, thickest -->
+    <path d="M 172 45 C 190 60 190 200 172 225" 
+          fill="none" stroke="#2e4230" stroke-width="5.5" stroke-linecap="round"/>
+    
+    <!-- Sound wave 2 -->
+    <path d="M 195 28 C 218 50 218 215 195 242" 
+          fill="none" stroke="#2e4230" stroke-width="4.5" stroke-linecap="round"/>
+    
+    <!-- Sound wave 3 - farthest, thinnest -->
+    <path d="M 216 15 C 244 42 244 230 216 260" 
+          fill="none" stroke="#2e4230" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- ===== REP TEXT ===== -->
+  <text x="320" y="140" 
+        font-family="'Liberation Sans', 'Carlito', 'DejaVu Sans', Arial, Helvetica, sans-serif" 
+        font-size="120" 
+        font-weight="bold" 
+        fill="#A8C3A0" 
+        letter-spacing="14">REP</text>
+
+  <!-- ===== SUBTITLE TEXT ===== -->
+  <text x="322" y="195" 
+        font-family="'Liberation Sans', 'Carlito', 'DejaVu Sans', Arial, Helvetica, sans-serif" 
+        font-size="36" 
+        font-weight="normal" 
+        fill="#2e4230" 
+        letter-spacing="2">Red de Escucha Psicológica</text>
+</svg>
