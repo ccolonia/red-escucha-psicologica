@@ -578,7 +578,7 @@ export function LandingPage() {
               Nuestra Filosofía
             </h2>
             <p className="mt-6 text-forest-400 text-lg leading-relaxed font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              En <strong>REP</strong> creemos que cada persona merece un espacio de escucha genuina.
+              En <strong className="text-forest-500">REP</strong> creemos que cada persona merece un espacio de escucha genuina.
               Desde hace más de 30 años, acompañamos a quienes buscan
               bienestar emocional con un enfoque humano, ético y profesional.
             </p>
