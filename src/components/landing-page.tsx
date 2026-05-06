@@ -222,7 +222,7 @@ export function LandingPage() {
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
             ? "bg-white/95 backdrop-blur-xl shadow-md"
-            : "bg-white/85 backdrop-blur-sm"
+            : "bg-white/95 backdrop-blur-sm"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -238,31 +238,31 @@ export function LandingPage() {
             <div className="hidden md:flex items-center gap-8">
               <button
                 onClick={() => scrollToSection("inicio")}
-                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-800 hover:text-forest-900 transition-colors font-medium tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Inicio
               </button>
               <button
                 onClick={() => scrollToSection("nosotros")}
-                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-800 hover:text-forest-900 transition-colors font-medium tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Nosotros
               </button>
               <button
                 onClick={() => scrollToSection("especialidades")}
-                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-800 hover:text-forest-900 transition-colors font-medium tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Especialidades
               </button>
               <button
                 onClick={() => scrollToSection("contacto")}
-                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-800 hover:text-forest-900 transition-colors font-medium tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Contacto
               </button>
               <button
                 onClick={() => setCurrentView("login")}
-                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-800 hover:text-forest-900 transition-colors font-medium tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Ingresar
               </button>
@@ -290,32 +290,32 @@ export function LandingPage() {
           <div className="bg-beige-100/95 backdrop-blur-xl border-t border-forest-900/10 px-4 py-4 space-y-1">
             <button
               onClick={() => scrollToSection("inicio")}
-              className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+              className="w-full text-left px-4 py-3 text-forest-800 hover:text-forest-900 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Inicio
             </button>
             <button
               onClick={() => scrollToSection("nosotros")}
-              className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+              className="w-full text-left px-4 py-3 text-forest-800 hover:text-forest-900 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Nosotros
             </button>
             <button
               onClick={() => scrollToSection("especialidades")}
-              className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+              className="w-full text-left px-4 py-3 text-forest-800 hover:text-forest-900 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Especialidades
             </button>
             <button
               onClick={() => scrollToSection("contacto")}
-              className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+              className="w-full text-left px-4 py-3 text-forest-800 hover:text-forest-900 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Contacto
             </button>
             <div className="pt-2 space-y-2">
               <button
                 onClick={() => { setMobileMenuOpen(false); setCurrentView("login"); }}
-                className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="w-full text-left px-4 py-3 text-forest-800 hover:text-forest-900 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Ingresar
               </button>
