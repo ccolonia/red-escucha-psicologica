@@ -221,8 +221,8 @@ export function LandingPage() {
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-beige-100/95 backdrop-blur-xl shadow-md"
-            : "bg-beige-100/80 backdrop-blur-sm"
+            ? "bg-white/90 backdrop-blur-xl shadow-md"
+            : "bg-white/70 backdrop-blur-sm"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
