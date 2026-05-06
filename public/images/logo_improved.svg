@@ -1,68 +1,80 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" width="920" height="300">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 400" width="1150" height="400">
 
-  <!-- ===== R/EAR SYMBOL ===== -->
-  <g transform="translate(25, 15)">
+  <!-- ===== R/EAR SYMBOL - First letter shaped like an ear with sound waves ===== -->
+  <g transform="translate(52, 8)">
     
-    <!-- R vertical stroke - stronger presence -->
-    <line x1="38" y1="265" x2="38" y2="28" 
-          stroke="#2e4230" stroke-width="10" stroke-linecap="round"/>
+    <!-- R vertical stroke (left side) -->
+    <line x1="0" y1="260" x2="0" y2="25" 
+          stroke="#2e4230" stroke-width="13" stroke-linecap="round"/>
     
-    <!-- R bowl / ear helix - refined outer curve -->
-    <path d="M 38 32 C 38 16 55 5 72 5 L 110 5 C 148 5 168 30 168 68 C 168 98 148 118 120 124" 
-          fill="none" stroke="#2e4230" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- R bowl as ear helix - outer curve forming ear shape -->
+    <path d="M 0 25 C 0 5 24 0 48 0 L 102 0 C 148 0 172 36 172 80 C 172 116 148 145 114 154" 
+          fill="none" stroke="#2e4230" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
     
-    <!-- R leg (diagonal) - adjusted angle -->
-    <line x1="112" y1="108" x2="165" y2="265" 
-          stroke="#2e4230" stroke-width="10" stroke-linecap="round"/>
+    <!-- R leg (diagonal) -->
+    <line x1="100" y1="130" x2="168" y2="260" 
+          stroke="#2e4230" stroke-width="13" stroke-linecap="round"/>
     
-    <!-- Inner ear detail - ear canal suggestion -->
-    <path d="M 62 48 C 58 38 70 30 86 30 L 100 30 C 118 30 128 46 128 66 C 128 86 114 96 98 96 L 62 96" 
-          fill="none" stroke="#2e4230" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Inner ear detail - inner helix suggesting ear canal -->
+    <path d="M 32 42 C 24 26 40 16 62 16 L 88 16 C 116 16 130 42 130 76 C 130 108 110 128 84 128 L 32 128" 
+          fill="none" stroke="#2e4230" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
     
-    <!-- Subtle ear canal accent in sage green -->
-    <path d="M 76 54 C 82 46 94 44 102 50" 
-          fill="none" stroke="#A8C3A0" stroke-width="4" stroke-linecap="round"/>
+    <!-- Ear canal sage accent -->
+    <path d="M 48 52 C 58 38 78 36 90 48" 
+          fill="none" stroke="#A8C3A0" stroke-width="5.5" stroke-linecap="round"/>
     
-    <!-- Ear lobe detail - small sage accent -->
-    <path d="M 42 200 C 50 210 55 230 50 248" 
-          fill="none" stroke="#A8C3A0" stroke-width="3.5" stroke-linecap="round" opacity="0.6"/>
+    <!-- Small lobe accent -->
+    <path d="M 4 186 C 12 204 14 230 10 250" 
+          fill="none" stroke="#A8C3A0" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
 
-    <!-- Sound wave 1 - closest, thickest -->
-    <path d="M 182 38 C 202 58 202 210 182 240" 
-          fill="none" stroke="#2e4230" stroke-width="6" stroke-linecap="round"/>
+    <!-- Sound wave 1 - closest -->
+    <path d="M 188 14 C 214 52 214 222 188 264" 
+          fill="none" stroke="#2e4230" stroke-width="7.5" stroke-linecap="round"/>
     
     <!-- Sound wave 2 -->
-    <path d="M 206 20 C 232 48 232 220 206 258" 
-          fill="none" stroke="#2e4230" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 220 0 C 252 42 252 236 220 282" 
+          fill="none" stroke="#2e4230" stroke-width="6" stroke-linecap="round"/>
     
-    <!-- Sound wave 3 - farthest, thinnest -->
-    <path d="M 228 5 C 260 38 260 240 228 275" 
-          fill="none" stroke="#2e4230" stroke-width="3.8" stroke-linecap="round"/>
-
-    <!-- Subtle sage wave accents - inner glow effect -->
-    <path d="M 182 80 C 192 95 192 180 182 200" 
-          fill="none" stroke="#A8C3A0" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
-    <path d="M 206 65 C 218 85 218 195 206 218" 
-          fill="none" stroke="#A8C3A0" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+    <!-- Sound wave 3 - farthest -->
+    <path d="M 250 0 C 286 40 286 274 250 318" 
+          fill="none" stroke="#2e4230" stroke-width="4.2" stroke-linecap="round"/>
+    
+    <!-- Sage inner glow on waves -->
+    <path d="M 188 80 C 202 106 202 192 188 214" 
+          fill="none" stroke="#A8C3A0" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+    <path d="M 220 60 C 236 90 236 200 220 230" 
+          fill="none" stroke="#A8C3A0" stroke-width="2.5" stroke-linecap="round" opacity="0.3"/>
   </g>
 
-  <!-- ===== REP TEXT ===== -->
-  <text x="330" y="135" 
-        font-family="'Liberation Sans', 'Carlito', 'DejaVu Sans', Arial, Helvetica, sans-serif" 
-        font-size="130" 
-        font-weight="bold" 
-        fill="#A8C3A0" 
-        letter-spacing="16">REP</text>
+  <!-- ===== E letter ===== -->
+  <g transform="translate(355, 8)">
+    <line x1="0" y1="0" x2="0" y2="260" 
+          stroke="#2e4230" stroke-width="13" stroke-linecap="round"/>
+    <line x1="0" y1="6" x2="162" y2="6" 
+          stroke="#2e4230" stroke-width="13" stroke-linecap="round"/>
+    <line x1="0" y1="130" x2="132" y2="130" 
+          stroke="#2e4230" stroke-width="9.5" stroke-linecap="round"/>
+    <line x1="0" y1="254" x2="162" y2="254" 
+          stroke="#2e4230" stroke-width="13" stroke-linecap="round"/>
+  </g>
 
-  <!-- ===== SUBTITLE TEXT ===== -->
-  <text x="332" y="195" 
+  <!-- ===== P letter ===== -->
+  <g transform="translate(575, 8)">
+    <line x1="0" y1="0" x2="0" y2="260" 
+          stroke="#2e4230" stroke-width="13" stroke-linecap="round"/>
+    <path d="M 0 6 C 0 0 6 0 18 0 L 90 0 C 136 0 158 32 158 75 C 158 112 136 145 90 145 L 0 145" 
+          fill="none" stroke="#2e4230" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- ===== Subtitle: Red de Escucha Psicológica ===== -->
+  <text x="52" y="318" 
         font-family="'Liberation Sans', 'Carlito', 'DejaVu Sans', Arial, Helvetica, sans-serif" 
-        font-size="34" 
+        font-size="36" 
         font-weight="300"
         fill="#2e4230" 
         letter-spacing="3">Red de Escucha Psicológica</text>
   
   <!-- Subtle decorative line under subtitle -->
-  <line x1="332" y1="208" x2="760" y2="208" 
-        stroke="#A8C3A0" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  <line x1="52" y1="334" x2="710" y2="334" 
+        stroke="#A8C3A0" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
 </svg>
