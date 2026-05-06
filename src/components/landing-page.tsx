@@ -221,8 +221,8 @@ export function LandingPage() {
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-forest-900/60 backdrop-blur-xl"
-            : "bg-forest-900/15 backdrop-blur-sm"
+            ? "bg-beige-100/95 backdrop-blur-xl shadow-md"
+            : "bg-beige-100/80 backdrop-blur-sm"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -238,31 +238,31 @@ export function LandingPage() {
             <div className="hidden md:flex items-center gap-8">
               <button
                 onClick={() => scrollToSection("inicio")}
-                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Inicio
               </button>
               <button
                 onClick={() => scrollToSection("nosotros")}
-                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Nosotros
               </button>
               <button
                 onClick={() => scrollToSection("especialidades")}
-                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Especialidades
               </button>
               <button
                 onClick={() => scrollToSection("contacto")}
-                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Contacto
               </button>
               <button
                 onClick={() => setCurrentView("login")}
-                className="text-sm text-beige-100 hover:text-sage-300 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="text-sm text-forest-900 hover:text-sage-500 transition-colors font-light tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Ingresar
               </button>
@@ -272,7 +272,7 @@ export function LandingPage() {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2.5 text-beige-50 active:bg-white/10 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="md:hidden p-2.5 text-forest-900 active:bg-forest-900/10 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -287,43 +287,43 @@ export function LandingPage() {
           }`}
           style={{ pointerEvents: mobileMenuOpen ? "auto" : "none" }}
         >
-          <div className="bg-forest-900/80 backdrop-blur-xl border-t border-beige-50/10 px-4 py-4 space-y-1">
+          <div className="bg-beige-100/95 backdrop-blur-xl border-t border-forest-900/10 px-4 py-4 space-y-1">
             <button
               onClick={() => scrollToSection("inicio")}
-              className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+              className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Inicio
             </button>
             <button
               onClick={() => scrollToSection("nosotros")}
-              className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+              className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Nosotros
             </button>
             <button
               onClick={() => scrollToSection("especialidades")}
-              className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+              className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Especialidades
             </button>
             <button
               onClick={() => scrollToSection("contacto")}
-              className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+              className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Contacto
             </button>
             <div className="pt-2 space-y-2">
               <button
                 onClick={() => { setMobileMenuOpen(false); setCurrentView("login"); }}
-                className="w-full text-left px-4 py-3 text-beige-100 hover:text-sage-300 hover:bg-white/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+                className="w-full text-left px-4 py-3 text-forest-900 hover:text-sage-500 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Ingresar
               </button>
               {/* Botón "Solicitar Turno" deshabilitado temporalmente */}
             </div>
             {/* Mobile: Professional network CTA */}
-            <div className="mt-4 pt-4 border-t border-beige-50/10 flex flex-col items-center text-center">
-              <p className="text-beige-100 text-sm font-light leading-relaxed mb-3 tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>
+            <div className="mt-4 pt-4 border-t border-forest-900/10 flex flex-col items-center text-center">
+              <p className="text-forest-900 text-sm font-light leading-relaxed mb-3 tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 Querés formar parte de nuestra red de profesionales?
               </p>
               <Button
