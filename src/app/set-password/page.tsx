@@ -114,8 +114,8 @@ function SetPasswordContent() {
             </p>
             <p className="text-sm text-forest-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
               Contactá al administrador en{" "}
-              <a href="mailto:info@redescuchapsicologica.com" className="text-sage-500 underline">
-                info@redescuchapsicologica.com
+              <a href="mailto:contacto@redescuchapsicologica.com" className="text-sage-500 underline">
+                contacto@redescuchapsicologica.com
               </a>{" "}
               para solicitar un nuevo enlace.
             </p>

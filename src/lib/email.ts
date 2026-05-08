@@ -196,7 +196,7 @@ export async function sendApprovalEmail({ userEmail, userName, userId }: SendApp
             <div class="footer">
               Red Escucha Psicológica<br>
               Av. Sanabria 1616, CABA, Buenos Aires, Argentina<br>
-              <a href="mailto:info@redescuchapsicologica.com">info@redescuchapsicologica.com</a>
+              <a href="mailto:contacto@redescuchapsicologica.com">contacto@redescuchapsicologica.com</a>
             </div>
           </div>
         </div>

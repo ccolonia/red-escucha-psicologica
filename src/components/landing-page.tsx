@@ -868,7 +868,7 @@ export function LandingPage() {
                 {[
                   { icon: MapPin, title: "Dirección", text: "Av. Sanabria 1616, CABA, Buenos Aires, Argentina" },
                   { icon: Phone, title: "Teléfono", text: "+54 11 7668-3429" },
-                  { icon: Mail, title: "Email", text: "info@redescuchapsicologica.com" },
+                  { icon: Mail, title: "Email", text: "contacto@redescuchapsicologica.com" },
                   { icon: Clock, title: "Horarios", text: "Lunes a Viernes: 9:00 - 20:00\nSábados: 9:00 - 13:00" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
@@ -1054,7 +1054,7 @@ export function LandingPage() {
               <ul className="space-y-2 text-sm text-beige-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 <li>Av. Sanabria 1616, CABA</li>
                 <li>+54 11 7668-3429</li>
-                <li>info@redescuchapsicologica.com</li>
+                <li>contacto@redescuchapsicologica.com</li>
               </ul>
             </div>
           </div>
