@@ -46,8 +46,10 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Contact form error:", error);
+    // Return more detailed error for debugging
+    const errorMessage = error instanceof Error ? error.message : "Error al enviar la consulta";
     return NextResponse.json(
-      { error: "Error al enviar la consulta" },
+      { error: "Error al enviar la consulta", details: errorMessage },
       { status: 500 }
     );
   }
