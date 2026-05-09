@@ -2,13 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-// Public routes that don't require authentication
-const publicRoutes = ["/", "/api/auth/register", "/api/auth/[...nextauth]", "/api/contact", "/api/professionals/[id]/slots"];
-
-// API routes that require specific roles
-const adminOnlyRoutes = ["/api/admin", "/api/auth/approve-email", "/api/contact/[id]", "/api/patients"];
-const professionalOrAdminRoutes = ["/api/patients"];
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -22,8 +15,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow public API routes
-  if (pathname === "/api" || pathname === "/api/auth/register" || pathname.startsWith("/api/auth/[...nextauth]") || pathname === "/api/contact") {
+  // Allow public API routes (no auth required)
+  if (
+    pathname === "/api" ||
+    pathname.startsWith("/api/auth/") || // NextAuth routes: /api/auth/callback/credentials, /api/auth/session, etc.
+    pathname === "/api/auth/register" ||
+    pathname === "/api/contact" ||
+    pathname.match(/^\/api\/professionals\/[^/]+\/slots$/) // professional slots
+  ) {
     return NextResponse.next();
   }
 
@@ -58,13 +57,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - images (public images)
-     * - favicon (favicon files)
-     */
     "/((?!_next/static|_next/image|images|favicon).*)",
   ],
 };
