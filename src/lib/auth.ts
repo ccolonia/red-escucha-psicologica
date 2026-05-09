@@ -1,6 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
+import { comparePassword, isHashed, hashPassword } from "@/lib/password";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -23,8 +24,24 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Simple password comparison (in production, use bcrypt)
-        if (user.password !== credentials.password) {
+        // Secure password comparison using bcrypt
+        // Supports both hashed and plaintext passwords for migration period
+        let isValid = false;
+        if (isHashed(user.password)) {
+          isValid = await comparePassword(credentials.password, user.password);
+        } else {
+          // Legacy plaintext comparison (will be removed after migration)
+          isValid = user.password === credentials.password;
+          // Auto-upgrade plaintext to bcrypt on successful login
+          if (isValid) {
+            const hashedPassword = await hashPassword(credentials.password);
+            await db.user.update({
+              where: { id: user.id },
+              data: { password: hashedPassword },
+            });
+          }
+        }
+        if (!isValid) {
           return null;
         }
 

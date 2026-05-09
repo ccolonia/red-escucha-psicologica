@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { hashPassword, comparePassword, isHashed } from "@/lib/password";
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -40,17 +41,24 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Simple plaintext comparison (MVP)
-    if (user.password !== currentPassword) {
+    // Secure password comparison using bcrypt (with legacy plaintext support)
+    let isValid = false;
+    if (isHashed(user.password)) {
+      isValid = await comparePassword(currentPassword, user.password);
+    } else {
+      isValid = user.password === currentPassword;
+    }
+    if (!isValid) {
       return NextResponse.json(
         { error: "Contraseña actual incorrecta" },
         { status: 400 }
       );
     }
 
+    const hashedNewPassword = await hashPassword(newPassword);
     await db.user.update({
       where: { id: userId },
-      data: { password: newPassword },
+      data: { password: hashedNewPassword },
     });
 
     return NextResponse.json({ message: "Contraseña actualizada exitosamente" });

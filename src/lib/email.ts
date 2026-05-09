@@ -12,7 +12,10 @@ function getResend() {
 }
 
 const APP_URL = process.env.NEXTAUTH_URL || "https://red-escucha-psicologica.vercel.app";
-const FROM_EMAIL = "Red Escucha Psicológica <onboarding@resend.dev>";
+// Use custom domain email in production, Resend sandbox in development
+// For production: set EMAIL_FROM="Red Escucha Psicológica <noreply@redescuchapsicologica.com>"
+// For development: falls back to Resend's sandbox sender
+const FROM_EMAIL = process.env.EMAIL_FROM || "Red Escucha Psicológica <onboarding@resend.dev>";
 
 interface SendApprovalEmailParams {
   userEmail: string;

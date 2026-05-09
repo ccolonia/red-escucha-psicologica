@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { hashPassword } from "@/lib/password";
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,12 +63,14 @@ export async function POST(request: NextRequest) {
       const session = await getServerSession(authOptions);
       const isAdmin = session?.user && (session.user as { role: string }).role === "admin";
 
+      const hashedPassword = await hashPassword(password);
+
       const user = await db.user.create({
         data: {
           name,
           email,
           phone: phone || null,
-          password,
+          password: hashedPassword,
           role: "professional",
           active: isAdmin ? true : false, // Inactive until admin approves
         },
@@ -104,12 +107,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Default: create patient (no session check needed for self-registration)
+    const hashedPassword = await hashPassword(password);
     const user = await db.user.create({
       data: {
         name,
         email,
         phone: phone || null,
-        password,
+        password: hashedPassword,
         role: "patient",
       },
     });

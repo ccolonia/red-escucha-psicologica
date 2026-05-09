@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { hashPassword } from "./password";
 
 async function seed() {
   console.log("🌱 Iniciando seed...");
@@ -8,7 +9,7 @@ async function seed() {
     data: {
       name: "Administrador",
       email: "admin@ap.com.ar",
-      password: "admin123",
+      password: await hashPassword("admin123"),
       role: "admin",
       phone: "+54 11 4567-8900",
     },
@@ -57,7 +58,7 @@ async function seed() {
       data: {
         name: p.name,
         email: p.email,
-        password: "prof123",
+        password: await hashPassword("prof123"),
         role: "professional",
         phone: p.phone,
       },
@@ -91,7 +92,7 @@ async function seed() {
       data: {
         name: p.name,
         email: p.email,
-        password: "patient123",
+        password: await hashPassword("patient123"),
         role: "patient",
         phone: p.phone,
       },

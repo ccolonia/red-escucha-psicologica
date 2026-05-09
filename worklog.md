@@ -45,3 +45,28 @@ Stage Summary:
 - All pending features implemented and verified
 - Server running on port 3000, responding with 200
 - Build successful with no errors
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Security and infrastructure improvements
+
+Work Log:
+- Changed email from info@ to contacto@redescuchapsicologica.com across all files
+- Created new migration to sync Prisma schema with Neon DB (missing tables/columns)
+- Implemented bcrypt password hashing with gradual migration support
+- Added password.ts utility module (hash, compare, isHashed)
+- Updated auth.ts with auto-upgrade from plaintext to bcrypt on login
+- Updated register, change-password, set-password, approve-email routes to use bcrypt
+- Updated seed.ts to hash passwords with bcrypt
+- Created hash-existing-passwords.ts migration script
+- Added middleware.ts for API route protection (auth + role-based)
+- Configured email for production via EMAIL_FROM env var (Resend custom domain)
+- Added bcryptjs dependency
+
+Stage Summary:
+- Prisma migration created for PasswordToken table, Professional extended fields, ContactRequest.status/updatedAt
+- Password hashing fully implemented with backward compatibility
+- Middleware protects API routes with JWT verification
+- Email sender configurable via EMAIL_FROM env var for production
+- All changes ready for push to GitHub/Vercel

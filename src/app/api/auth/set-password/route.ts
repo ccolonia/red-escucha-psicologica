@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { hashPassword } from "@/lib/password";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,11 +49,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update user password and activate account
+    // Update user password (hashed) and activate account
+    const hashedPassword = await hashPassword(password);
     await db.user.update({
       where: { id: passwordToken.userId },
       data: {
-        password,
+        password: hashedPassword,
         active: true,
       },
     });
