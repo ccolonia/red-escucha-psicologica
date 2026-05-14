@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendContactNotification } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +37,15 @@ export async function POST(request: NextRequest) {
     const contact = await db.contactRequest.create({
       data: sanitizedData,
     });
+
+    // Send email notification to contacto@redescuchapsicologica.com
+    // This runs in the background - if it fails, the contact is still saved in DB
+    try {
+      await sendContactNotification(sanitizedData);
+      console.log(`📧 Notificación de contacto enviada para: ${sanitizedData.name}`);
+    } catch (emailError) {
+      console.error("⚠️ Error enviando notificación de contacto (no bloqueante):", emailError);
+    }
 
     // Log notification for server monitoring
     console.log(`📧 Nueva consulta de contacto: ${sanitizedData.name} (${sanitizedData.email}) - Motivo: ${sanitizedData.reason || "No especificado"}`);

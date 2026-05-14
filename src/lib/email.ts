@@ -215,3 +215,179 @@ export async function sendApprovalEmail({ userEmail, userName, userId }: SendApp
 
   return { data, token };
 }
+
+// ---- Contact Form Notification Email ----
+
+interface SendContactNotificationParams {
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string;
+  reason: string | null;
+}
+
+const REASON_MAP: Record<string, string> = {
+  consulta_general: "Consulta general",
+  solicitar_turno: "Solicitar turno",
+  informacion: "Información",
+};
+
+export async function sendContactNotification({ name, email, phone, message, reason }: SendContactNotificationParams) {
+  const resend = getResend();
+  const reasonLabel = reason ? (REASON_MAP[reason] || reason) : "No especificado";
+
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ["contacto@redescuchapsicologica.com"],
+    subject: `Nueva consulta de contacto: ${name}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Nueva consulta de contacto</title>
+        <style>
+          body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f0e8;
+            color: #2d3b2d;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .card {
+            background-color: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+          }
+          .header {
+            background: linear-gradient(135deg, #2d3b2d 0%, #3d5a3d 100%);
+            padding: 30px;
+            text-align: center;
+          }
+          .header h1 {
+            color: #e8e0d0;
+            margin: 0;
+            font-size: 22px;
+            font-weight: 700;
+          }
+          .header .subtitle {
+            color: #a8c0a8;
+            margin-top: 8px;
+            font-size: 14px;
+          }
+          .body {
+            padding: 30px;
+          }
+          .field {
+            margin-bottom: 20px;
+          }
+          .field .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #7a8a7a;
+            margin-bottom: 4px;
+          }
+          .field .value {
+            font-size: 15px;
+            color: #2d3b2d;
+            line-height: 1.6;
+          }
+          .message-box {
+            background-color: #f0ebe0;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 4px;
+          }
+          .reason-badge {
+            display: inline-block;
+            background-color: #a8c0a8;
+            color: #2d3b2d;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+          }
+          .footer {
+            background-color: #f8f4ec;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #9a8a7a;
+            line-height: 1.6;
+          }
+          .footer a {
+            color: #6a8a6a;
+            text-decoration: none;
+          }
+          .divider {
+            border: none;
+            border-top: 1px solid #e0e0d0;
+            margin: 16px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="card">
+            <div class="header">
+              <h1>Red Escucha Psicológica</h1>
+              <div class="subtitle">Nueva consulta de contacto recibida</div>
+            </div>
+            <div class="body">
+              <div class="field">
+                <div class="label">Nombre</div>
+                <div class="value" style="font-weight:600;">${name}</div>
+              </div>
+
+              <div class="field">
+                <div class="label">Email</div>
+                <div class="value"><a href="mailto:${email}" style="color:#6a8a6a;">${email}</a></div>
+              </div>
+
+              ${phone ? `
+              <div class="field">
+                <div class="label">Teléfono</div>
+                <div class="value"><a href="tel:${phone}" style="color:#6a8a6a;">${phone}</a></div>
+              </div>
+              ` : ''}
+
+              <div class="field">
+                <div class="label">Motivo</div>
+                <div class="value"><span class="reason-badge">${reasonLabel}</span></div>
+              </div>
+
+              <hr class="divider">
+
+              <div class="field">
+                <div class="label">Mensaje</div>
+                <div class="message-box">${message.replace(/\n/g, '<br>')}</div>
+              </div>
+            </div>
+            <div class="footer">
+              Este mensaje fue enviado desde el formulario de contacto de<br>
+              <a href="${APP_URL}">www.redescuchapsicologica.com</a><br>
+              <a href="mailto:contacto@redescuchapsicologica.com">contacto@redescuchapsicologica.com</a>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  });
+
+  if (error) {
+    console.error("Error sending contact notification email:", error);
+    // Don't throw - the contact was already saved to DB, just log the email error
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
