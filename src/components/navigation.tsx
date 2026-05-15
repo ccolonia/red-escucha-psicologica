@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   Shield,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,7 @@ const ADMIN_NAV: NavItem[] = [
   { view: "admin-professionals", label: "Profesionales", icon: Stethoscope },
   { view: "admin-patients", label: "Pacientes", icon: Users },
   { view: "admin-contacts", label: "Consultas", icon: MessageSquare },
+  { view: "admin-cms", label: "CMS", icon: Palette },
   { view: "admin-profile", label: "Mi Perfil", icon: Shield },
 ];
 
@@ -57,7 +59,12 @@ export function AppNavigation() {
     useAppStore();
 
   const role = (session?.user as { role?: string })?.role || "patient";
-  const navItems = role === "admin" ? ADMIN_NAV : role === "professional" ? PROFESSIONAL_NAV : PATIENT_NAV;
+  const allNavItems = role === "admin" || role === "super_admin" ? ADMIN_NAV : role === "professional" ? PROFESSIONAL_NAV : PATIENT_NAV;
+  // CMS nav item only visible to super_admin
+  const navItems = allNavItems.filter((item) => {
+    if (item.view === "admin-cms" && role !== "super_admin") return false;
+    return true;
+  });
 
   return (
     <>
@@ -103,7 +110,9 @@ export function AppNavigation() {
                 {session?.user?.name}
               </p>
               <p className="text-xs text-teal-500 truncate capitalize">
-                {role === "admin"
+                {role === "super_admin"
+                  ? "Super Admin"
+                  : role === "admin"
                   ? "Administrador"
                   : role === "professional"
                   ? "Profesional"
@@ -190,7 +199,9 @@ export function AppNavigation() {
                 {session?.user?.name}
               </p>
               <p className="text-xs text-teal-500 capitalize">
-                {role === "admin"
+                {role === "super_admin"
+                  ? "Super Admin"
+                  : role === "admin"
                   ? "Administrador"
                   : role === "professional"
                   ? "Profesional"

@@ -21,6 +21,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/auth/") || // NextAuth routes: /api/auth/callback/credentials, /api/auth/session, etc.
     pathname === "/api/auth/register" ||
     pathname === "/api/contact" ||
+    pathname === "/api/cms/content" || // Public CMS content endpoint
     pathname.match(/^\/api\/professionals\/[^/]+\/slots$/) // professional slots
   ) {
     return NextResponse.next();
@@ -43,8 +44,15 @@ export async function middleware(request: NextRequest) {
 
     // Admin-only routes
     if (pathname.startsWith("/api/admin") || pathname.startsWith("/api/auth/approve-email")) {
-      if (role !== "admin") {
+      if (role !== "admin" && role !== "super_admin") {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+      }
+    }
+
+    // CMS routes require super_admin
+    if (pathname.startsWith("/api/cms/") && pathname !== "/api/cms/content") {
+      if (role !== "super_admin") {
+        return NextResponse.json({ error: "No autorizado - se requiere super_admin" }, { status: 403 });
       }
     }
 

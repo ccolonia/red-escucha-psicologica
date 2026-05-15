@@ -18,6 +18,7 @@ export type AppView =
   | "admin-patients"
   | "admin-contacts"
   | "admin-profile"
+  | "admin-cms"
   | "professional-register";
 
 interface AppState {

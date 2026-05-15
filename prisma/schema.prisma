@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -14,7 +13,7 @@ model User {
   password     String
   name         String
   phone        String?
-  role         String      @default("patient") // "admin", "professional", "patient"
+  role         String      @default("patient") // "admin", "super_admin", "professional", "patient"
   active       Boolean     @default(true)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -94,4 +93,93 @@ model PasswordToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CmsHeroSlide {
+  id           String   @id @default(cuid())
+  badge        String
+  title        String
+  description  String
+  cta          String   @default("Contactanos")
+  secondaryCta String  @default("Conocer Especialidades")
+  imageUrl     String
+  order        Int      @default(0)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model CmsSpecialtyTab {
+  id        String          @id @default(cuid())
+  label     String
+  order     Int             @default(0)
+  active    Boolean         @default(true)
+  specialties CmsSpecialty[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model CmsSpecialty {
+  id          String          @id @default(cuid())
+  icon        String          @default("Brain")
+  label       String
+  description String
+  tabId       String
+  tab         CmsSpecialtyTab @relation(fields: [tabId], references: [id], onDelete: Cascade)
+  order       Int             @default(0)
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model CmsPhilosophy {
+  id          String   @id @default(cuid())
+  icon        String   @default("HandHeart")
+  title       String
+  description String
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CmsStep {
+  id          String   @id @default(cuid())
+  icon        String   @default("CalendarPlus")
+  title       String
+  description String
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CmsStat {
+  id        String   @id @default(cuid())
+  value     String
+  label     String
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CmsTestimonial {
+  id        String   @id @default(cuid())
+  text      String
+  name      String
+  role      String
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CmsSiteConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  group     String   @default("general")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

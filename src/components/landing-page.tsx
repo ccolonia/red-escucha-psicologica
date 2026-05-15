@@ -42,7 +42,16 @@ import {
 } from "@/components/ui/select";
 import { useAppStore } from "@/lib/store";
 
-const specialties = [
+// ===== Icon map for dynamic CMS content =====
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Brain, Heart, Shield, Users, Baby, UserCheck,
+  HeartHandshake, Sparkles, HandHeart, BookOpen,
+  CalendarPlus, MessageCircle, Leaf, Phone, Mail,
+  MapPin, Clock, Send, CheckCircle2,
+};
+
+// ===== Default (fallback) data =====
+const defaultSpecialties = [
   { icon: Brain, label: "Ansiedad y Estrés", desc: "Técnicas de manejo y afrontamiento para recuperar la calma" },
   { icon: Heart, label: "Depresión", desc: "Acompañamiento y terapia integral para transitar el dolor" },
   { icon: Sparkles, label: "Crisis Vitales", desc: "Soporte profesional en momentos de transformación" },
@@ -54,13 +63,13 @@ const specialties = [
   { icon: Shield, label: "Familias", desc: "Terapia familiar sistémica para armonizar el hogar" },
 ];
 
-const specialtyTabs = [
+const defaultSpecialtyTabs = [
   { id: "individual", label: "Individual", items: [0, 1, 2, 6] },
   { id: "vincular", label: "Vínculos", items: [3, 7, 8] },
   { id: "infanto", label: "Infanto-Juvenil", items: [4, 5] },
 ];
 
-const testimonials = [
+const defaultTestimonials = [
   {
     text: "Encontré en Red Escucha Psicológica un espacio seguro donde puedo hablar sin ser juzgada. Mi terapeuta me ayudó a entender mis emociones y a construir herramientas para el día a día.",
     name: "M.L.",
@@ -78,7 +87,7 @@ const testimonials = [
   },
 ];
 
-const heroSlides = [
+const defaultHeroSlides = [
   {
     badge: "MÁS DE 30 AÑOS DE EXPERIENCIA",
     title: <>Red Escucha <span className="text-sage-300">Psicológica</span></>,
@@ -145,26 +154,92 @@ export function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
+  // ===== CMS Dynamic Content =====
+  const [cmsHeroSlides, setCmsHeroSlides] = useState(defaultHeroSlides);
+  const [cmsSpecialties, setCmsSpecialties] = useState(defaultSpecialties);
+  const [cmsSpecialtyTabs, setCmsSpecialtyTabs] = useState(defaultSpecialtyTabs);
+  const [cmsTestimonials, setCmsTestimonials] = useState(defaultTestimonials);
+  const [cmsPhilosophies, setCmsPhilosophies] = useState<Array<{ icon: string; title: string; description: string }>>([]);
+  const [cmsSteps, setCmsSteps] = useState<Array<{ icon: string; title: string; description: string }>>([]);
+  const [cmsStats, setCmsStats] = useState<Array<{ value: string; label: string }>>([]);
+  const [cmsConfig, setCmsConfig] = useState<Record<string, string>>({});
+  const [cmsLoaded, setCmsLoaded] = useState(false);
+
+  // Fetch CMS content
+  useEffect(() => {
+    fetch("/api/cms/content")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.heroSlides?.length) {
+          setCmsHeroSlides(data.heroSlides.map((s: { badge: string; title: string; description: string; cta: string; secondaryCta: string; imageUrl: string }) => ({
+            badge: s.badge,
+            title: s.title,
+            description: s.description,
+            cta: s.cta,
+            secondaryCta: s.secondaryCta,
+            image: s.imageUrl,
+          })));
+        }
+        if (data.specialtyTabs?.length) {
+          const allSpecs: Array<{ icon: React.ComponentType<{ className?: string }>; label: string; desc: string }> = [];
+          const specIndexMap: Record<string, number> = {};
+          const tabs = data.specialtyTabs.map((tab: { id: string; label: string; specialties: Array<{ icon: string; label: string; description: string }> }) => {
+            const itemIndices = tab.specialties.map((spec: { icon: string; label: string; description: string }) => {
+              const key = `${tab.id}-${spec.label}`;
+              if (!(key in specIndexMap)) {
+                specIndexMap[key] = allSpecs.length;
+                allSpecs.push({ icon: ICON_MAP[spec.icon] || Brain, label: spec.label, desc: spec.description });
+              }
+              return specIndexMap[key];
+            });
+            return { id: tab.id, label: tab.label, items: itemIndices };
+          });
+          if (allSpecs.length > 0) setCmsSpecialties(allSpecs);
+          if (tabs.length > 0) setCmsSpecialtyTabs(tabs);
+        }
+        if (data.philosophies?.length) {
+          setCmsPhilosophies(data.philosophies);
+        }
+        if (data.steps?.length) {
+          setCmsSteps(data.steps);
+        }
+        if (data.stats?.length) {
+          setCmsStats(data.stats);
+        }
+        if (data.testimonials?.length) {
+          setCmsTestimonials(data.testimonials);
+        }
+        if (data.config) {
+          setCmsConfig(data.config);
+        }
+        setCmsLoaded(true);
+      })
+      .catch(() => {
+        // Use defaults on error
+        setCmsLoaded(true);
+      });
+  }, []);
+
   // Auto-advance carousel
   useEffect(() => {
     if (isPaused) return;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+      setCurrentSlide((prev) => (prev + 1) % cmsHeroSlides.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, [isPaused, cmsHeroSlides.length]);
 
   const goToSlide = useCallback((index: number) => {
     setCurrentSlide(index);
   }, []);
 
   const nextSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-  }, []);
+    setCurrentSlide((prev) => (prev + 1) % cmsHeroSlides.length);
+  }, [cmsHeroSlides.length]);
 
   const prevSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-  }, []);
+    setCurrentSlide((prev) => (prev - 1 + cmsHeroSlides.length) % cmsHeroSlides.length);
+  }, [cmsHeroSlides.length]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -357,7 +432,7 @@ export function LandingPage() {
           >
             <div
               className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-              style={{ backgroundImage: `url(${heroSlides[currentSlide].image})` }}
+              style={{ backgroundImage: `url(${cmsHeroSlides[currentSlide].image})` }}
             />
           </motion.div>
         </AnimatePresence>
@@ -380,17 +455,17 @@ export function LandingPage() {
                 {/* Badge */}
                 <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
                   <Leaf className="w-4 h-4" />
-                  {heroSlides[currentSlide].badge}
+                  {cmsHeroSlides[currentSlide].badge}
                 </div>
 
                 {/* Title */}
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-beige-50 leading-tight">
-                  {heroSlides[currentSlide].title}
+                  {cmsHeroSlides[currentSlide].title}
                 </h1>
 
                 {/* Description */}
                 <p className="mt-6 text-lg sm:text-xl text-beige-200/90 leading-relaxed max-w-xl font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                  {heroSlides[currentSlide].description}
+                  {cmsHeroSlides[currentSlide].description}
                 </p>
 
                 {/* CTAs */}
@@ -398,7 +473,7 @@ export function LandingPage() {
                   <Button
                     size="lg"
                     onClick={() => {
-                      const cta = heroSlides[currentSlide].cta;
+                      const cta = cmsHeroSlides[currentSlide].cta;
                       if (cta === "Conocer Especialidades") {
                         scrollToSection("especialidades");
                       } else if (cta === "Contactanos") {
@@ -407,15 +482,15 @@ export function LandingPage() {
                     }}
                     className="btn-sage text-forest-900 font-semibold text-base px-8 h-12 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
-                    {heroSlides[currentSlide].cta === "Contactanos" && <Phone className="mr-2 w-5 h-5" />}
-                    {heroSlides[currentSlide].cta === "Conocer Especialidades" && <ArrowRight className="mr-2 w-5 h-5" />}
-                    {heroSlides[currentSlide].cta}
+                    {cmsHeroSlides[currentSlide].cta === "Contactanos" && <Phone className="mr-2 w-5 h-5" />}
+                    {cmsHeroSlides[currentSlide].cta === "Conocer Especialidades" && <ArrowRight className="mr-2 w-5 h-5" />}
+                    {cmsHeroSlides[currentSlide].cta}
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
                     onClick={() => {
-                      const sCta = heroSlides[currentSlide].secondaryCta;
+                      const sCta = cmsHeroSlides[currentSlide].secondaryCta;
                       if (sCta === "Cómo Funciona") {
                         scrollToSection("inicio");
                       } else if (sCta === "Conocer Especialidades") {
@@ -426,9 +501,9 @@ export function LandingPage() {
                     }}
                     className="border-beige-200/30 text-beige-100 hover:bg-beige-50/10 text-base px-8 h-12 rounded-full bg-transparent" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
-                    {heroSlides[currentSlide].secondaryCta === "Conocer Especialidades" && <ArrowRight className="mr-2 w-5 h-5" />}
-                    {heroSlides[currentSlide].secondaryCta === "Contactanos" && <Phone className="mr-2 w-5 h-5" />}
-                    {heroSlides[currentSlide].secondaryCta}
+                    {cmsHeroSlides[currentSlide].secondaryCta === "Conocer Especialidades" && <ArrowRight className="mr-2 w-5 h-5" />}
+                    {cmsHeroSlides[currentSlide].secondaryCta === "Contactanos" && <Phone className="mr-2 w-5 h-5" />}
+                    {cmsHeroSlides[currentSlide].secondaryCta}
                   </Button>
                 </div>
               </motion.div>
@@ -438,7 +513,7 @@ export function LandingPage() {
             <div className="mt-14 flex items-center gap-6">
               {/* Dots */}
               <div className="flex items-center gap-2.5">
-                {heroSlides.map((_, i) => (
+                {cmsHeroSlides.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => goToSlide(i)}
@@ -575,33 +650,35 @@ export function LandingPage() {
             {...fadeInUp}
           >
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-forest-500 leading-tight">
-              Nuestra Filosofía
+              {cmsConfig.philosophy_title || "Nuestra Filosofía"}
             </h2>
             <p className="mt-6 text-forest-400 text-lg leading-relaxed font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              En <strong className="text-forest-500">REP</strong> creemos que cada persona merece un espacio de escucha genuina.
+              {cmsConfig.philosophy_description || <>En <strong className="text-forest-500">REP</strong> creemos que cada persona merece un espacio de escucha genuina.
               Desde hace más de 30 años, acompañamos a quienes buscan
-              bienestar emocional con un enfoque humano, ético y profesional.
+              bienestar emocional con un enfoque humano, ético y profesional.</>}
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
-            {[
+            {(cmsPhilosophies.length > 0 ? cmsPhilosophies : [
               {
-                icon: HandHeart,
+                icon: "HandHeart",
                 title: "Acompañamiento",
-                desc: "Cada persona es única. Nuestros profesionales diseñan un abordaje personalizado, respetando tus tiempos y necesidades para que el proceso terapéutico sea significativo y transformador.",
+                description: "Cada persona es única. Nuestros profesionales diseñan un abordaje personalizado, respetando tus tiempos y necesidades para que el proceso terapéutico sea significativo y transformador.",
               },
               {
-                icon: Shield,
+                icon: "Shield",
                 title: "Confidencialidad",
-                desc: "El secreto profesional es el pilar de nuestra práctica. Garantizamos un espacio seguro donde podés expresarte libremente, sabiendo que tu privacidad está protegida en todo momento.",
+                description: "El secreto profesional es el pilar de nuestra práctica. Garantizamos un espacio seguro donde podés expresarte libremente, sabiendo que tu privacidad está protegida en todo momento.",
               },
               {
-                icon: BookOpen,
+                icon: "BookOpen",
                 title: "Profesionalismo",
-                desc: "Nuestro equipo se forma continuamente en las corrientes más reconocidas de la psicología, asegurando una atención de calidad basada en evidencia y buenas prácticas clínicas.",
+                description: "Nuestro equipo se forma continuamente en las corrientes más reconocidas de la psicología, asegurando una atención de calidad basada en evidencia y buenas prácticas clínicas.",
               },
-            ].map((item, i) => (
+            ]).map((item, i) => {
+              const IconComp = ICON_MAP[item.icon] || HandHeart;
+              return (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 30 }}
@@ -611,14 +688,14 @@ export function LandingPage() {
                 className="text-center"
               >
                 <div className="w-16 h-16 bg-sage-300/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                  <item.icon className="w-8 h-8 text-sage-500" />
+                  <IconComp className="w-8 h-8 text-sage-500" />
                 </div>
                 <h3 className="font-serif text-xl font-semibold text-forest-500 mb-3">
                   {item.title}
                 </h3>
-                <p className="text-forest-400 font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>{item.desc}</p>
+                <p className="text-forest-400 font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>{item.description}</p>
               </motion.div>
-            ))}
+            )})}
           </div>
         </div>
       </section>
@@ -629,16 +706,16 @@ export function LandingPage() {
           <div className="sage-line max-w-xs mx-auto mb-12" />
           <motion.div className="text-center max-w-2xl mx-auto mb-12" {...fadeInUp}>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-forest-500">
-              Nuestras Especialidades
+              {cmsConfig.specialties_title || "Nuestras Especialidades"}
             </h2>
             <p className="mt-4 text-forest-400 text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos, atendemos tus necesidades y garantizamos absoluta confidencialidad en cada acompañamiento.
+              {cmsConfig.specialties_description || "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos, atendemos tus necesidades y garantizamos absoluta confidencialidad en cada acompañamiento."}
             </p>
           </motion.div>
 
           {/* Tabs */}
           <div className="flex justify-center gap-2 mb-10">
-            {specialtyTabs.map((tab) => (
+            {cmsSpecialtyTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -661,10 +738,10 @@ export function LandingPage() {
             transition={{ duration: 0.4 }}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
           >
-            {specialtyTabs
+            {cmsSpecialtyTabs
               .find((t) => t.id === activeTab)
               ?.items.map((idx) => {
-                const spec = specialties[idx];
+                const spec = cmsSpecialties[idx];
                 return (
                   <div
                     key={idx}
@@ -694,40 +771,22 @@ export function LandingPage() {
           <div className="sage-line max-w-xs mx-auto mb-12" />
           <motion.div className="text-center max-w-2xl mx-auto mb-16" {...fadeInUp}>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-beige-50">
-              ¿Cómo Funciona?
+              {cmsConfig.how_it_works_title || "¿Cómo Funciona?"}
             </h2>
             <p className="mt-4 text-beige-200 text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              Un proceso simple y respetuoso para que puedas acceder a la atención que necesitás.
+              {cmsConfig.how_it_works_description || "Un proceso simple y respetuoso para que puedas acceder a la atención que necesitás."}
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-4 gap-8">
-            {[
-              {
-                step: "01",
-                icon: CalendarPlus,
-                title: "Solicitá tu turno",
-                desc: "Completá el registro y elegí el profesional y horario que mejor se ajuste a tus necesidades.",
-              },
-              {
-                step: "02",
-                icon: MessageCircle,
-                title: "Primer contacto",
-                desc: "El profesional se pondrá en contacto con vos para coordinar los detalles de la primera sesión.",
-              },
-              {
-                step: "03",
-                icon: Heart,
-                title: "Comenzá tu proceso",
-                desc: "Iniciá tu recorrido terapéutico en un espacio seguro, confidencial y profesional.",
-              },
-              {
-                step: "04",
-                icon: Leaf,
-                title: "Acompañamiento",
-                desc: "Recibí seguimiento continuo y personalizá tu tratamiento según tu evolución.",
-              },
-            ].map((item, i) => (
+            {(cmsSteps.length > 0 ? cmsSteps : [
+              { icon: "CalendarPlus", title: "Solicitá tu turno", description: "Completá el registro y elegí el profesional y horario que mejor se ajuste a tus necesidades." },
+              { icon: "MessageCircle", title: "Primer contacto", description: "El profesional se pondrá en contacto con vos para coordinar los detalles de la primera sesión." },
+              { icon: "Heart", title: "Comenzá tu proceso", description: "Iniciá tu recorrido terapéutico en un espacio seguro, confidencial y profesional." },
+              { icon: "Leaf", title: "Acompañamiento", description: "Recibí seguimiento continuo y personalizá tu tratamiento según tu evolución." },
+            ]).map((item, i) => {
+              const IconComp = ICON_MAP[item.icon] || CalendarPlus;
+              return (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 30 }}
@@ -737,19 +796,19 @@ export function LandingPage() {
                 className="text-center"
               >
                 <div className="text-sage-300 font-serif text-4xl font-bold mb-4">
-                  {item.step}
+                  {String(i + 1).padStart(2, "0")}
                 </div>
                 <div className="w-14 h-14 bg-beige-50/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <item.icon className="w-7 h-7 text-sage-300" />
+                  <IconComp className="w-7 h-7 text-sage-300" />
                 </div>
                 <h3 className="font-serif text-lg font-semibold text-beige-50 mb-2">
                   {item.title}
                 </h3>
                 <p className="text-beige-200/80 text-sm font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                  {item.desc}
+                  {item.description}
                 </p>
               </motion.div>
-            ))}
+            )})}
           </div>
         </div>
       </section>
@@ -758,12 +817,12 @@ export function LandingPage() {
       <section className="bg-sage-300 py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {[
+            {(cmsStats.length > 0 ? cmsStats : [
               { value: "30+", label: "Años de experiencia" },
               { value: "50+", label: "Profesionales" },
               { value: "15+", label: "Especialidades" },
               { value: "0", label: "Listas de espera" },
-            ].map((stat, i) => (
+            ]).map((stat, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 15 }}
@@ -779,19 +838,19 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ===== TESTIMONIOS (deshabilitado temporalmente) ===== */}
-      {false && (
+      {/* ===== TESTIMONIOS (controlled by CMS) ===== */}
+      {cmsConfig.testimonials_enabled === "true" && (
       <section className="paper-texture py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="sage-line max-w-xs mx-auto mb-12" />
           <motion.div className="text-center max-w-2xl mx-auto mb-14" {...fadeInUp}>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-forest-500">
-              Lo que Dicen de Nosotros
+              {cmsConfig.testimonials_title || "Lo que Dicen de Nosotros"}
             </h2>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((t, i) => (
+            {cmsTestimonials.map((t, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 30 }}
@@ -825,11 +884,10 @@ export function LandingPage() {
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div {...fadeInUp} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} initial={{ opacity: 0, y: 20 }}>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-beige-50">
-              ¿Necesitás hablar con alguien?
+              {cmsConfig.cta_title || "¿Necesitás hablar con alguien?"}
             </h2>
             <p className="mt-5 text-beige-200 text-lg max-w-2xl mx-auto font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              No estás solo/a. Nuestro equipo de profesionales está listo para
-              acompañarte. Sin listas de espera, con turnos disponibles.
+              {cmsConfig.cta_description || "No estás solo/a. Nuestro equipo de profesionales está listo para acompañarte. Sin listas de espera, con turnos disponibles."}
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
               {/* Botón "Solicitar Turno" deshabilitado temporalmente */}
@@ -858,18 +916,18 @@ export function LandingPage() {
               viewport={{ once: true }}
             >
               <h2 className="text-3xl sm:text-4xl font-serif font-bold text-forest-500">
-                Contactanos
+                {cmsConfig.contact_title || "Contactanos"}
               </h2>
               <p className="mt-4 text-forest-400 text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                Completá el formulario y nos comunicaremos con vos a la brevedad.
+                {cmsConfig.contact_description || "Completá el formulario y nos comunicaremos con vos a la brevedad."}
               </p>
 
               <div className="mt-8 space-y-6">
                 {[
-                  { icon: MapPin, title: "Dirección", text: "Av. Sanabria 1616, CABA, Buenos Aires, Argentina" },
-                  { icon: Phone, title: "Teléfono", text: "+54 11 7668-3429" },
-                  { icon: Mail, title: "Email", text: "contacto@redescuchapsicologica.com" },
-                  { icon: Clock, title: "Horarios", text: "Lunes a Viernes: 9:00 - 20:00\nSábados: 9:00 - 13:00" },
+                  { icon: MapPin, title: "Dirección", text: cmsConfig.contact_address || "Av. Sanabria 1616, CABA, Buenos Aires, Argentina" },
+                  { icon: Phone, title: "Teléfono", text: cmsConfig.contact_phone || "+54 11 7668-3429" },
+                  { icon: Mail, title: "Email", text: cmsConfig.contact_email || "contacto@redescuchapsicologica.com" },
+                  { icon: Clock, title: "Horarios", text: `${cmsConfig.contact_hours_weekday || "Lunes a Viernes: 9:00 - 20:00"}\n${cmsConfig.contact_hours_saturday || "Sábados: 9:00 - 13:00"}` },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
                     <div className="w-10 h-10 bg-sage-300/15 rounded-lg flex items-center justify-center shrink-0">
@@ -1066,8 +1124,9 @@ export function LandingPage() {
       </footer>
 
       {/* ===== WHATSAPP FLOATING BUTTON ===== */}
+      {cmsConfig.whatsapp_enabled !== "false" && (
       <a
-        href="https://wa.me/5491176683429?text=Hola%2C%20quiero%20hacer%20una%20consulta"
+        href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
         rel="noopener noreferrer"
         aria-label="Contactar por WhatsApp"
         className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#25D366] hover:bg-[#20bd5a] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
@@ -1076,6 +1135,7 @@ export function LandingPage() {
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
         </svg>
       </a>
+      )}
     </div>
   );
 }

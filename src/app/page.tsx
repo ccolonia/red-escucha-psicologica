@@ -26,6 +26,7 @@ import {
   AdminContacts,
   AdminProfile,
 } from "@/components/admin-dashboard";
+import { AdminCMS } from "@/components/admin-cms";
 import { ProfessionalRegister } from "@/components/professional-register";
 import { AppNavigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
@@ -49,6 +50,7 @@ function DashboardContent() {
     "admin-patients": <AdminPatients />,
     "admin-contacts": <AdminContacts />,
     "admin-profile": <AdminProfile />,
+    "admin-cms": <AdminCMS />,
   };
 
   return (
@@ -79,7 +81,7 @@ function AppContent() {
         currentView === "login" ||
         currentView === "register"
       ) {
-        if (role === "admin") {
+        if (role === "admin" || role === "super_admin") {
           setCurrentView("admin-dashboard");
         } else if (role === "professional") {
           setCurrentView("professional-dashboard");
