@@ -1067,7 +1067,7 @@ export function LandingPage() {
 
       {/* ===== WHATSAPP FLOATING BUTTON ===== */}
       <a
-        href="https://wa.me/5491176683429"
+        href="https://wa.me/5491176683429?text=Hola%20😊%20Gracias%20por%20comunicarte%20con%20Red%20de%20Escucha%20Psicológica.%20Nuestro%20equipo%20de%20profesionales%20está%20listo%20para%20acompañarte.%20¿En%20qué%20podemos%20ayudarte%20hoy%3F"
         rel="noopener noreferrer"
         aria-label="Contactar por WhatsApp"
         className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#25D366] hover:bg-[#20bd5a] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
