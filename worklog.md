@@ -70,3 +70,29 @@ Stage Summary:
 - Middleware protects API routes with JWT verification
 - Email sender configurable via EMAIL_FROM env var for production
 - All changes ready for push to GitHub/Vercel
+---
+Task ID: 4
+Agent: Main Agent
+Task: Configure email notifications for contact form + email receiving/sending system
+
+Work Log:
+- Changed email from info@ to contacto@ across all files
+- Implemented sendContactNotification() in email.ts
+- Integrated notification in contact route (sends email on form submission)
+- Added Resend DNS records in Vercel (DKIM, SPF, MX for send subdomain)
+- Verified domain in Resend (status: verified)
+- Updated EMAIL_FROM env var in Vercel to use noreply@redescuchapsicologica.com
+- Attempted DonWeb nameserver migration (failed - no _ underscore support in DNS names)
+- Reverted nameservers to Vercel
+- Replaced Hostmar MX with ImprovMX MX for email forwarding
+- Updated SPF to include spf.improvmx.com + amazonses.com
+- Added DMARC record
+- Added Vercel verification TXT record
+- Added Gmail (redescuchapsicologica@gmail.com) as secondary recipient in contact notification
+- Pushed code to GitHub, deployed on Vercel
+
+Stage Summary:
+- Contact form notifications now arrive at redescuchapsicologica@gmail.com ✅
+- Resend domain verified, emails sent from noreply@redescuchapsicologica.com ✅
+- ImprovMX configured for forwarding (contacto@ → Gmail) - pending activation (DNS cache)
+- Web continues to work on Vercel ✅
