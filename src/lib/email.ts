@@ -238,7 +238,7 @@ export async function sendContactNotification({ name, email, phone, message, rea
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
-    to: ["contacto@redescuchapsicologica.com"],
+    to: ["contacto@redescuchapsicologica.com", "redescuchapsicologica@gmail.com"],
     subject: `Nueva consulta de contacto: ${name}`,
     html: `
       <!DOCTYPE html>
