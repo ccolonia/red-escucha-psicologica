@@ -126,7 +126,10 @@ export function AdminDashboard() {
 
   useEffect(() => {
     fetch("/api/admin/stats")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Error al cargar estadísticas");
+        return res.json();
+      })
       .then((data) => {
         setStats(data);
         setLoading(false);

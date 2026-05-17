@@ -105,7 +105,8 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || (session.user as { role: string }).role !== "admin") {
+    const role = (session.user as { role: string }).role;
+    if (!session?.user || (role !== "admin" && role !== "super_admin")) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

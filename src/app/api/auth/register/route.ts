@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
 
       // Public registration: professional starts as inactive until admin approves
       const session = await getServerSession(authOptions);
-      const isAdmin = session?.user && (session.user as { role: string }).role === "admin";
+      const userRole = (session?.user as { role: string })?.role;
+      const isAdmin = session?.user && (userRole === "admin" || userRole === "super_admin");
 
       const hashedPassword = await hashPassword(password);
 

@@ -49,6 +49,7 @@ function DashboardContent() {
     "admin-professionals": <AdminProfessionals />,
     "admin-patients": <AdminPatients />,
     "admin-contacts": <AdminContacts />,
+    "admin-cms": <AdminCMS />,
     "admin-profile": <AdminProfile />,
     "admin-cms": <AdminCMS />,
   };

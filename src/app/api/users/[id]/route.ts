@@ -18,7 +18,7 @@ export async function GET(
     // Only allow users to fetch their own data (or admin can fetch anyone)
     const currentUserId = (session.user as { id: string }).id;
     const currentRole = (session.user as { role: string }).role;
-    if (id !== currentUserId && currentRole !== "admin") {
+    if (id !== currentUserId && currentRole !== "admin" && currentRole !== "super_admin") {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -77,7 +77,8 @@ export async function PATCH(
     }
 
     // Only admin can change active status
-    if (active !== undefined && (session.user as { role: string }).role !== "admin") {
+    const currentRole = (session.user as { role: string }).role;
+    if (active !== undefined && currentRole !== "admin" && currentRole !== "super_admin") {
       return NextResponse.json(
         { error: "No autorizado para cambiar el estado de la cuenta" },
         { status: 403 }
@@ -112,7 +113,8 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || (session.user as { role: string }).role !== "admin") {
+    const role = (session.user as { role: string }).role;
+    if (!session?.user || (role !== "admin" && role !== "super_admin")) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

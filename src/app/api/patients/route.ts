@@ -11,7 +11,7 @@ export async function GET() {
     }
 
     const role = (session.user as { role: string }).role;
-    if (role !== "admin" && role !== "professional") {
+    if (role !== "admin" && role !== "super_admin" && role !== "professional") {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
