@@ -352,7 +352,7 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-beige-100">
+    <div className="min-h-screen flex flex-col bg-beige-100 overflow-x-hidden">
       {/* ===== NAVBAR ===== */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -478,7 +478,7 @@ export function LandingPage() {
       {/* ===== HERO CAROUSEL WITH BACKGROUND IMAGES ===== */}
       <section
         id="inicio"
-        className="relative min-h-screen flex items-center"
+        className="relative min-h-screen flex items-center overflow-hidden"
         style={{ touchAction: 'pan-y' }}
       >
         {/* Preload hidden images for instant swapping */}
@@ -533,10 +533,10 @@ export function LandingPage() {
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 hero-overlay z-[2]" />
 
-        <div className="relative z-[3] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 w-full">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:gap-12">
+        <div className="relative z-[3] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 w-full min-w-0">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:gap-12 min-w-0">
           {/* Left column - Hero content */}
-          <div className="max-w-3xl flex-1">
+          <div className="max-w-3xl flex-1 min-w-0">
             {/* Hero text content - smooth crossfade with CSS */}
             <div className="transition-opacity duration-500 ease-in-out">
                 {/* Badge */}
@@ -596,7 +596,7 @@ export function LandingPage() {
             </div>
 
             {/* Carousel controls */}
-            <div className="mt-14 flex items-center gap-6">
+            <div className="mt-14 flex flex-wrap items-center gap-4 sm:gap-6">
               {/* Dots */}
               <div className="flex items-center gap-2.5">
                 {cmsHeroSlides.map((_, i) => (
