@@ -875,12 +875,11 @@ export function LandingPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-4 gap-8">
-            {(cmsSteps.length > 0 ? cmsSteps : [
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {(cmsSteps.length > 0 ? cmsSteps.slice(0, 3) : [
               { icon: "CalendarPlus", title: "Solicitá tu turno", description: "Completá el registro y elegí el profesional y horario que mejor se ajuste a tus necesidades." },
               { icon: "MessageCircle", title: "Primer contacto", description: "El profesional se pondrá en contacto con vos para coordinar los detalles de la primera sesión." },
               { icon: "Heart", title: "Comenzá tu proceso", description: "Iniciá tu recorrido terapéutico en un espacio seguro, confidencial y profesional." },
-              { icon: "Leaf", title: "Acompañamiento", description: "Recibí seguimiento continuo y personalizá tu tratamiento según tu evolución." },
             ]).map((item, i) => {
               const IconComp = ICON_MAP[item.icon] || CalendarPlus;
               return (
