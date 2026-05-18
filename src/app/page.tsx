@@ -51,7 +51,6 @@ function DashboardContent() {
     "admin-contacts": <AdminContacts />,
     "admin-cms": <AdminCMS />,
     "admin-profile": <AdminProfile />,
-    "admin-cms": <AdminCMS />,
   };
 
   return (
