@@ -1215,6 +1215,15 @@ export function LandingPage() {
           <div className="mt-10 pt-6 border-t border-beige-50/10 text-center text-sm text-beige-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
             &copy; {new Date().getFullYear()} Red Escucha Psicológica.
             Todos los derechos reservados.
+            <span className="mx-1">|</span>
+            <a
+              href="https://www.sextosistema.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-sage-300 transition-colors duration-200"
+            >
+              Diseño Web - Sexto Sistema
+            </a>
           </div>
         </div>
       </footer>
