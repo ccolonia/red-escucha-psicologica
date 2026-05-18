@@ -156,9 +156,23 @@ export function LandingPage() {
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
+  const isTouchDevice = useRef(false);
 
   // ===== CMS Dynamic Content =====
   const [cmsHeroSlides, setCmsHeroSlides] = useState(defaultHeroSlides);
+
+  // Helper: render CMS title with sage-300 accent on last word(s)
+  // For CMS string titles like "Red Escucha Psicológica", highlights last word
+  // For JSX titles (defaults), renders as-is
+  const renderHeroTitle = (title: React.ReactNode) => {
+    if (typeof title !== "string") return title;
+    // Split title: first N-1 words normal, last word in sage-300
+    const words = title.trim().split(/\s+/);
+    if (words.length <= 1) return title;
+    const mainPart = words.slice(0, -1).join(" ");
+    const accentPart = words[words.length - 1];
+    return <>{mainPart} <span className="text-sage-300">{accentPart}</span></>;
+  };
   const [cmsSpecialties, setCmsSpecialties] = useState(defaultSpecialties);
   const [cmsSpecialtyTabs, setCmsSpecialtyTabs] = useState(defaultSpecialtyTabs);
   const [cmsTestimonials, setCmsTestimonials] = useState(defaultTestimonials);
@@ -246,6 +260,13 @@ export function LandingPage() {
       }
     });
   }, [cmsHeroSlides]);
+
+  // Detect touch device on first touch
+  useEffect(() => {
+    const markTouch = () => { isTouchDevice.current = true; };
+    window.addEventListener('touchstart', markTouch, { once: true, passive: true });
+    return () => window.removeEventListener('touchstart', markTouch);
+  }, []);
 
   // Auto-advance carousel
   useEffect(() => {
@@ -465,8 +486,8 @@ export function LandingPage() {
       <section
         id="inicio"
         className="relative min-h-screen flex items-center overflow-hidden"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
+        onMouseEnter={() => { if (!isTouchDevice.current) setIsPaused(true); }}
+        onMouseLeave={() => { if (!isTouchDevice.current) setIsPaused(false); }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -489,12 +510,22 @@ export function LandingPage() {
                 zIndex: i === currentSlide ? 1 : 0,
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={slide.image}
                 alt=""
                 className="w-full h-full object-cover"
-                loading={i === 0 ? "eager" : "lazy"}
+                loading="eager"
                 style={{ objectPosition: "center" }}
+                onError={(e) => {
+                  // Fallback: hide broken image, show background color
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.style.backgroundColor = '#1a2e1c';
+                  }
+                }}
               />
             </div>
           ))}
@@ -527,7 +558,7 @@ export function LandingPage() {
 
                 {/* Title */}
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-beige-50 leading-tight">
-                  {cmsHeroSlides[currentSlide].title}
+                  {renderHeroTitle(cmsHeroSlides[currentSlide].title)}
                 </h1>
 
                 {/* Description */}
