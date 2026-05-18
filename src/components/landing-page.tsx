@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
@@ -153,6 +153,9 @@ export function LandingPage() {
   const [activeTab, setActiveTab] = useState("individual");
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   // ===== CMS Dynamic Content =====
   const [cmsHeroSlides, setCmsHeroSlides] = useState(defaultHeroSlides);
@@ -220,14 +223,38 @@ export function LandingPage() {
       });
   }, []);
 
+  // Preload carousel images
+  useEffect(() => {
+    const images = cmsHeroSlides.map((slide) => {
+      const img = new window.Image();
+      img.src = slide.image;
+      return img;
+    });
+    let loadedCount = 0;
+    const checkAllLoaded = () => {
+      loadedCount++;
+      if (loadedCount >= images.length) {
+        setImagesLoaded(true);
+      }
+    };
+    images.forEach((img) => {
+      if (img.complete) {
+        checkAllLoaded();
+      } else {
+        img.onload = checkAllLoaded;
+        img.onerror = checkAllLoaded; // Don't block on error
+      }
+    });
+  }, [cmsHeroSlides]);
+
   // Auto-advance carousel
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || !imagesLoaded) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % cmsHeroSlides.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [isPaused, cmsHeroSlides.length]);
+  }, [isPaused, cmsHeroSlides.length, imagesLoaded]);
 
   const goToSlide = useCallback((index: number) => {
     setCurrentSlide(index);
@@ -240,6 +267,27 @@ export function LandingPage() {
   const prevSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev - 1 + cmsHeroSlides.length) % cmsHeroSlides.length);
   }, [cmsHeroSlides.length]);
+
+  // Touch/swipe handlers for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    const diff = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50;
+    if (Math.abs(diff) > minSwipeDistance) {
+      if (diff > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
+    }
+  }, [nextSlide, prevSlide]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -419,39 +467,58 @@ export function LandingPage() {
         className="relative min-h-screen flex items-center overflow-hidden"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        {/* Background image - changes per slide */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentSlide}
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 1.2, ease: "easeInOut" }}
-            className="absolute inset-0"
-          >
+        {/* Preload hidden images for instant swapping */}
+        <div className="hidden" aria-hidden="true">
+          {cmsHeroSlides.map((slide, i) => (
+            <img key={i} src={slide.image} alt="" />
+          ))}
+        </div>
+
+        {/* Background images - crossfade layers */}
+        <div className="absolute inset-0">
+          {cmsHeroSlides.map((slide, i) => (
             <div
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-              style={{ backgroundImage: `url(${cmsHeroSlides[currentSlide].image})` }}
-            />
-          </motion.div>
-        </AnimatePresence>
+              key={i}
+              className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+              style={{
+                opacity: i === currentSlide ? 1 : 0,
+                zIndex: i === currentSlide ? 1 : 0,
+              }}
+            >
+              <img
+                src={slide.image}
+                alt=""
+                className="w-full h-full object-cover"
+                loading={i === 0 ? "eager" : "lazy"}
+                style={{ objectPosition: "center" }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Loading placeholder */}
+        {!imagesLoaded && (
+          <div className="absolute inset-0 bg-forest-900 flex items-center justify-center z-10">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-sage-300/30 border-t-sage-300 rounded-full animate-spin" />
+              <span className="text-sage-300/60 text-sm font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>Cargando...</span>
+            </div>
+          </div>
+        )}
 
         {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 hero-overlay" />
+        <div className="absolute inset-0 hero-overlay z-[2]" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 w-full">
+        <div className="relative z-[3] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 w-full">
           <div className="flex flex-col lg:flex-row lg:items-start lg:gap-12">
           {/* Left column - Hero content */}
           <div className="max-w-3xl flex-1">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentSlide}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.5 }}
-              >
+            {/* Hero text content - smooth crossfade with CSS */}
+            <div className="transition-opacity duration-500 ease-in-out">
                 {/* Badge */}
                 <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
                   <Leaf className="w-4 h-4" />
@@ -506,8 +573,7 @@ export function LandingPage() {
                     {cmsHeroSlides[currentSlide].secondaryCta}
                   </Button>
                 </div>
-              </motion.div>
-            </AnimatePresence>
+            </div>
 
             {/* Carousel controls */}
             <div className="mt-14 flex items-center gap-6">
