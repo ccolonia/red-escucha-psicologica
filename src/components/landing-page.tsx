@@ -936,7 +936,6 @@ export function LandingPage() {
       </section>
 
       {/* ===== TESTIMONIOS ===== */}
-      {cmsConfig.testimonials_enabled !== "false" && (
       <section id="testimonios" className="paper-texture py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="sage-line max-w-xs mx-auto mb-12" />
@@ -970,7 +969,6 @@ export function LandingPage() {
           </div>
         </div>
       </section>
-      )}
 
       {/* ===== CTA ===== */}
       <section className="bg-forest-500 py-16 sm:py-20 relative overflow-hidden">
