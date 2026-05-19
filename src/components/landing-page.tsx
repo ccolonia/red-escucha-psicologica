@@ -392,6 +392,12 @@ export function LandingPage() {
                 Especialidades
               </button>
               <button
+                onClick={() => scrollToSection("testimonios")}
+                className="text-sm text-forest-700 hover:text-sage-300 transition-colors font-medium tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
+              >
+                Testimonios
+              </button>
+              <button
                 onClick={() => scrollToSection("contacto")}
                 className="text-sm text-forest-700 hover:text-sage-300 transition-colors font-medium tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
@@ -442,6 +448,12 @@ export function LandingPage() {
               className="w-full text-left px-4 py-3 text-forest-700 hover:text-sage-300 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Especialidades
+            </button>
+            <button
+              onClick={() => scrollToSection("testimonios")}
+              className="w-full text-left px-4 py-3 text-forest-700 hover:text-sage-300 hover:bg-forest-900/5 rounded-lg transition-colors text-base min-h-[44px] flex items-center" style={{ fontFamily: "Montserrat, sans-serif" }}
+            >
+              Testimonios
             </button>
             <button
               onClick={() => scrollToSection("contacto")}
@@ -923,9 +935,9 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ===== TESTIMONIOS (controlled by CMS) ===== */}
-      {cmsConfig.testimonials_enabled === "true" && (
-      <section className="paper-texture py-20 sm:py-28">
+      {/* ===== TESTIMONIOS ===== */}
+      {cmsConfig.testimonials_enabled !== "false" && (
+      <section id="testimonios" className="paper-texture py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="sage-line max-w-xs mx-auto mb-12" />
           <motion.div className="text-center max-w-2xl mx-auto mb-14" {...fadeInUp}>
@@ -1183,6 +1195,11 @@ export function LandingPage() {
                 <li>
                   <button onClick={() => scrollToSection("especialidades")} className="hover:text-sage-300 transition-colors font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                     Especialidades
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => scrollToSection("testimonios")} className="hover:text-sage-300 transition-colors font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                    Testimonios
                   </button>
                 </li>
                 <li>
