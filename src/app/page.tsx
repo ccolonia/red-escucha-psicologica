@@ -30,7 +30,7 @@ import { AdminCMS } from "@/components/admin-cms";
 import { ProfessionalRegister } from "@/components/professional-register";
 import { AppNavigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 
 function DashboardContent() {
   const { currentView } = useAppStore();
@@ -71,6 +71,33 @@ function DashboardContent() {
 function AppContent() {
   const { data: session, status } = useSession();
   const { currentView, setCurrentView } = useAppStore();
+
+  // Map URL hashes to views
+  const hashToView: Record<string, string> = {
+    "#registro-profesional": "professional-register",
+    "#login": "login",
+    "#registro": "register",
+  };
+
+  // Read URL hash on mount and navigate accordingly
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hashToView[hash]) {
+      setCurrentView(hashToView[hash] as any);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Listen for hash changes (e.g. browser back/forward)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash && hashToView[hash]) {
+        setCurrentView(hashToView[hash] as any);
+      }
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Redirect to appropriate dashboard on login
   useEffect(() => {

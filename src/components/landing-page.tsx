@@ -347,6 +347,10 @@ export function LandingPage() {
 
   const scrollToSection = (id: string) => {
     setMobileMenuOpen(false);
+    // Clear any view-related hash when navigating within the landing
+    if (window.location.hash === "#registro-profesional" || window.location.hash === "#login" || window.location.hash === "#registro") {
+      history.replaceState(null, "", window.location.pathname);
+    }
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
@@ -476,7 +480,7 @@ export function LandingPage() {
                 Querés formar parte de nuestra red de profesionales?
               </p>
               <Button
-                onClick={() => { setMobileMenuOpen(false); setCurrentView("professional-register"); }}
+                onClick={() => { setMobileMenuOpen(false); window.location.hash = "registro-profesional"; setCurrentView("professional-register"); }}
                 className="btn-sage text-forest-900 font-semibold text-sm px-6 h-9 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Pulsar aquí
@@ -695,7 +699,7 @@ export function LandingPage() {
                 whileTap={{ scale: 0.95 }}
               >
                 <Button
-                  onClick={() => setCurrentView("professional-register")}
+                  onClick={() => { window.location.hash = "registro-profesional"; setCurrentView("professional-register"); }}
                   className="btn-sage text-forest-900 font-semibold text-sm px-6 h-10 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
                 >
                   Pulsar aquí
@@ -726,7 +730,7 @@ export function LandingPage() {
               whileTap={{ scale: 0.95 }}
             >
               <Button
-                onClick={() => setCurrentView("professional-register")}
+                onClick={() => { window.location.hash = "registro-profesional"; setCurrentView("professional-register"); }}
                 className="btn-sage text-forest-900 font-semibold text-sm px-6 h-10 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 Pulsar aquí

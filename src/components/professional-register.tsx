@@ -308,7 +308,7 @@ export function ProfessionalRegister() {
           <Button
             className="btn-sage text-forest-900 font-semibold px-8 h-11 rounded-full"
             style={{ fontFamily: "Montserrat, sans-serif" }}
-            onClick={() => setCurrentView("landing")}
+            onClick={() => { history.replaceState(null, "", window.location.pathname); setCurrentView("landing"); }}
           >
             <ArrowLeft className="mr-2 w-4 h-4" />
             Volver al inicio
@@ -769,7 +769,7 @@ export function ProfessionalRegister() {
                 <div className="flex justify-between pt-4 border-t border-beige-200">
                   <Button
                     variant="outline"
-                    onClick={step === 1 ? () => setCurrentView("landing") : prevStep}
+                    onClick={step === 1 ? () => { history.replaceState(null, "", window.location.pathname); setCurrentView("landing"); } : prevStep}
                     className="border-beige-300 text-forest-400 hover:text-forest-600 hover:bg-beige-50"
                     style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
