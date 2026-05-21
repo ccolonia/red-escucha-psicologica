@@ -421,7 +421,9 @@ export async function sendNewProfessionalAdminNotification({
   const resend = getResend();
   const adminUrl = `${APP_URL}`;
 
-  const displayName = title && title !== "Ninguno" ? `${title} ${professionalName}` : professionalName;
+  // professionalName already includes the title (e.g. "Lic. Monica Quiroga")
+  // so we don't add it again
+  const displayName = professionalName;
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,

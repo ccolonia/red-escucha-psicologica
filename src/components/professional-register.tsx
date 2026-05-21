@@ -271,6 +271,7 @@ export function ProfessionalRegister() {
           phone: form.phone,
           password: form.password,
           role: "professional",
+          profession: form.profession,
           license: form.license,
           specialty: form.specialty,
           bio: form.bio || null,
