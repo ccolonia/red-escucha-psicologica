@@ -95,6 +95,20 @@ const SPECIALTIES = [
   "Psiquiatría",
   "Psicopedagogía",
   "Musicoterapia",
+  "Neuropsicología",
+  "Psicología Laboral / Organizacional",
+  "Psicología Educativa",
+  "Psicología Deportiva",
+  "Psicología Forense",
+  "Psicología Social / Comunitaria",
+  "Psicología de la Salud",
+  "Sexología / Terapia Sexual",
+  "Adicciones",
+  "Duelo y Pérdida",
+  "Trauma y EMDR",
+  "Trastornos Alimentarios",
+  "Psicología Geriátrica",
+  "Psicología Transcultural",
 ];
 
 const TITLES = ["Lic.", "Dr.", "Dra.", "Ninguno"];
@@ -122,7 +136,7 @@ export function ProfessionalRegister() {
     cuil: "",
     gender: "",
     // Step 3: Datos profesionales
-    profession: "Psicólogo",
+    profession: "",
     license: "",
     specialty: "",
     therapyTypes: [] as string[],
@@ -189,6 +203,10 @@ export function ProfessionalRegister() {
         return true;
 
       case 3:
+        if (!form.profession) {
+          toast.error("Seleccioná tu profesión");
+          return false;
+        }
         if (!form.license.trim()) {
           toast.error("Ingresá tu número de matrícula");
           return false;
@@ -324,7 +342,7 @@ export function ProfessionalRegister() {
       <div className="bg-forest-900">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
-            onClick={() => setCurrentView("landing")}
+            onClick={() => { history.replaceState(null, "", window.location.pathname); setCurrentView("landing"); }}
             className="p-2 text-beige-200 hover:text-sage-300 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -579,13 +597,21 @@ export function ProfessionalRegister() {
                         <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Profesión *</Label>
                         <Select value={form.profession} onValueChange={(v) => updateForm("profession", v)}>
                           <SelectTrigger className="border-beige-300 bg-beige-50">
-                            <SelectValue />
+                            <SelectValue placeholder="Seleccionar profesión" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Psicólogo">Psicólogo/a</SelectItem>
                             <SelectItem value="Psiquiatra">Psiquiatra</SelectItem>
                             <SelectItem value="Psicopedagogo">Psicopedagogo/a</SelectItem>
                             <SelectItem value="Musicoterapeuta">Musicoterapeuta</SelectItem>
+                            <SelectItem value="Licenciado en Psicología">Lic. en Psicología</SelectItem>
+                            <SelectItem value="Doctor en Psicología">Dr. en Psicología</SelectItem>
+                            <SelectItem value="Neuropsicólogo">Neuropsicólogo/a</SelectItem>
+                            <SelectItem value="Terapeuta Ocupacional">Terapeuta Ocupacional</SelectItem>
+                            <SelectItem value="Trabajador Social">Trabajador/a Social</SelectItem>
+                            <SelectItem value="Coach Profesional">Coach Profesional</SelectItem>
+                            <SelectItem value="Counselor">Counselor</SelectItem>
+                            <SelectItem value="Otra">Otra</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

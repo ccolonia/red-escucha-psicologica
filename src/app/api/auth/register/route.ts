@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
+import { sendProfessionalRegistrationConfirmation, sendNewProfessionalAdminNotification } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -100,6 +101,27 @@ export async function POST(request: NextRequest) {
       const message = isAdmin
         ? "Profesional creado exitosamente"
         : "Tu registro fue enviado exitosamente. Un administrador lo revisará y activará tu cuenta.";
+
+      // Send emails in the background (don't block the response)
+      // Only send when it's a public registration (not admin creating)
+      if (!isAdmin) {
+        // Email to professional: confirmation of receipt
+        sendProfessionalRegistrationConfirmation({
+          userEmail: email,
+          userName: name,
+        }).catch((err) => console.error("Failed to send professional registration confirmation:", err));
+
+        // Email to admin: notification of new professional
+        sendNewProfessionalAdminNotification({
+          professionalName: name,
+          professionalEmail: email,
+          professionalPhone: phone || null,
+          profession: body.profession || null,
+          license,
+          specialty,
+          title: title || null,
+        }).catch((err) => console.error("Failed to send admin notification:", err));
+      }
 
       return NextResponse.json(
         { message, userId: user.id },
