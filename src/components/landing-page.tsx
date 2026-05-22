@@ -595,7 +595,7 @@ export function LandingPage() {
                     onClick={() => {
                       const sCta = cmsHeroSlides[currentSlide].secondaryCta;
                       if (sCta === "Cómo Funciona") {
-                        scrollToSection("inicio");
+                        scrollToSection("como-funciona");
                       } else if (sCta === "Conocer Especialidades") {
                         scrollToSection("especialidades");
                       } else {
@@ -913,7 +913,7 @@ export function LandingPage() {
       </section>
 
       {/* ===== CÓMO FUNCIONA ===== */}
-      <section className="bg-forest-700 py-20 sm:py-28 relative overflow-hidden">
+      <section id="como-funciona" className="bg-forest-700 py-20 sm:py-28 relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-64 h-64 bg-sage-300/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-0 w-80 h-80 bg-earth-400/5 rounded-full blur-3xl" />
