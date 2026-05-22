@@ -1023,7 +1023,7 @@ export function LandingPage() {
 
               <div className="mt-8 space-y-6">
                 {[
-                  { icon: MapPin, title: "Dirección", text: cmsConfig.contact_address || "Av. Sanabria 1616, CABA, Buenos Aires, Argentina" },
+                  ...(cmsConfig.contact_address ? [{ icon: MapPin, title: "Dirección", text: cmsConfig.contact_address }] : []),
                   { icon: Phone, title: "Teléfono", text: cmsConfig.contact_phone || "+54 11 7668-3429" },
                   { icon: Mail, title: "Email", text: cmsConfig.contact_email || "contacto@redescuchapsicologica.com" },
                   { icon: Clock, title: "Horarios", text: `${cmsConfig.contact_hours_weekday || "Lunes a Viernes: 9:00 - 20:00"}\n${cmsConfig.contact_hours_saturday || "Sábados: 9:00 - 13:00"}` },
@@ -1214,9 +1214,9 @@ export function LandingPage() {
             <div>
               <h4 className="font-serif font-semibold text-beige-50 mb-3">Contacto</h4>
               <ul className="space-y-2 text-sm text-beige-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                <li>Av. Sanabria 1616, CABA</li>
-                <li>+54 11 7668-3429</li>
-                <li>contacto@redescuchapsicologica.com</li>
+                {cmsConfig.contact_address && <li>{cmsConfig.contact_address}</li>}
+                <li>{cmsConfig.contact_phone || "+54 11 7668-3429"}</li>
+                <li>{cmsConfig.contact_email || "contacto@redescuchapsicologica.com"}</li>
               </ul>
             </div>
           </div>
