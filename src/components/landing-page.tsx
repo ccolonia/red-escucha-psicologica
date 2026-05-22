@@ -757,20 +757,20 @@ export function LandingPage() {
             </h2>
           </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 mb-20">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-start mb-20">
             {/* Image */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="order-2 lg:order-1 lg:h-full"
+              className="order-2 lg:order-1"
             >
-              <div className="rounded-2xl overflow-hidden shadow-lg h-full">
+              <div className="rounded-2xl overflow-hidden shadow-lg lg:sticky lg:top-24">
                 <img
                   src="/images/quienes-somos.jpg"
                   alt="Espacio de escucha y acompañamiento terapéutico"
-                  className="w-full h-full object-cover"
+                  className="w-full max-h-[520px] object-cover object-top"
                 />
               </div>
             </motion.div>
