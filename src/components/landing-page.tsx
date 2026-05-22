@@ -746,6 +746,29 @@ export function LandingPage() {
       {/* ===== NOSOTROS / PHILOSOPHY ===== */}
       <section id="nosotros" className="paper-texture py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* About text */}
+          <motion.div
+            className="max-w-3xl mx-auto mb-20 text-center"
+            {...fadeInUp}
+          >
+            <p className="text-forest-500 text-base sm:text-lg leading-relaxed font-light mb-5" style={{ fontFamily: "Montserrat, sans-serif" }}>
+              <strong className="text-forest-600 font-semibold">Red de Escucha Psicológica</strong> es una red de profesionales de la salud mental con sólida formación clínica y amplia experiencia en la atención de niños, adolescentes, jóvenes, adultos, parejas y familias.
+            </p>
+            <p className="text-forest-500 text-base sm:text-lg leading-relaxed font-light mb-5" style={{ fontFamily: "Montserrat, sans-serif" }}>
+              Brindamos un espacio de escucha, orientación, acompañamiento y tratamiento para aquellas personas que atraviesan situaciones que generan malestar, incertidumbre o sufrimiento emocional. Entendemos que cada historia es única; por ello, nuestros abordajes son personalizados y adaptados a las necesidades de cada consultante. El profesional interviniente evaluará la modalidad terapéutica más adecuada para cada caso.
+            </p>
+            <p className="text-forest-500 text-base sm:text-lg leading-relaxed font-light mb-5" style={{ fontFamily: "Montserrat, sans-serif" }}>
+              Con más de <strong className="text-forest-600 font-semibold">35 años de trayectoria</strong>, contamos con una extensa red de consultorios en distintos barrios de CABA y GBA, además de ofrecer alternativas de atención que facilitan el acceso al acompañamiento profesional. <strong className="text-forest-600 font-semibold">Contamos con turnos disponibles.</strong>
+            </p>
+            <p className="text-forest-500 text-base sm:text-lg leading-relaxed font-light mb-5" style={{ fontFamily: "Montserrat, sans-serif" }}>
+              Consultar en <strong className="text-forest-600 font-semibold">Red de Escucha Psicológica</strong> significa encontrar un profesional capacitado para escuchar, comprender y acompañar. Juntos podrán evaluar la mejor manera de abordar aquello que te preocupa y, si corresponde, iniciar un proceso terapéutico orientado al bienestar y al crecimiento personal.
+            </p>
+            <p className="text-forest-500 text-base sm:text-lg leading-relaxed font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+              En <strong className="text-forest-600 font-semibold">Red de Escucha Psicológica</strong> creemos que una escucha genuina y un vínculo terapéutico de confianza pueden convertirse en el punto de partida para generar cambios significativos y <strong className="text-forest-600 font-semibold">mejorar la calidad de vida</strong>.
+            </p>
+          </motion.div>
+
           <div className="sage-line max-w-xs mx-auto mb-12" />
           <motion.div
             className="text-center max-w-3xl mx-auto mb-16"
