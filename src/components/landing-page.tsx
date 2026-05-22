@@ -792,12 +792,6 @@ export function LandingPage() {
               <p className="text-forest-500 text-base sm:text-lg leading-relaxed font-light mb-5" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 Con más de <strong className="text-forest-600 font-semibold">35 años de trayectoria</strong>, contamos con una extensa red de consultorios en distintos barrios de CABA y GBA, además de ofrecer alternativas de atención que facilitan el acceso al acompañamiento profesional. <strong className="text-forest-600 font-semibold">Contamos con turnos disponibles.</strong>
               </p>
-              <p className="text-forest-500 text-base sm:text-lg leading-relaxed font-light mb-5" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                Consultar en <strong className="text-forest-600 font-semibold">REP</strong> significa encontrar un profesional capacitado para escuchar, comprender y acompañar. Juntos podrán evaluar la mejor manera de abordar aquello que te preocupa y, si corresponde, iniciar un proceso terapéutico orientado al bienestar y al crecimiento personal.
-              </p>
-              <p className="text-forest-500 text-base sm:text-lg leading-relaxed font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                En <strong className="text-forest-600 font-semibold">REP</strong> creemos que una escucha genuina y un vínculo terapéutico de confianza pueden convertirse en el punto de partida para generar cambios significativos y <strong className="text-forest-600 font-semibold">mejorar la calidad de vida</strong>.
-              </p>
             </motion.div>
           </div>
 
