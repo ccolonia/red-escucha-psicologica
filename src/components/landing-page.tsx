@@ -372,7 +372,7 @@ export function LandingPage() {
             <img
               src="/images/logo.png"
               alt="Red Escucha Psicológica"
-              className="h-14 sm:h-16 md:h-18 w-auto object-contain"
+              className="h-10 sm:h-12 md:h-14 w-auto object-contain"
             />
 
             {/* Desktop nav links */}
@@ -1173,7 +1173,7 @@ export function LandingPage() {
                 <img
                   src="/images/logo.png"
                   alt="Red Escucha Psicológica"
-                  className="h-20 w-auto object-contain"
+                  className="h-14 w-auto object-contain"
                 />
               </div>
               <p className="text-beige-300 text-sm font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
