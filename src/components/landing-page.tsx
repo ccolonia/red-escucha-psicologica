@@ -1169,11 +1169,11 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             <div>
-              <div className="mb-4">
+              <div className="mb-4 bg-beige-100/90 rounded-lg p-2 inline-block">
                 <img
                   src="/images/logo.png"
                   alt="Red Escucha Psicológica"
-                  className="h-16 w-auto object-contain"
+                  className="h-14 w-auto object-contain"
                 />
               </div>
               <p className="text-beige-300 text-sm font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
