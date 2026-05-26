@@ -328,6 +328,10 @@ export function ProfessionalRegister() {
           toast.error("Seleccioná al menos un público objetivo");
           return false;
         }
+        if (!cvFile) {
+          toast.error("Adjuntá tu CV / Curriculum es obligatorio");
+          return false;
+        }
         return true;
 
       case 4:
@@ -751,9 +755,9 @@ export function ProfessionalRegister() {
                     </div>
                     {/* CV Upload */}
                     <div className="space-y-2">
-                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>CV / Curriculum (opcional)</Label>
+                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>CV / Curriculum *</Label>
                       <p className="text-xs text-forest-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                        Podés adjuntar tu curriculum en formato PDF o Word (máx. 10MB)
+                        Adjuntá tu curriculum en formato PDF o Word (máx. 10MB). Es obligatorio para validar tu perfil profesional.
                       </p>
                       {cvFileName ? (
                         <div className="flex items-center gap-2 p-3 bg-sage-300/10 border border-sage-300/30 rounded-lg">
