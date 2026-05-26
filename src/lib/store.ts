@@ -12,6 +12,7 @@ export type AppView =
   | "professional-schedule"
   | "professional-patients"
   | "professional-profile"
+  | "professional-planilla"
   | "admin-dashboard"
   | "admin-appointments"
   | "admin-professionals"
@@ -19,7 +20,6 @@ export type AppView =
   | "admin-contacts"
   | "admin-cms"
   | "admin-profile"
-  | "admin-cms"
   | "professional-register";
 
 interface AppState {

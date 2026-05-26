@@ -15,6 +15,8 @@ import {
   UserPlus,
   AlertCircle,
   FileText,
+  FileSpreadsheet,
+  Download,
   MessageSquare,
   Pencil,
   Trash2,
@@ -98,7 +100,9 @@ interface Professional {
   homeAttention: boolean;
   zones: string | null;
   bio: string | null;
-  user: { name: string; email: string; phone: string; active: boolean };
+  cvFileName: string | null;
+  createdAt: string;
+  user: { name: string; email: string; phone: string; active: boolean; createdAt: string };
 }
 
 interface ContactRequest {
@@ -1072,6 +1076,31 @@ export function AdminProfessionals() {
                               </a>
                             </div>
                           )}
+
+                          {/* Planilla de Atención */}
+                          <div>
+                            <p className="text-teal-500 text-sm mb-2">Planilla de Atención:</p>
+                            <div className="flex flex-wrap gap-2">
+                              <a
+                                href={`/api/attendance-sheets?professionalId=${prof.id}&csv=1&month=${new Date().getMonth() + 1}&year=${new Date().getFullYear()}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 hover:bg-emerald-100 transition-colors"
+                              >
+                                <Download className="w-4 h-4" />
+                                <span className="font-medium">Descargar Planilla Mes Actual (CSV)</span>
+                              </a>
+                              <a
+                                href={`/api/attendance-sheets?professionalId=${prof.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-lg text-sm text-teal-700 hover:bg-teal-100 transition-colors"
+                              >
+                                <FileSpreadsheet className="w-4 h-4" />
+                                <span className="font-medium">Ver todas las planillas</span>
+                              </a>
+                            </div>
+                          </div>
 
                           <div className="flex items-center gap-3 text-xs text-teal-400 pt-1">
                             <span>Cuenta: {isActive ? "Activada" : "Pendiente"}</span>

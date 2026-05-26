@@ -48,6 +48,7 @@ model Professional {
   updatedAt           DateTime      @updatedAt
   user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   appointments        Appointment[]
+  attendanceSheets    AttendanceSheet[]
 }
 
 model Patient {
@@ -186,4 +187,40 @@ model CmsSiteConfig {
   group     String   @default("general")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AttendanceSheet {
+  id             String       @id @default(cuid())
+  professionalId String
+  month          Int          // 1-12
+  year           Int          // e.g. 2026
+  repCommission  Float        @default(0.30) // 0.30, 0.20, 0.10 based on year
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  sessions       AttendanceSession[]
+
+  @@unique([professionalId, month, year])
+}
+
+model AttendanceSession {
+  id                   String          @id @default(cuid())
+  sheetId              String
+  date                 String          // ISO date string
+  patientName          String
+  mode                 String          // "P" or "OL"
+  treatmentStartDate   String?         // ISO date string
+  frequency            String?         // "1 vez x sem", "c/15 dias", etc.
+  patientFee           Int             @default(0) // Honorario cobrado al paciente
+  professionalFee      Int             @default(0) // Calculado automáticamente
+  repFee               Int             @default(0) // Calculado automáticamente
+  absentWithNotice     Boolean         @default(false) // CA - con aviso
+  absentWithoutNotice  Boolean         @default(false) // SA - sin aviso
+  absentReason         String?         // Motivo de inasistencia
+  supervised           Boolean         @default(false) // Supervisión: Sí/No
+  suspendedTreatment   Boolean         @default(false) // Suspendió tratamiento
+  weekNumber           Int             @default(1) // 1-5
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  sheet                AttendanceSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
 }
