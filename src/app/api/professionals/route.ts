@@ -21,7 +21,29 @@ export async function GET(request: NextRequest) {
 
     const professionals = await db.professional.findMany({
       where,
-      include: {
+      // Exclude cvData (base64) from the list — use /api/professionals/cv?id= to download
+      select: {
+        id: true,
+        userId: true,
+        license: true,
+        specialty: true,
+        bio: true,
+        available: true,
+        title: true,
+        profession: true,
+        cuil: true,
+        gender: true,
+        therapyTypes: true,
+        targetAudience: true,
+        therapyModality: true,
+        onlineAttention: true,
+        presentialAttention: true,
+        homeAttention: true,
+        zones: true,
+        cvFileName: true,
+        cvMimeType: true,
+        createdAt: true,
+        updatedAt: true,
         user: {
           select: { id: true, name: true, email: true, phone: true, active: true, createdAt: true },
         },

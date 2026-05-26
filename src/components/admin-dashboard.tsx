@@ -1057,6 +1057,22 @@ export function AdminProfessionals() {
                             </div>
                           )}
 
+                          {prof.cvFileName && (
+                            <div>
+                              <p className="text-teal-500 text-sm mb-1">CV / Curriculum:</p>
+                              <a
+                                href={`/api/professionals/cv?id=${prof.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors"
+                              >
+                                <FileText className="w-4 h-4" />
+                                <span className="font-medium">{prof.cvFileName}</span>
+                                <span className="text-blue-400 text-xs">(Ver / Descargar)</span>
+                              </a>
+                            </div>
+                          )}
+
                           <div className="flex items-center gap-3 text-xs text-teal-400 pt-1">
                             <span>Cuenta: {isActive ? "Activada" : "Pendiente"}</span>
                             <span>•</span>
