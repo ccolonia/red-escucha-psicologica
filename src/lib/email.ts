@@ -11,7 +11,13 @@ function getResend() {
   return new Resend(apiKey);
 }
 
-const APP_URL = process.env.NEXTAUTH_URL || "https://www.redescuchapsicologica.com";
+// Email links must always point to the public-facing domain.
+// NEXTAUTH_URL may be set to the Vercel internal domain, so we
+// prioritize EMAIL_APP_URL, then force the correct public domain
+// if NEXTAUTH_URL is the old Vercel domain.
+const _nextAuthUrl = process.env.NEXTAUTH_URL || "";
+const APP_URL = process.env.EMAIL_APP_URL
+  || (_nextAuthUrl && !_nextAuthUrl.includes("vercel.app") ? _nextAuthUrl : "https://www.redescuchapsicologica.com");
 // Use custom domain email in production, Resend sandbox in development
 // For production: set EMAIL_FROM="Red Escucha Psicológica <noreply@redescuchapsicologica.com>"
 // For development: falls back to Resend's sandbox sender
