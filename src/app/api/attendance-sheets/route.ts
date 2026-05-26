@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // GET /api/attendance-sheets — list sheets for the logged-in professional (or all for admin)
 export async function GET(req: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const user = session.user as { id: string; role: string };
@@ -91,85 +92,97 @@ export async function GET(req: NextRequest) {
 
 // POST /api/attendance-sheets — create or update a sheet with sessions
 export async function POST(req: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const user = session.user as { id: string; role: string };
-  const body = await req.json();
-  const { professionalId, month, year, repCommission, sessions } = body;
+    const user = session.user as { id: string; role: string };
+    const body = await req.json();
+    const { professionalId, month, year, repCommission, sessions } = body;
 
-  // Determine the professional
-  let targetProfessionalId = professionalId;
-  if (user.role !== "admin" && user.role !== "super_admin") {
-    const prof = await db.professional.findUnique({ where: { userId: user.id } });
-    if (!prof) return NextResponse.json({ error: "Profesional no encontrado" }, { status: 404 });
-    targetProfessionalId = prof.id;
-  }
+    // Determine the professional
+    let targetProfessionalId = professionalId;
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      const prof = await db.professional.findUnique({ where: { userId: user.id } });
+      if (!prof) return NextResponse.json({ error: "Profesional no encontrado" }, { status: 404 });
+      targetProfessionalId = prof.id;
+    }
 
-  if (!targetProfessionalId || !month || !year) {
-    return NextResponse.json({ error: "Faltan datos obligatorios" }, { status: 400 });
-  }
+    if (!targetProfessionalId || !month || !year) {
+      return NextResponse.json({ error: "Faltan datos obligatorios (professionalId, month, year)" }, { status: 400 });
+    }
 
-  // Upsert the sheet
-  const sheet = await db.attendanceSheet.upsert({
-    where: {
-      professionalId_month_year: {
-        professionalId: targetProfessionalId,
-        month: parseInt(month),
-        year: parseInt(year),
+    const monthInt = parseInt(String(month));
+    const yearInt = parseInt(String(year));
+    const commission = repCommission || 0.30;
+
+    // Upsert the sheet
+    const sheet = await db.attendanceSheet.upsert({
+      where: {
+        professionalId_month_year: {
+          professionalId: targetProfessionalId,
+          month: monthInt,
+          year: yearInt,
+        },
       },
-    },
-    create: {
-      professionalId: targetProfessionalId,
-      month: parseInt(month),
-      year: parseInt(year),
-      repCommission: repCommission || 0.30,
-    },
-    update: {
-      repCommission: repCommission || 0.30,
-    },
-  });
-
-  // Delete existing sessions and recreate
-  if (sessions && Array.isArray(sessions)) {
-    await db.attendanceSession.deleteMany({ where: { sheetId: sheet.id } });
-
-    const sessionsData = sessions.map((s: any) => {
-      const patientFee = s.absentWithNotice || s.absentWithoutNotice ? 0 : (s.patientFee || 0);
-      const commission = repCommission || 0.30;
-      const professionalFee = Math.round(patientFee * (1 - commission));
-      const repFee = patientFee - professionalFee;
-
-      return {
-        sheetId: sheet.id,
-        date: s.date,
-        patientName: s.patientName,
-        mode: s.mode || "P",
-        treatmentStartDate: s.treatmentStartDate || null,
-        frequency: s.frequency || null,
-        patientFee: s.absentWithNotice || s.absentWithoutNotice ? 0 : (s.patientFee || 0),
-        professionalFee: s.absentWithNotice || s.absentWithoutNotice ? 0 : professionalFee,
-        repFee: s.absentWithNotice || s.absentWithoutNotice ? 0 : repFee,
-        absentWithNotice: s.absentWithNotice || false,
-        absentWithoutNotice: s.absentWithoutNotice || false,
-        absentReason: s.absentReason || null,
-        supervised: s.supervised || false,
-        suspendedTreatment: s.suspendedTreatment || false,
-        weekNumber: s.weekNumber || 1,
-      };
+      create: {
+        professionalId: targetProfessionalId,
+        month: monthInt,
+        year: yearInt,
+        repCommission: commission,
+      },
+      update: {
+        repCommission: commission,
+      },
     });
 
-    await db.attendanceSession.createMany({ data: sessionsData });
+    // Delete existing sessions and recreate
+    if (sessions && Array.isArray(sessions)) {
+      await db.attendanceSession.deleteMany({ where: { sheetId: sheet.id } });
+
+      const sessionsData = sessions.map((s: any) => {
+        const isAbsent = s.absentWithNotice || s.absentWithoutNotice;
+        const patientFee = isAbsent ? 0 : (parseInt(s.patientFee) || 0);
+        const professionalFee = isAbsent ? 0 : Math.round(patientFee * (1 - commission));
+        const repFee = isAbsent ? 0 : (patientFee - professionalFee);
+
+        return {
+          sheetId: sheet.id,
+          date: s.date || "",
+          patientName: s.patientName || "",
+          mode: s.mode || "P",
+          treatmentStartDate: s.treatmentStartDate || null,
+          frequency: s.frequency || null,
+          patientFee,
+          professionalFee,
+          repFee,
+          absentWithNotice: s.absentWithNotice || false,
+          absentWithoutNotice: s.absentWithoutNotice || false,
+          absentReason: s.absentReason || null,
+          supervised: s.supervised || false,
+          suspendedTreatment: s.suspendedTreatment || false,
+          weekNumber: s.weekNumber || 1,
+        };
+      });
+
+      await db.attendanceSession.createMany({ data: sessionsData });
+    }
+
+    // Return the updated sheet with sessions
+    const updatedSheet = await db.attendanceSheet.findUnique({
+      where: { id: sheet.id },
+      include: {
+        professional: { include: { user: { select: { name: true } } } },
+        sessions: { orderBy: [{ weekNumber: "asc" }, { date: "asc" }] },
+      },
+    });
+
+    return NextResponse.json(updatedSheet);
+  } catch (error: any) {
+    console.error("Attendance sheet save error:", error);
+    return NextResponse.json(
+      { error: "Error al guardar planilla: " + (error.message || "Error desconocido") },
+      { status: 500 }
+    );
   }
-
-  // Return the updated sheet with sessions
-  const updatedSheet = await db.attendanceSheet.findUnique({
-    where: { id: sheet.id },
-    include: {
-      professional: { include: { user: { select: { name: true } } } },
-      sessions: { orderBy: [{ weekNumber: "asc" }, { date: "asc" }] },
-    },
-  });
-
-  return NextResponse.json(updatedSheet);
 }

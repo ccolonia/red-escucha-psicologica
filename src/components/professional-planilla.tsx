@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   FileSpreadsheet,
   Plus,
@@ -16,6 +18,7 @@ import {
   Save,
   Calendar,
   DollarSign,
+  CalendarIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +32,53 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { toast } from "sonner";
+
+// Inline date picker component with calendar popup
+function DatePickerInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedDate = value ? parseISO(value) : undefined;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className={`flex items-center gap-1 h-8 px-2 text-xs border border-teal-200 rounded-md bg-white hover:bg-teal-50 transition-colors ${className || ""}`}
+          type="button"
+        >
+          <CalendarIcon className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+          <span className={value ? "text-teal-900" : "text-teal-400"}>
+            {value ? formatDisplayDate(value) : "dd/mm/aaaa"}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <CalendarPicker
+          mode="single"
+          selected={selectedDate}
+          onSelect={(date) => {
+            if (date) {
+              onChange(formatDate(date));
+            }
+            setOpen(false);
+          }}
+          locale={es}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -569,13 +618,13 @@ export function ProfessionalPlanilla() {
             </div>
           ) : (
             <div className="overflow-x-auto -mx-6">
-              <table className="w-full min-w-[900px] text-sm">
+              <table className="w-full min-w-[1100px] text-sm">
                 <thead>
                   <tr className="border-b border-teal-100 bg-teal-50/50">
-                    <th className="px-2 py-2 text-left text-teal-700 font-medium w-[90px]">Fecha</th>
-                    <th className="px-2 py-2 text-left text-teal-700 font-medium w-[140px]">Paciente</th>
+                    <th className="px-2 py-2 text-left text-teal-700 font-medium w-[110px]">Fecha</th>
+                    <th className="px-2 py-2 text-left text-teal-700 font-medium w-[200px]">Nombre y Apellido</th>
                     <th className="px-2 py-2 text-center text-teal-700 font-medium w-[60px]">Modo</th>
-                    <th className="px-2 py-2 text-left text-teal-700 font-medium w-[90px]">Inicio Trat.</th>
+                    <th className="px-2 py-2 text-left text-teal-700 font-medium w-[110px]">Inicio Trat.</th>
                     <th className="px-2 py-2 text-left text-teal-700 font-medium w-[100px]">Frecuencia</th>
                     <th className="px-2 py-2 text-right text-teal-700 font-medium w-[90px]">Honor. Pac.</th>
                     <th className="px-2 py-2 text-right text-teal-700 font-medium w-[90px]">Honor. Prof.</th>
@@ -599,11 +648,10 @@ export function ProfessionalPlanilla() {
                       >
                         {/* Date */}
                         <td className="px-2 py-1.5">
-                          <Input
-                            type="date"
+                          <DatePickerInput
                             value={s.date}
-                            onChange={(e) => updateSession(s.id, "date", e.target.value)}
-                            className="h-8 text-xs border-teal-200 w-[110px]"
+                            onChange={(val) => updateSession(s.id, "date", val)}
+                            className="w-[130px]"
                           />
                         </td>
                         {/* Patient Name */}
@@ -611,8 +659,8 @@ export function ProfessionalPlanilla() {
                           <Input
                             value={s.patientName}
                             onChange={(e) => updateSession(s.id, "patientName", e.target.value)}
-                            placeholder="Nombre del paciente"
-                            className="h-8 text-xs border-teal-200 w-full"
+                            placeholder="Nombre y Apellido"
+                            className="h-8 text-xs border-teal-200 w-full min-w-[180px]"
                           />
                         </td>
                         {/* Mode */}
@@ -632,11 +680,10 @@ export function ProfessionalPlanilla() {
                         </td>
                         {/* Treatment Start Date */}
                         <td className="px-2 py-1.5">
-                          <Input
-                            type="date"
+                          <DatePickerInput
                             value={s.treatmentStartDate}
-                            onChange={(e) => updateSession(s.id, "treatmentStartDate", e.target.value)}
-                            className="h-8 text-xs border-teal-200 w-[110px]"
+                            onChange={(val) => updateSession(s.id, "treatmentStartDate", val)}
+                            className="w-[130px]"
                           />
                         </td>
                         {/* Frequency */}

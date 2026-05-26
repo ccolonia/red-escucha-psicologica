@@ -382,7 +382,7 @@ export function AdminPlanilla() {
                     <thead>
                       <tr className="border-b border-teal-100 bg-teal-50/50">
                         <th className="px-2 py-2 text-left text-teal-700 font-medium">Fecha</th>
-                        <th className="px-2 py-2 text-left text-teal-700 font-medium">Paciente</th>
+                        <th className="px-2 py-2 text-left text-teal-700 font-medium">Nombre y Apellido</th>
                         <th className="px-2 py-2 text-center text-teal-700 font-medium">Modo</th>
                         <th className="px-2 py-2 text-left text-teal-700 font-medium">Inicio Trat.</th>
                         <th className="px-2 py-2 text-left text-teal-700 font-medium">Frecuencia</th>
