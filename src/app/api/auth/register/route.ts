@@ -78,6 +78,17 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Validate CV data
+      const allowedMimeTypes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ];
+      const cvBase64 = body.cvBase64 || null;
+      const cvOriginalName = body.cvOriginalName || null;
+      const cvMimeType = body.cvMimeType || null;
+      const hasValidCv = cvBase64 && cvOriginalName && cvMimeType && allowedMimeTypes.includes(cvMimeType);
+
       await db.professional.create({
         data: {
           userId: user.id,
@@ -95,7 +106,9 @@ export async function POST(request: NextRequest) {
           presentialAttention: presentialAttention ?? false,
           homeAttention: homeAttention ?? false,
           zones: zones ? JSON.stringify(zones) : null,
-          cvUrl: body.cvUrl || null,
+          cvData: hasValidCv ? cvBase64 : null,
+          cvFileName: hasValidCv ? cvOriginalName : null,
+          cvMimeType: hasValidCv ? cvMimeType : null,
         },
       });
 

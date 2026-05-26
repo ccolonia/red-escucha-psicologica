@@ -371,21 +371,20 @@ export function ProfessionalRegister() {
     try {
       const fullName = `${form.title !== "Ninguno" ? form.title + " " : ""}${form.firstName} ${form.lastName}`;
 
-      // Upload CV first if present
-      let cvUrl: string | null = null;
+      // Convert CV to base64
+      let cvBase64: string | null = null;
+      let cvOriginalName: string | null = null;
+      let cvMimeType: string | null = null;
       if (cvFile) {
-        const cvFormData = new FormData();
-        cvFormData.append("file", cvFile);
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: cvFormData,
-        });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          cvUrl = uploadData.cvUrl;
-        } else {
-          toast.error("Error al subir el CV. El registro continuará sin el archivo.");
+        cvOriginalName = cvFile.name;
+        cvMimeType = cvFile.type;
+        const arrayBuffer = await cvFile.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        let binary = "";
+        for (let i = 0; i < uint8Array.length; i++) {
+          binary += String.fromCharCode(uint8Array[i]);
         }
+        cvBase64 = btoa(binary);
       }
 
       const res = await fetch("/api/auth/register", {
@@ -411,7 +410,9 @@ export function ProfessionalRegister() {
           presentialAttention: form.presentialAttention,
           homeAttention: form.homeAttention,
           zones: form.zones,
-          cvUrl,
+          cvBase64,
+          cvOriginalName,
+          cvMimeType,
         }),
       });
 
