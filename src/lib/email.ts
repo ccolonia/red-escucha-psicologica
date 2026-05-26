@@ -11,7 +11,7 @@ function getResend() {
   return new Resend(apiKey);
 }
 
-const APP_URL = process.env.NEXTAUTH_URL || "https://red-escucha-psicologica.vercel.app";
+const APP_URL = process.env.NEXTAUTH_URL || "https://www.redescuchapsicologica.com";
 // Use custom domain email in production, Resend sandbox in development
 // For production: set EMAIL_FROM="Red Escucha Psicológica <noreply@redescuchapsicologica.com>"
 // For development: falls back to Resend's sandbox sender
@@ -198,7 +198,6 @@ export async function sendApprovalEmail({ userEmail, userName, userId }: SendApp
             </div>
             <div class="footer">
               Red Escucha Psicológica<br>
-              Av. Sanabria 1616, CABA, Buenos Aires, Argentina<br>
               <a href="mailto:contacto@redescuchapsicologica.com">contacto@redescuchapsicologica.com</a>
             </div>
           </div>
@@ -378,7 +377,6 @@ export async function sendProfessionalRegistrationConfirmation({ userEmail, user
             </div>
             <div class="footer">
               Red Escucha Psicológica<br>
-              Av. Sanabria 1616, CABA, Buenos Aires, Argentina<br>
               <a href="mailto:contacto@redescuchapsicologica.com">contacto@redescuchapsicologica.com</a>
             </div>
           </div>
@@ -419,11 +417,15 @@ export async function sendNewProfessionalAdminNotification({
   title,
 }: SendNewProfessionalAdminNotificationParams) {
   const resend = getResend();
-  const adminUrl = `${APP_URL}`;
+  const adminUrl = `${APP_URL}/#login`;
 
   // professionalName already includes the title (e.g. "Lic. Monica Quiroga")
-  // so we don't add it again
-  const displayName = professionalName;
+  // so we don't add it again. Also strip duplicate title prefixes just in case.
+  const displayName = professionalName
+    .replace(/^(Lic\.\s+)+/, "Lic. ")
+    .replace(/^(Dr\.\s+)+/, "Dr. ")
+    .replace(/^(Dra\.\s+)+/, "Dra. ")
+    .replace(/^(Psic\.\s+)+/, "Psic. ");
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
@@ -597,7 +599,6 @@ export async function sendNewProfessionalAdminNotification({
             </div>
             <div class="footer">
               Red Escucha Psicológica<br>
-              Av. Sanabria 1616, CABA, Buenos Aires, Argentina<br>
               <a href="mailto:contacto@redescuchapsicologica.com">contacto@redescuchapsicologica.com</a>
             </div>
           </div>
