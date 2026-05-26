@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
           presentialAttention: presentialAttention ?? false,
           homeAttention: homeAttention ?? false,
           zones: zones ? JSON.stringify(zones) : null,
+          cvUrl: body.cvUrl || null,
         },
       });
 

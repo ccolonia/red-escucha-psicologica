@@ -20,6 +20,11 @@ import {
   Monitor,
   Home,
   Heart,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Upload,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,17 +80,62 @@ const TARGET_AUDIENCES = [
   "Mayores",
 ];
 
-const ZONES = [
-  "Capital Federal (CABA)",
-  "GBA Zona Norte",
-  "GBA Zona Oeste",
-  "GBA Zona Sur",
-  "La Plata",
-  "Mar del Plata",
-  "Córdoba",
-  "Rosario",
-  "Mendoza",
-  "Otra (indicar en mensaje)",
+const ZONES_HIERARCHY: { region: string; areas: string[] }[] = [
+  {
+    region: "Capital Federal (CABA)",
+    areas: [
+      "Abasto", "Agronomía", "Almagro", "Balvanera (Once)", "Barracas",
+      "Belgrano", "Boedo", "Caballito", "Chacarita", "Coghlan",
+      "Colegiales", "Congreso - Tribunales", "Constitución", "Flores", "Floresta",
+      "La Boca", "La Paternal", "Liniers", "Mataderos", "Monserrat",
+      "Monte Castro", "Nueva Pompeya", "Núñez", "Palermo", "Parque Avellaneda",
+      "Parque Chacabuco", "Parque Chas", "Parque Patricios", "Puerto Madero",
+      "Recoleta - Barrio Norte", "Retiro", "Saavedra", "San Cristobal",
+      "San Nicolas", "San Telmo", "Vélez Sarsfield", "Versalles",
+      "Villa Crespo", "Villa del Parque", "Villa Devoto", "Villa General Mitre",
+      "Villa Lugano", "Villa Luro", "Villa Ortúzar", "Villa Pueyrredón",
+      "Villa Real", "Villa Riachuelo", "Villa Santa Rita", "Villa Soldati",
+      "Villa Urquiza",
+    ],
+  },
+  {
+    region: "GBA Zona Norte",
+    areas: [
+      "Escobar", "General San Martin", "Pilar", "San Fernando",
+      "San Isidro", "Tigre - Nordelta", "Vicente López",
+    ],
+  },
+  {
+    region: "GBA Zona Oeste",
+    areas: [
+      "General Rodriguez", "Hurlingham", "Ituzaingó", "La Matanza",
+      "Merlo", "Moreno", "Morón", "San Miguel", "Tres de Febrero",
+    ],
+  },
+  {
+    region: "GBA Zona Sur",
+    areas: [
+      "Almirante Brown", "Avellaneda", "Berazategui", "Esteban Echeverría",
+      "Ezeiza", "Florencio Varela", "Lanús", "Lomas de Zamora",
+      "Presidente Peron", "Quilmes", "San Vicente",
+    ],
+  },
+  {
+    region: "Prov. de Buenos Aires",
+    areas: ["La Plata", "Mar del Plata (MDQ)", "Tandil"],
+  },
+  {
+    region: "Prov. de Córdoba",
+    areas: ["Córdoba (Ciudad)"],
+  },
+  {
+    region: "Prov. de Mendoza",
+    areas: ["Mendoza (Ciudad)"],
+  },
+  {
+    region: "Prov. de Santa Fe",
+    areas: ["Rosario", "Santa Fe"],
+  },
 ];
 
 const SPECIALTIES = [
@@ -121,6 +171,9 @@ export function ProfessionalRegister() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvFileName, setCvFileName] = useState<string>("");
 
   const [form, setForm] = useState({
     // Step 1: Cuenta
@@ -164,6 +217,58 @@ export function ProfessionalRegister() {
         [field]: arr.includes(item) ? arr.filter((i) => i !== item) : [...arr, item],
       };
     });
+  };
+
+  const toggleRegion = (region: string) => {
+    setExpandedRegions((prev) => {
+      const next = new Set(prev);
+      if (next.has(region)) {
+        next.delete(region);
+      } else {
+        next.add(region);
+      }
+      return next;
+    });
+  };
+
+  const selectAllInRegion = (region: string, areas: string[]) => {
+    setForm((prev) => {
+      const currentZones = prev.zones as string[];
+      const allSelected = areas.every((a) => currentZones.includes(a));
+      if (allSelected) {
+        // Deselect all in this region
+        return { ...prev, zones: currentZones.filter((z) => !areas.includes(z)) };
+      } else {
+        // Select all in this region (add missing ones)
+        const newZones = [...new Set([...currentZones, ...areas])];
+        return { ...prev, zones: newZones };
+      }
+    });
+  };
+
+  const handleCvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Solo se permiten archivos PDF o Word");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("El archivo no puede superar los 10MB");
+      return;
+    }
+    setCvFile(file);
+    setCvFileName(file.name);
+  };
+
+  const removeCv = () => {
+    setCvFile(null);
+    setCvFileName("");
   };
 
   const validateStep = (s: number): boolean => {
@@ -262,6 +367,23 @@ export function ProfessionalRegister() {
     try {
       const fullName = `${form.title !== "Ninguno" ? form.title + " " : ""}${form.firstName} ${form.lastName}`;
 
+      // Upload CV first if present
+      let cvUrl: string | null = null;
+      if (cvFile) {
+        const cvFormData = new FormData();
+        cvFormData.append("file", cvFile);
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: cvFormData,
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          cvUrl = uploadData.cvUrl;
+        } else {
+          toast.error("Error al subir el CV. El registro continuará sin el archivo.");
+        }
+      }
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -285,6 +407,7 @@ export function ProfessionalRegister() {
           presentialAttention: form.presentialAttention,
           homeAttention: form.homeAttention,
           zones: form.zones,
+          cvUrl,
         }),
       });
 
@@ -626,6 +749,39 @@ export function ProfessionalRegister() {
                         />
                       </div>
                     </div>
+                    {/* CV Upload */}
+                    <div className="space-y-2">
+                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>CV / Curriculum (opcional)</Label>
+                      <p className="text-xs text-forest-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                        Podés adjuntar tu curriculum en formato PDF o Word (máx. 10MB)
+                      </p>
+                      {cvFileName ? (
+                        <div className="flex items-center gap-2 p-3 bg-sage-300/10 border border-sage-300/30 rounded-lg">
+                          <FileText className="w-5 h-5 text-sage-500 shrink-0" />
+                          <span className="text-sm text-forest-500 truncate flex-1" style={{ fontFamily: "Montserrat, sans-serif" }}>{cvFileName}</span>
+                          <button
+                            type="button"
+                            onClick={removeCv}
+                            className="p-1 text-forest-300 hover:text-red-500 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center gap-3 p-4 border-2 border-dashed border-beige-300 rounded-lg cursor-pointer hover:border-sage-300/50 hover:bg-sage-300/5 transition-colors">
+                          <Upload className="w-5 h-5 text-forest-300" />
+                          <span className="text-sm text-forest-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                            Hacé clic para adjuntar tu CV
+                          </span>
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            onChange={handleCvUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Especialidad *</Label>
                       <Select value={form.specialty} onValueChange={(v) => updateForm("specialty", v)}>
@@ -745,20 +901,63 @@ export function ProfessionalRegister() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Zonas de atención * (seleccioná al menos una)</Label>
-                      <div className="grid grid-cols-2 gap-2 border border-beige-300 rounded-lg p-3 bg-beige-50 max-h-56 overflow-y-auto">
-                        {ZONES.map((z) => (
-                          <label
-                            key={z}
-                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-1 py-0.5 transition-colors"
-                          >
-                            <Checkbox
-                              checked={form.zones.includes(z)}
-                              onCheckedChange={() => toggleArrayItem("zones", z)}
-                            />
-                            <span className="text-forest-500">{z}</span>
-                          </label>
-                        ))}
+                      <Label className="text-forest-500 font-medium text-base" style={{ fontFamily: "Montserrat, sans-serif" }}>Zonas de atención * (seleccioná al menos una)</Label>
+                      {form.zones.length > 0 && (
+                        <p className="text-xs text-sage-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                          {form.zones.length} zona{form.zones.length !== 1 ? "s" : ""} seleccionada{form.zones.length !== 1 ? "s" : ""}
+                        </p>
+                      )}
+                      <div className="border border-beige-300 rounded-lg bg-beige-50 max-h-80 overflow-y-auto">
+                        {ZONES_HIERARCHY.map((zoneGroup) => {
+                          const isExpanded = expandedRegions.has(zoneGroup.region);
+                          const selectedInRegion = zoneGroup.areas.filter((a) => form.zones.includes(a));
+                          const allSelected = zoneGroup.areas.length > 0 && selectedInRegion.length === zoneGroup.areas.length;
+                          const someSelected = selectedInRegion.length > 0 && !allSelected;
+
+                          return (
+                            <div key={zoneGroup.region} className="border-b border-beige-200 last:border-b-0">
+                              {/* Region header */}
+                              <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-sage-300/10 cursor-pointer transition-colors" onClick={() => toggleRegion(zoneGroup.region)}>
+                                {isExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-forest-400 shrink-0" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-forest-400 shrink-0" />
+                                )}
+                                <Checkbox
+                                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                                  onCheckedChange={() => selectAllInRegion(zoneGroup.region, zoneGroup.areas)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <span className="text-sm font-semibold text-forest-600 flex-1" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                  {zoneGroup.region}
+                                </span>
+                                {selectedInRegion.length > 0 && (
+                                  <span className="text-xs text-sage-500 bg-sage-300/20 px-2 py-0.5 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                    {selectedInRegion.length}/{zoneGroup.areas.length}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Areas list */}
+                              {isExpanded && (
+                                <div className="pl-10 pr-3 pb-2 grid grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-0.5">
+                                  {zoneGroup.areas.map((area) => (
+                                    <label
+                                      key={area}
+                                      className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-1 py-0.5 transition-colors"
+                                    >
+                                      <Checkbox
+                                        checked={form.zones.includes(area)}
+                                        onCheckedChange={() => toggleArrayItem("zones", area)}
+                                      />
+                                      <span className="text-forest-500 text-xs sm:text-sm">{area}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
