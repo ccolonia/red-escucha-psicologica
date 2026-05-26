@@ -18,6 +18,7 @@ export type AppView =
   | "admin-professionals"
   | "admin-patients"
   | "admin-contacts"
+  | "admin-planilla"
   | "admin-cms"
   | "admin-profile"
   | "professional-register";

@@ -28,6 +28,7 @@ import {
   AdminProfile,
 } from "@/components/admin-dashboard";
 import { AdminCMS } from "@/components/admin-cms";
+import { AdminPlanilla } from "@/components/admin-planilla";
 import { ProfessionalRegister } from "@/components/professional-register";
 import { AppNavigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
@@ -51,6 +52,7 @@ function DashboardContent() {
     "admin-professionals": <AdminProfessionals />,
     "admin-patients": <AdminPatients />,
     "admin-contacts": <AdminContacts />,
+    "admin-planilla": <AdminPlanilla />,
     "admin-cms": <AdminCMS />,
     "admin-profile": <AdminProfile />,
   };

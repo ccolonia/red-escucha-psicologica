@@ -50,6 +50,7 @@ const ADMIN_NAV: NavItem[] = [
   { view: "admin-professionals", label: "Profesionales", icon: Stethoscope },
   { view: "admin-patients", label: "Pacientes", icon: Users },
   { view: "admin-contacts", label: "Consultas", icon: MessageSquare },
+  { view: "admin-planilla", label: "Planilla", icon: FileText },
   { view: "admin-cms", label: "CMS", icon: Palette },
   { view: "admin-profile", label: "Mi Perfil", icon: Shield },
 ];
