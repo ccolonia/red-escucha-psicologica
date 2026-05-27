@@ -49,6 +49,8 @@ model Professional {
   user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   appointments        Appointment[]
   attendanceSheets    AttendanceSheet[]
+  schedules           ProfessionalSchedule[]
+  scheduleOverrides   ScheduleOverride[]
 }
 
 model Patient {
@@ -69,12 +71,43 @@ model Appointment {
   professionalId String
   date           String // ISO date string
   time           String // "09:00", "10:00", etc.
+  modality       String       @default("P") // "P" presencial, "OL" online
   status         String       @default("pending") // "pending", "confirmed", "completed", "cancelled"
   reason         String?
   notes          String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+}
+
+model ProfessionalSchedule {
+  id             String       @id @default(cuid())
+  professionalId String
+  dayOfWeek      Int          // 1=Lunes, 2=Martes, 3=Miercoles, 4=Jueves, 5=Viernes, 6=Sabado
+  startTime      String       // "09:00"
+  endTime        String       // "18:00"
+  slotDuration   Int          @default(45) // Duracion del turno en minutos (30, 45, 60)
+  modality       String       @default("ambas") // "P" presencial, "OL" online, "ambas"
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@unique([professionalId, dayOfWeek, startTime])
+}
+
+model ScheduleOverride {
+  id             String       @id @default(cuid())
+  professionalId String
+  date           String       // ISO date string "2026-06-15"
+  type           String       // "block" = no atiende, "extra" = horario adicional
+  startTime      String?      // Requerido para "extra"
+  endTime        String?      // Requerido para "extra"
+  slotDuration   Int?         // Para "extra", duracion de sesion
+  modality       String?      // Para "extra"
+  reason         String?      // "Vacaciones", "Feriado", "Guardia", etc.
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
 }
 

@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { patientId, professionalId, date, time, reason } = body;
+    const { patientId, professionalId, date, time, modality, reason } = body;
 
     if (!patientId || !professionalId || !date || !time) {
       return NextResponse.json(
@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
         professionalId,
         date,
         time,
+        modality: modality || "P",
         reason: reason || null,
       },
       include: {

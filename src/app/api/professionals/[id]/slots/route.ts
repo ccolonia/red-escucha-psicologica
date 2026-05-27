@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-const TIME_SLOTS = [
-  "09:00", "09:30", "10:00", "10:30",
-  "11:00", "11:30", "12:00", "12:30",
-  "14:00", "14:30", "15:00", "15:30",
-  "16:00", "16:30", "17:00", "17:30",
-  "18:00", "18:30", "19:00", "19:30",
-];
+// Generate time slots from start to end with given duration
+function generateSlots(startTime: string, endTime: string, duration: number): string[] {
+  const slots: string[] = [];
+  const [startH, startM] = startTime.split(":").map(Number);
+  const [endH, endM] = endTime.split(":").map(Number);
 
+  let currentMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
+
+  while (currentMinutes + duration <= endMinutes) {
+    const hours = Math.floor(currentMinutes / 60);
+    const minutes = currentMinutes % 60;
+    slots.push(`${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`);
+    currentMinutes += duration;
+  }
+
+  return slots;
+}
+
+// GET /api/professionals/[id]/slots?date=2026-06-15
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,7 +52,80 @@ export async function GET(
       return NextResponse.json([]);
     }
 
-    // Get existing appointments for this professional on this date
+    // Check if date is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const requestedDate = new Date(date + "T00:00:00");
+
+    if (requestedDate < today) {
+      return NextResponse.json([]);
+    }
+
+    // Sunday = 0, no slots
+    const dayOfWeekJS = requestedDate.getDay(); // 0=Sun, 1=Mon...
+    if (dayOfWeekJS === 0) {
+      return NextResponse.json([]);
+    }
+
+    // Convert JS day (0=Sun,1=Mon..6=Sat) to our dayOfWeek (1=Mon..6=Sat)
+    const dayOfWeek = dayOfWeekJS; // 1=Lun, 2=Mar...6=Sab
+
+    // 1. Get the professional's weekly schedule for this day
+    const schedules = await db.professionalSchedule.findMany({
+      where: { professionalId: id, dayOfWeek },
+    });
+
+    // 2. Get overrides for this specific date
+    const overrides = await db.scheduleOverride.findMany({
+      where: { professionalId: id, date },
+    });
+
+    // 3. If no schedule defined for this day, check if there are "extra" overrides
+    //    If no schedule and no extra overrides, return empty
+    const blockOverrides = overrides.filter((o) => o.type === "block");
+    const extraOverrides = overrides.filter((o) => o.type === "extra");
+
+    // If there's a full-day block (no startTime/endTime on block), no slots
+    const fullDayBlock = blockOverrides.some((o) => !o.startTime && !o.endTime);
+    if (fullDayBlock) {
+      return NextResponse.json([]);
+    }
+
+    // Generate base slots from weekly schedule
+    let allSlots: Array<{ time: string; modality: string }> = [];
+
+    for (const schedule of schedules) {
+      const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
+      for (const time of slots) {
+        // Check if this specific time is blocked by a partial block override
+        const isBlocked = blockOverrides.some((block) => {
+          if (block.startTime && block.endTime) {
+            return time >= block.startTime && time < block.endTime;
+          }
+          return false; // full-day blocks already handled above
+        });
+
+        if (!isBlocked) {
+          allSlots.push({ time, modality: schedule.modality });
+        }
+      }
+    }
+
+    // Add extra override slots
+    for (const extra of extraOverrides) {
+      if (extra.startTime && extra.endTime) {
+        const duration = extra.slotDuration || 45;
+        const slots = generateSlots(extra.startTime, extra.endTime, duration);
+        for (const time of slots) {
+          // Don't add duplicates
+          if (!allSlots.find((s) => s.time === time)) {
+            allSlots.push({ time, modality: extra.modality || "ambas" });
+          }
+        }
+      }
+    }
+
+    // 4. Remove already booked slots
     const existingAppointments = await db.appointment.findMany({
       where: {
         professionalId: id,
@@ -52,43 +137,27 @@ export async function GET(
 
     const bookedTimes = new Set(existingAppointments.map((a) => a.time));
 
-    // Check if date is in the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const requestedDate = new Date(date + "T00:00:00");
+    // 5. Filter out past times if date is today
+    const isToday = requestedDate.getTime() === today.getTime();
+    const now = isToday ? new Date() : null;
 
-    if (requestedDate < today) {
-      return NextResponse.json([]);
-    }
+    const availableSlots = allSlots.filter((slot) => {
+      // Remove booked
+      if (bookedTimes.has(slot.time)) return false;
 
-    // Check if date is a weekend
-    const dayOfWeek = requestedDate.getDay();
-    if (dayOfWeek === 0) {
-      // Sunday - no slots
-      return NextResponse.json([]);
-    }
-
-    // Filter available slots
-    const availableSlots = TIME_SLOTS.filter((slot) => {
-      if (bookedTimes.has(slot)) return false;
-
-      // If the date is today, filter out past times
-      if (requestedDate.getTime() === today.getTime()) {
-        const now = new Date();
-        const [hours, minutes] = slot.split(":").map(Number);
+      // Remove past times for today
+      if (now) {
+        const [hours, minutes] = slot.time.split(":").map(Number);
         const slotDate = new Date();
         slotDate.setHours(hours, minutes, 0, 0);
         if (slotDate <= now) return false;
       }
 
-      // Saturday: only morning slots
-      if (dayOfWeek === 6) {
-        const hour = parseInt(slot.split(":")[0]);
-        return hour < 13;
-      }
-
       return true;
     });
+
+    // Sort by time and return
+    availableSlots.sort((a, b) => a.time.localeCompare(b.time));
 
     return NextResponse.json(availableSlots);
   } catch (error) {

@@ -13,6 +13,7 @@ export type AppView =
   | "professional-patients"
   | "professional-profile"
   | "professional-planilla"
+  | "professional-schedule-config"
   | "admin-dashboard"
   | "admin-appointments"
   | "admin-professionals"

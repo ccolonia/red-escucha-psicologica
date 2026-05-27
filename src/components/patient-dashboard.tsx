@@ -14,6 +14,8 @@ import {
   Calendar,
   Stethoscope,
   FileText,
+  MapPin,
+  Monitor,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,8 +69,9 @@ function BookingFlow({ patientId }: { patientId: string }) {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [selectedProfessional, setSelectedProfessional] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
-  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<Array<{time: string; modality: string}>>([]);
   const [selectedTime, setSelectedTime] = useState("");
+  const [selectedModality, setSelectedModality] = useState("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [bookingDone, setBookingDone] = useState(false);
@@ -97,8 +100,15 @@ function BookingFlow({ patientId }: { patientId: string }) {
       )
         .then((res) => res.json())
         .then((data) => {
-          setAvailableSlots(data);
+          // API now returns {time, modality} objects
+          if (Array.isArray(data) && data.length > 0 && typeof data[0] === "object") {
+            setAvailableSlots(data);
+          } else {
+            // Fallback for old format (string array)
+            setAvailableSlots((data as string[]).map((t: string) => ({ time: t, modality: "ambas" })));
+          }
           setSelectedTime("");
+          setSelectedModality("");
         })
         .catch(() => {});
     }
@@ -115,6 +125,7 @@ function BookingFlow({ patientId }: { patientId: string }) {
           professionalId: selectedProfessional,
           date: selectedDate,
           time: selectedTime,
+          modality: selectedModality === "ambas" ? "P" : selectedModality,
           reason,
         }),
       });
@@ -155,6 +166,7 @@ function BookingFlow({ patientId }: { patientId: string }) {
             setSelectedProfessional("");
             setSelectedDate("");
             setSelectedTime("");
+            setSelectedModality("");
             setReason("");
           }}
         >
@@ -319,19 +331,26 @@ function BookingFlow({ patientId }: { patientId: string }) {
                 <div className="space-y-2">
                   <Label>Horario disponible</Label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {availableSlots.map((slot) => (
-                      <button
-                        key={slot}
-                        onClick={() => setSelectedTime(slot)}
-                        className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                          selectedTime === slot
-                            ? "bg-teal-600 text-white"
-                            : "bg-teal-50 text-teal-700 hover:bg-teal-100"
-                        }`}
-                      >
-                        {slot}
-                      </button>
-                    ))}
+                    {availableSlots.map((slot) => {
+                      const ModIcon = slot.modality === "OL" ? Monitor : slot.modality === "P" ? MapPin : CheckCircle2;
+                      return (
+                        <button
+                          key={slot.time}
+                          onClick={() => { setSelectedTime(slot.time); setSelectedModality(slot.modality); }}
+                          className={`py-2 px-3 rounded-lg text-sm font-medium transition-all flex flex-col items-center gap-0.5 ${
+                            selectedTime === slot.time
+                              ? "bg-teal-600 text-white"
+                              : "bg-teal-50 text-teal-700 hover:bg-teal-100"
+                          }`}
+                        >
+                          <span>{slot.time}</span>
+                          <span className={`text-[10px] flex items-center gap-0.5 ${selectedTime === slot.time ? "text-teal-100" : "text-teal-400"}`}>
+                            <ModIcon className="w-3 h-3" />
+                            {slot.modality === "P" ? "Pres." : slot.modality === "OL" ? "Online" : "Ambas"}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -401,6 +420,14 @@ function BookingFlow({ patientId }: { patientId: string }) {
                   <span className="text-teal-600">Horario</span>
                   <span className="font-medium text-teal-900">
                     {selectedTime} hs
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-teal-600">Modalidad</span>
+                  <span className="font-medium text-teal-900 flex items-center gap-1">
+                    {selectedModality === "P" ? <><MapPin className="w-4 h-4" /> Presencial</> :
+                     selectedModality === "OL" ? <><Monitor className="w-4 h-4" /> Online</> :
+                     <><CheckCircle2 className="w-4 h-4" /> Presencial</>}
                   </span>
                 </div>
                 <div className="pt-2">
