@@ -115,6 +115,7 @@ export function ProfessionalScheduleConfig() {
   const [overrideModality, setOverrideModality] = useState("ambas");
   const [overrideReason, setOverrideReason] = useState("");
   const [editingOverrideId, setEditingOverrideId] = useState<string | null>(null);
+  const [overrideDatePickerOpen, setOverrideDatePickerOpen] = useState(false);
 
   // Load professional ID and data
   useEffect(() => {
@@ -338,6 +339,7 @@ export function ProfessionalScheduleConfig() {
     setOverrideModality("ambas");
     setOverrideReason("");
     setEditingOverrideId(null);
+    setOverrideDatePickerOpen(false);
   };
 
   // Delete override
@@ -694,7 +696,7 @@ export function ProfessionalScheduleConfig() {
                   {/* Date picker */}
                   <div className="space-y-1">
                     <Label className="text-xs text-teal-600">Fecha</Label>
-                    <Popover>
+                    <Popover open={overrideDatePickerOpen} onOpenChange={setOverrideDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -708,7 +710,10 @@ export function ProfessionalScheduleConfig() {
                         <CalendarComponent
                           mode="single"
                           selected={overrideDate}
-                          onSelect={setOverrideDate}
+                          onSelect={(date) => {
+                            setOverrideDate(date);
+                            setOverrideDatePickerOpen(false);
+                          }}
                           disabled={(date) => date < new Date()}
                           locale={es}
                         />
