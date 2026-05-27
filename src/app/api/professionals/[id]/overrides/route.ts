@@ -100,6 +100,84 @@ export async function POST(
   }
 }
 
+// PATCH /api/professionals/[id]/overrides?overrideId=xxx - Update an override
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
+    const role = (session.user as { role: string }).role;
+    if (role !== "professional" && role !== "admin" && role !== "super_admin") {
+      return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const overrideId = searchParams.get("overrideId");
+
+    if (!overrideId) {
+      return NextResponse.json(
+        { error: "overrideId es requerido" },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const { date, type, startTime, endTime, slotDuration, modality, reason } = body;
+
+    // Verify the override belongs to this professional
+    const existing = await db.scheduleOverride.findFirst({
+      where: { id: overrideId, professionalId: id },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Excepción no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    const updateType = type || existing.type;
+
+    if (updateType && !["block", "extra"].includes(updateType)) {
+      return NextResponse.json(
+        { error: "Tipo debe ser 'block' o 'extra'" },
+        { status: 400 }
+      );
+    }
+
+    if (updateType === "extra" && !startTime && !existing.startTime && !endTime && !existing.endTime) {
+      return NextResponse.json(
+        { error: "Horario de inicio y fin son requeridos para excepciones de tipo 'extra'" },
+        { status: 400 }
+      );
+    }
+
+    const updated = await db.scheduleOverride.update({
+      where: { id: overrideId },
+      data: {
+        date: date || existing.date,
+        type: updateType,
+        startTime: updateType === "extra" ? (startTime ?? existing.startTime) : null,
+        endTime: updateType === "extra" ? (endTime ?? existing.endTime) : null,
+        slotDuration: updateType === "extra" ? (slotDuration ?? existing.slotDuration ?? 45) : null,
+        modality: updateType === "extra" ? (modality ?? existing.modality ?? "ambas") : null,
+        reason: reason !== undefined ? (reason || null) : existing.reason,
+      },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("Update override error:", error);
+    return NextResponse.json({ error: "Error al actualizar excepción" }, { status: 500 });
+  }
+}
+
 // DELETE /api/professionals/[id]/overrides?overrideId=xxx
 export async function DELETE(
   request: NextRequest,

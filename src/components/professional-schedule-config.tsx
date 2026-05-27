@@ -104,6 +104,7 @@ export function ProfessionalScheduleConfig() {
   const [newEnd, setNewEnd] = useState("18:00");
   const [newDuration, setNewDuration] = useState(45);
   const [newModality, setNewModality] = useState("ambas");
+  const [editingScheduleIdx, setEditingScheduleIdx] = useState<number | null>(null);
 
   // New override form
   const [overrideDate, setOverrideDate] = useState<Date>();
@@ -113,6 +114,7 @@ export function ProfessionalScheduleConfig() {
   const [overrideDuration, setOverrideDuration] = useState(45);
   const [overrideModality, setOverrideModality] = useState("ambas");
   const [overrideReason, setOverrideReason] = useState("");
+  const [editingOverrideId, setEditingOverrideId] = useState<string | null>(null);
 
   // Load professional ID and data
   useEffect(() => {
@@ -152,16 +154,16 @@ export function ProfessionalScheduleConfig() {
     }
   };
 
-  // Add schedule entry
+  // Add or update schedule entry
   const handleAddSchedule = () => {
     if (newStart >= newEnd) {
       toast.error("La hora de inicio debe ser anterior a la de fin");
       return;
     }
 
-    // Check for overlap on same day
+    // Check for overlap on same day (excluding the entry being edited)
     const overlap = schedules.find(
-      (s) => s.dayOfWeek === newDay && newStart < s.endTime && newEnd > s.startTime
+      (s, i) => i !== editingScheduleIdx && s.dayOfWeek === newDay && newStart < s.endTime && newEnd > s.startTime
     );
     if (overlap) {
       toast.error(`Ya existe un horario el ${DAYS_MAP[newDay]} que se superpone (${overlap.startTime} - ${overlap.endTime})`);
@@ -175,12 +177,53 @@ export function ProfessionalScheduleConfig() {
       slotDuration: newDuration,
       modality: newModality,
     };
-    setSchedules((prev) => [...prev, newEntry].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime)));
+
+    if (editingScheduleIdx !== null) {
+      // Update existing entry
+      setSchedules((prev) =>
+        prev
+          .map((s, i) => (i === editingScheduleIdx ? newEntry : s))
+          .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
+      );
+      setEditingScheduleIdx(null);
+      toast.success("Horario modificado. Recordá guardar los cambios.");
+    } else {
+      // Add new entry
+      setSchedules((prev) => [...prev, newEntry].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime)));
+    }
   };
 
   // Remove schedule entry
   const handleRemoveSchedule = (index: number) => {
     setSchedules((prev) => prev.filter((_, i) => i !== index));
+    if (editingScheduleIdx === index) {
+      setEditingScheduleIdx(null);
+      resetScheduleForm();
+    } else if (editingScheduleIdx !== null && editingScheduleIdx > index) {
+      setEditingScheduleIdx(editingScheduleIdx - 1);
+    }
+  };
+
+  // Edit schedule entry - populate form with existing values
+  const handleEditSchedule = (index: number) => {
+    const entry = schedules[index];
+    if (!entry) return;
+    setNewDay(entry.dayOfWeek);
+    setNewStart(entry.startTime);
+    setNewEnd(entry.endTime);
+    setNewDuration(entry.slotDuration);
+    setNewModality(entry.modality);
+    setEditingScheduleIdx(index);
+  };
+
+  // Reset schedule form to defaults
+  const resetScheduleForm = () => {
+    setNewDay(1);
+    setNewStart("09:00");
+    setNewEnd("18:00");
+    setNewDuration(45);
+    setNewModality("ambas");
+    setEditingScheduleIdx(null);
   };
 
   // Save all schedules
@@ -208,7 +251,7 @@ export function ProfessionalScheduleConfig() {
     }
   };
 
-  // Add override
+  // Add or update override
   const handleAddOverride = async () => {
     if (!professionalId || !overrideDate) {
       toast.error("Seleccioná una fecha");
@@ -231,20 +274,34 @@ export function ProfessionalScheduleConfig() {
         body.modality = overrideModality;
       }
 
-      const res = await fetch(`/api/professionals/${professionalId}/overrides`, {
-        method: "POST",
+      const isEditing = editingOverrideId !== null;
+      const url = isEditing
+        ? `/api/professionals/${professionalId}/overrides?overrideId=${editingOverrideId}`
+        : `/api/professionals/${professionalId}/overrides`;
+      const method = isEditing ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
       if (res.ok) {
-        const newOverride = await res.json();
-        setOverrides((prev) =>
-          [...prev, newOverride].sort((a, b) => a.date.localeCompare(b.date) || (a.startTime || "").localeCompare(b.startTime || ""))
+        const savedOverride = await res.json();
+        if (isEditing) {
+          setOverrides((prev) =>
+            prev
+          .map((o) => (o.id === editingOverrideId ? savedOverride : o))
+          .sort((a, b) => a.date.localeCompare(b.date) || (a.startTime || "").localeCompare(b.startTime || ""))
+        );
+        toast.success("Excepción actualizada");
+        } else {
+          setOverrides((prev) =>
+          [...prev, savedOverride].sort((a, b) => a.date.localeCompare(b.date) || (a.startTime || "").localeCompare(b.startTime || ""))
         );
         toast.success(overrideType === "block" ? "Día bloqueado" : "Horario extra agregado");
-        setOverrideDate(undefined);
-        setOverrideReason("");
+        }
+        resetOverrideForm();
       } else {
         const error = await res.json();
         toast.error(error.error || "Error al agregar excepción");
@@ -252,6 +309,35 @@ export function ProfessionalScheduleConfig() {
     } catch {
       toast.error("Error de conexión");
     }
+  };
+
+  // Edit override - populate form with existing values
+  const handleEditOverride = (override: OverrideEntry) => {
+    if (!override.id) return;
+    setEditingOverrideId(override.id);
+    setOverrideType(override.type);
+    setOverrideReason(override.reason || "");
+    if (override.date) {
+      setOverrideDate(new Date(override.date + "T00:00:00"));
+    }
+    if (override.type === "extra") {
+      setOverrideStart(override.startTime || "09:00");
+      setOverrideEnd(override.endTime || "13:00");
+      setOverrideDuration(override.slotDuration || 45);
+      setOverrideModality(override.modality || "ambas");
+    }
+  };
+
+  // Reset override form
+  const resetOverrideForm = () => {
+    setOverrideDate(undefined);
+    setOverrideType("block");
+    setOverrideStart("09:00");
+    setOverrideEnd("13:00");
+    setOverrideDuration(45);
+    setOverrideModality("ambas");
+    setOverrideReason("");
+    setEditingOverrideId(null);
   };
 
   // Delete override
@@ -265,6 +351,9 @@ export function ProfessionalScheduleConfig() {
       if (res.ok) {
         setOverrides((prev) => prev.filter((o) => o.id !== overrideId));
         toast.success("Excepción eliminada");
+        if (editingOverrideId === overrideId) {
+          resetOverrideForm();
+        }
       }
     } catch {
       toast.error("Error al eliminar excepción");
@@ -327,11 +416,21 @@ export function ProfessionalScheduleConfig() {
       {activeTab === "weekly" && (
         <div className="space-y-6">
           {/* Add new schedule entry */}
-          <Card className="border-teal-100">
+          <Card className={`border-teal-100 ${editingScheduleIdx !== null ? "ring-2 ring-amber-300 border-amber-200" : ""}`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-teal-900 text-base flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Agregar Horario
+                {editingScheduleIdx !== null ? (
+                  <>
+                    <Edit3 className="w-4 h-4 text-amber-600" />
+                    <span className="text-amber-700">Editar Horario</span>
+                    <Badge variant="outline" className="ml-2 text-xs border-amber-300 text-amber-600">Modificando</Badge>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Agregar Horario
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -404,13 +503,25 @@ export function ProfessionalScheduleConfig() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button
-                    onClick={handleAddSchedule}
-                    size="sm"
-                    className="bg-teal-600 hover:bg-teal-700 text-white h-9"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    {editingScheduleIdx !== null && (
+                      <Button
+                        onClick={resetScheduleForm}
+                        size="sm"
+                        variant="outline"
+                        className="border-teal-200 text-teal-600 hover:bg-teal-50 h-9"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button
+                      onClick={handleAddSchedule}
+                      size="sm"
+                      className={editingScheduleIdx !== null ? "bg-amber-500 hover:bg-amber-600 text-white h-9" : "bg-teal-600 hover:bg-teal-700 text-white h-9"}
+                    >
+                      {editingScheduleIdx !== null ? <Edit3 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -468,14 +579,28 @@ export function ProfessionalScheduleConfig() {
                                   {MODALITY_MAP[s.modality]?.label}
                                 </Badge>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-400 hover:text-red-600 hover:bg-red-50 h-8"
-                                onClick={() => handleRemoveSchedule(origIdx)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-8 ${
+                                    editingScheduleIdx === origIdx
+                                      ? "text-amber-500 bg-amber-50 hover:bg-amber-100"
+                                      : "text-teal-400 hover:text-teal-600 hover:bg-teal-50"
+                                  }`}
+                                  onClick={() => handleEditSchedule(origIdx)}
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-400 hover:text-red-600 hover:bg-red-50 h-8"
+                                  onClick={() => handleRemoveSchedule(origIdx)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
                           );
                         })}
@@ -514,11 +639,21 @@ export function ProfessionalScheduleConfig() {
       {activeTab === "overrides" && (
         <div className="space-y-6">
           {/* Add override */}
-          <Card className="border-teal-100">
+          <Card className={`border-teal-100 ${editingOverrideId !== null ? "ring-2 ring-amber-300 border-amber-200" : ""}`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-teal-900 text-base flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Agregar Excepción
+                {editingOverrideId !== null ? (
+                  <>
+                    <Edit3 className="w-4 h-4 text-amber-600" />
+                    <span className="text-amber-700">Editar Excepción</span>
+                    <Badge variant="outline" className="ml-2 text-xs border-amber-300 text-amber-600">Modificando</Badge>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Agregar Excepción
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -651,27 +786,45 @@ export function ProfessionalScheduleConfig() {
                   </div>
                 )}
 
-                <Button
-                  onClick={handleAddOverride}
-                  className={`text-white ${
-                    overrideType === "block"
-                      ? "bg-red-500 hover:bg-red-600"
-                      : "bg-teal-600 hover:bg-teal-700"
-                  }`}
-                  disabled={!overrideDate}
-                >
-                  {overrideType === "block" ? (
-                    <>
-                      <XCircle className="mr-2 w-4 h-4" />
-                      Bloquear Fecha
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 w-4 h-4" />
-                      Agregar Horario Extra
-                    </>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleAddOverride}
+                    className={`text-white ${
+                      editingOverrideId !== null
+                        ? "bg-amber-500 hover:bg-amber-600"
+                        : overrideType === "block"
+                          ? "bg-red-500 hover:bg-red-600"
+                          : "bg-teal-600 hover:bg-teal-700"
+                    }`}
+                    disabled={!overrideDate}
+                  >
+                    {editingOverrideId !== null ? (
+                      <>
+                        <Edit3 className="mr-2 w-4 h-4" />
+                        Actualizar Excepción
+                      </>
+                    ) : overrideType === "block" ? (
+                      <>
+                        <XCircle className="mr-2 w-4 h-4" />
+                        Bloquear Fecha
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 w-4 h-4" />
+                        Agregar Horario Extra
+                      </>
+                    )}
+                  </Button>
+                  {editingOverrideId !== null && (
+                    <Button
+                      onClick={resetOverrideForm}
+                      variant="outline"
+                      className="border-teal-200 text-teal-600 hover:bg-teal-50"
+                    >
+                      Cancelar
+                    </Button>
                   )}
-                </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -727,14 +880,28 @@ export function ProfessionalScheduleConfig() {
                             )}
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-400 hover:text-red-600 hover:bg-red-50 h-8"
-                          onClick={() => o.id && handleDeleteOverride(o.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-8 ${
+                              editingOverrideId === o.id
+                                ? "text-amber-500 bg-amber-50 hover:bg-amber-100"
+                                : "text-teal-400 hover:text-teal-600 hover:bg-teal-50"
+                            }`}
+                            onClick={() => handleEditOverride(o)}
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-400 hover:text-red-600 hover:bg-red-50 h-8"
+                            onClick={() => o.id && handleDeleteOverride(o.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
