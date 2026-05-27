@@ -11,13 +11,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { patientId, professionalId, date, time, modality, reason } = body;
+    const { patientId, professionalId, date, time, modality, reason, status } = body;
 
     if (!patientId || !professionalId || !date || !time) {
       return NextResponse.json(
         { error: "Faltan datos obligatorios" },
         { status: 400 }
       );
+    }
+
+    // Determine appointment status based on role
+    const role = (session.user as { role: string }).role;
+    let appointmentStatus = "pending"; // Default for patients
+    if ((role === "professional" || role === "admin" || role === "super_admin") && status === "confirmed") {
+      appointmentStatus = "confirmed";
     }
 
     // Check for conflicting appointment
@@ -45,6 +52,7 @@ export async function POST(request: NextRequest) {
         time,
         modality: modality || "P",
         reason: reason || null,
+        status: appointmentStatus,
       },
       include: {
         patient: { include: { user: { select: { name: true } } } },

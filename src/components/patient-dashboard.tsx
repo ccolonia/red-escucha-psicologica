@@ -16,6 +16,7 @@ import {
   FileText,
   MapPin,
   Monitor,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -644,9 +645,43 @@ export function PatientDashboard() {
                       </p>
                     </div>
                   </div>
-                  <Badge variant={STATUS_MAP[apt.status]?.variant || "outline"}>
-                    {STATUS_MAP[apt.status]?.label || apt.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={STATUS_MAP[apt.status]?.variant || "outline"}>
+                      {STATUS_MAP[apt.status]?.label || apt.status}
+                    </Badge>
+                    {(apt.status === "pending" || apt.status === "confirmed") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={async () => {
+                          if (!window.confirm("¿Estás seguro de que querés cancelar este turno?")) return;
+                          try {
+                            const res = await fetch(`/api/appointments/${apt.id}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ status: "cancelled" }),
+                            });
+                            if (res.ok) {
+                              setAppointments((prev) =>
+                                prev.map((a) =>
+                                  a.id === apt.id ? { ...a, status: "cancelled" } : a
+                                )
+                              );
+                              toast.success("Turno cancelado exitosamente");
+                            } else {
+                              const data = await res.json();
+                              toast.error(data.error || "Error al cancelar el turno");
+                            }
+                          } catch {
+                            toast.error("Error de conexión");
+                          }
+                        }}
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -736,6 +771,7 @@ export function PatientAppointments() {
   const { data: session } = useSession();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/appointments")
@@ -746,6 +782,33 @@ export function PatientAppointments() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  const handleCancel = async (aptId: string) => {
+    if (!window.confirm("¿Estás seguro de que querés cancelar este turno?")) return;
+    setCancellingId(aptId);
+    try {
+      const res = await fetch(`/api/appointments/${aptId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (res.ok) {
+        setAppointments((prev) =>
+          prev.map((a) =>
+            a.id === aptId ? { ...a, status: "cancelled" } : a
+          )
+        );
+        toast.success("Turno cancelado exitosamente");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al cancelar el turno");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   return (
     <div>
@@ -789,9 +852,23 @@ export function PatientAppointments() {
                     )}
                   </div>
                 </div>
-                <Badge variant={STATUS_MAP[apt.status]?.variant || "outline"}>
-                  {STATUS_MAP[apt.status]?.label || apt.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={STATUS_MAP[apt.status]?.variant || "outline"}>
+                    {STATUS_MAP[apt.status]?.label || apt.status}
+                  </Badge>
+                  {(apt.status === "pending" || apt.status === "confirmed") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      disabled={cancellingId === apt.id}
+                      onClick={() => handleCancel(apt.id)}
+                    >
+                      <XCircle className="w-4 h-4" />
+                      <span className="ml-1 text-xs hidden sm:inline">Cancelar</span>
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}

@@ -14,6 +14,7 @@ import {
   FileText,
   Lock,
   Save,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,8 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
+import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
+import { NewAppointmentDialog } from "@/components/new-appointment-dialog";
 
 interface Appointment {
   id: string;
@@ -304,12 +308,34 @@ export function ProfessionalDashboard() {
 }
 
 export function ProfessionalSchedule() {
+  const { data: session } = useSession();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [sessionNotes, setSessionNotes] = useState("");
+  const [professionalId, setProfessionalId] = useState<string>("");
+  const [showNewAppointment, setShowNewAppointment] = useState(false);
+  const [activeTab, setActiveTab] = useState("agenda");
 
+  // Load professional ID
   useEffect(() => {
+    if (session?.user) {
+      const userId = (session.user as { id: string }).id;
+      fetch("/api/professionals")
+        .then((res) => res.json())
+        .then((data) => {
+          const prof = Array.isArray(data)
+            ? data.find((p: { userId: string }) => p.userId === userId)
+            : null;
+          if (prof) {
+            setProfessionalId(prof.id);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [session]);
+
+  const loadAppointments = () => {
     fetch("/api/appointments")
       .then((res) => res.json())
       .then((data) => {
@@ -317,6 +343,10 @@ export function ProfessionalSchedule() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadAppointments();
   }, []);
 
   const handleConfirm = async (id: string) => {
@@ -397,157 +427,204 @@ export function ProfessionalSchedule() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-teal-900 mb-6">Mi Agenda</h2>
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-teal-50 animate-pulse rounded-lg" />
-          ))}
-        </div>
-      ) : Object.keys(grouped).length === 0 ? (
-        <Card className="border-teal-100">
-          <CardContent className="py-12 text-center">
-            <Calendar className="w-12 h-12 text-teal-200 mx-auto" />
-            <p className="text-teal-600 mt-2">No hay turnos programados</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(grouped).map(([date, apts]) => (
-            <Card key={date} className="border-teal-100">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-teal-900 text-base flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  {date === new Date().toISOString().split("T")[0]
-                    ? "Hoy"
-                    : date}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {apts.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="p-3 bg-teal-50/50 rounded-lg"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-teal-100 rounded flex items-center justify-center">
-                          <Clock className="w-4 h-4 text-teal-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-teal-600">
-                            {apt.time} hs
-                          </p>
-                          <p className="text-sm font-semibold text-teal-900">
-                            {apt.patient.user.name}
-                          </p>
-                          {apt.reason ? (
-                            <p className="text-xs text-teal-600 mt-0.5 bg-teal-100/50 px-2 py-1 rounded">
-                              <span className="font-medium">Motivo:</span> {apt.reason}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-teal-400 italic">Sin motivo especificado</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={
-                            STATUS_MAP[apt.status]?.variant || "outline"
-                          }
-                        >
-                          {STATUS_MAP[apt.status]?.label || apt.status}
-                        </Badge>
-                        {apt.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              className="bg-teal-600 hover:bg-teal-700 text-white h-7 text-xs"
-                              onClick={() => handleConfirm(apt.id)}
+      {/* Header with title and new appointment button */}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-teal-900">Mi Agenda</h2>
+        <Button
+          onClick={() => setShowNewAppointment(true)}
+          className="bg-teal-600 hover:bg-teal-700 text-white"
+        >
+          <Plus className="mr-2 w-4 h-4" />
+          Nuevo Turno
+        </Button>
+      </div>
+
+      {/* Tabs: Agenda Visual / Lista */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-teal-50 border border-teal-100">
+          <TabsTrigger
+            value="agenda"
+            className="data-[state=active]:bg-teal-600 data-[state=active]:text-white"
+          >
+            <Calendar className="w-4 h-4 mr-1" />
+            Agenda Visual
+          </TabsTrigger>
+          <TabsTrigger
+            value="lista"
+            className="data-[state=active]:bg-teal-600 data-[state=active]:text-white"
+          >
+            <Clock className="w-4 h-4 mr-1" />
+            Lista
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="agenda" className="mt-4">
+          <ProfessionalWeeklyAgenda professionalId={professionalId} />
+        </TabsContent>
+
+        <TabsContent value="lista" className="mt-4">
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 bg-teal-50 animate-pulse rounded-lg" />
+              ))}
+            </div>
+          ) : Object.keys(grouped).length === 0 ? (
+            <Card className="border-teal-100">
+              <CardContent className="py-12 text-center">
+                <Calendar className="w-12 h-12 text-teal-200 mx-auto" />
+                <p className="text-teal-600 mt-2">No hay turnos programados</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {Object.entries(grouped).map(([date, apts]) => (
+                <Card key={date} className="border-teal-100">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-teal-900 text-base flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      {date === new Date().toISOString().split("T")[0]
+                        ? "Hoy"
+                        : date}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {apts.map((apt) => (
+                      <div
+                        key={apt.id}
+                        className="p-3 bg-teal-50/50 rounded-lg"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-teal-100 rounded flex items-center justify-center">
+                              <Clock className="w-4 h-4 text-teal-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-teal-600">
+                                {apt.time} hs
+                              </p>
+                              <p className="text-sm font-semibold text-teal-900">
+                                {apt.patient.user.name}
+                              </p>
+                              {apt.reason ? (
+                                <p className="text-xs text-teal-600 mt-0.5 bg-teal-100/50 px-2 py-1 rounded">
+                                  <span className="font-medium">Motivo:</span> {apt.reason}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-teal-400 italic">Sin motivo especificado</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                STATUS_MAP[apt.status]?.variant || "outline"
+                              }
                             >
-                              Confirmar
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="h-7 text-xs"
-                              onClick={() => handleCancel(apt.id)}
-                            >
-                              Cancelar
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {/* Complete appointment with notes - only for confirmed */}
-                    {apt.status === "confirmed" && (
-                      <div className="mt-3 pt-3 border-t border-teal-100">
-                        {completingId === apt.id ? (
-                          <div className="space-y-3">
-                            <Label className="text-sm text-teal-700">
-                              Notas de la sesión (obligatorio para completar)
-                            </Label>
-                            <textarea
-                              value={sessionNotes}
-                              onChange={(e) => setSessionNotes(e.target.value)}
-                              placeholder="Registre las observaciones de la sesión..."
-                              className="w-full min-h-[80px] rounded-md border border-teal-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
-                              rows={3}
-                            />
-                            <div className="flex gap-2">
+                              {STATUS_MAP[apt.status]?.label || apt.status}
+                            </Badge>
+                            {apt.status === "pending" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-teal-600 hover:bg-teal-700 text-white h-7 text-xs"
+                                  onClick={() => handleConfirm(apt.id)}
+                                >
+                                  Confirmar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-7 text-xs"
+                                  onClick={() => handleCancel(apt.id)}
+                                >
+                                  Cancelar
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {/* Complete appointment with notes - only for confirmed */}
+                        {apt.status === "confirmed" && (
+                          <div className="mt-3 pt-3 border-t border-teal-100">
+                            {completingId === apt.id ? (
+                              <div className="space-y-3">
+                                <Label className="text-sm text-teal-700">
+                                  Notas de la sesión (obligatorio para completar)
+                                </Label>
+                                <textarea
+                                  value={sessionNotes}
+                                  onChange={(e) => setSessionNotes(e.target.value)}
+                                  placeholder="Registre las observaciones de la sesión..."
+                                  className="w-full min-h-[80px] rounded-md border border-teal-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                                  rows={3}
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-7 text-xs"
+                                    onClick={() => handleComplete(apt.id)}
+                                  >
+                                    <CheckCircle2 className="mr-1 w-3 h-3" />
+                                    Completar Turno
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs border-teal-200"
+                                    onClick={() => {
+                                      setCompletingId(null);
+                                      setSessionNotes("");
+                                    }}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
                               <Button
                                 size="sm"
                                 variant="secondary"
                                 className="h-7 text-xs"
-                                onClick={() => handleComplete(apt.id)}
+                                onClick={() => {
+                                  setCompletingId(apt.id);
+                                  setSessionNotes("");
+                                }}
                               >
                                 <CheckCircle2 className="mr-1 w-3 h-3" />
                                 Completar Turno
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs border-teal-200"
-                                onClick={() => {
-                                  setCompletingId(null);
-                                  setSessionNotes("");
-                                }}
-                              >
-                                Cancelar
-                              </Button>
-                            </div>
+                            )}
                           </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              setCompletingId(apt.id);
-                              setSessionNotes("");
-                            }}
-                          >
-                            <CheckCircle2 className="mr-1 w-3 h-3" />
-                            Completar Turno
-                          </Button>
+                        )}
+                        {/* Show notes for completed appointments */}
+                        {apt.status === "completed" && apt.notes && (
+                          <div className="mt-2 pt-2 border-t border-teal-100">
+                            <p className="text-xs text-teal-500">
+                              <FileText className="inline w-3 h-3 mr-1" />
+                              Notas: {apt.notes}
+                            </p>
+                          </div>
                         )}
                       </div>
-                    )}
-                    {/* Show notes for completed appointments */}
-                    {apt.status === "completed" && apt.notes && (
-                      <div className="mt-2 pt-2 border-t border-teal-100">
-                        <p className="text-xs text-teal-500">
-                          <FileText className="inline w-3 h-3 mr-1" />
-                          Notas: {apt.notes}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* New appointment dialog */}
+      {professionalId && (
+        <NewAppointmentDialog
+          open={showNewAppointment}
+          onOpenChange={setShowNewAppointment}
+          professionalId={professionalId}
+          onSuccess={loadAppointments}
+        />
       )}
     </div>
   );

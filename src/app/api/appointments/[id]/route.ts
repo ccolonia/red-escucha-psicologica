@@ -21,6 +21,9 @@ export async function PATCH(
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
+    const userRole = (session.user as { role: string }).role;
+    const userId = (session.user as { id: string }).id;
+
     const { id } = await params;
     const body = await request.json();
     const { status, notes } = body;
@@ -35,6 +38,7 @@ export async function PATCH(
     // Fetch the current appointment to validate status transition
     const currentAppointment = await db.appointment.findUnique({
       where: { id },
+      include: { patient: true },
     });
 
     if (!currentAppointment) {
@@ -45,6 +49,25 @@ export async function PATCH(
     }
 
     const currentStatus = currentAppointment.status;
+
+    // If the user is a patient, enforce stricter rules
+    if (userRole === "patient") {
+      // Verify the patient owns this appointment
+      if (currentAppointment.patient.userId !== userId) {
+        return NextResponse.json(
+          { error: "No tenés permiso para modificar este turno" },
+          { status: 403 }
+        );
+      }
+
+      // Patients can ONLY cancel appointments
+      if (status !== "cancelled") {
+        return NextResponse.json(
+          { error: "Los pacientes solo pueden cancelar turnos" },
+          { status: 403 }
+        );
+      }
+    }
 
     // Validate the status transition
     if (!validTransitions[currentStatus]?.includes(status)) {

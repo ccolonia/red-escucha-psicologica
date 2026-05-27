@@ -6,6 +6,7 @@ import {
   Users,
   Stethoscope,
   Calendar,
+  CalendarPlus,
   Clock,
   Mail,
   CheckCircle2,
@@ -55,6 +56,7 @@ import {
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
+import { NewAppointmentDialog } from "@/components/new-appointment-dialog";
 
 // ---- Admin Stats / Dashboard ----
 
@@ -289,6 +291,7 @@ export function AdminAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [showNewAppointment, setShowNewAppointment] = useState(false);
 
   useEffect(() => {
     fetch("/api/appointments")
@@ -327,18 +330,27 @@ export function AdminAppointments() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-teal-900">Turnos</h2>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 border-teal-200">
-            <SelectValue placeholder="Filtrar estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="pending">Pendientes</SelectItem>
-            <SelectItem value="confirmed">Confirmados</SelectItem>
-            <SelectItem value="completed">Completados</SelectItem>
-            <SelectItem value="cancelled">Cancelados</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setShowNewAppointment(true)}
+            className="bg-teal-600 hover:bg-teal-700 text-white"
+          >
+            <CalendarPlus className="mr-2 w-4 h-4" />
+            Nuevo Turno
+          </Button>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40 border-teal-200">
+              <SelectValue placeholder="Filtrar estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="pending">Pendientes</SelectItem>
+              <SelectItem value="confirmed">Confirmados</SelectItem>
+              <SelectItem value="completed">Completados</SelectItem>
+              <SelectItem value="cancelled">Cancelados</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
@@ -408,6 +420,20 @@ export function AdminAppointments() {
           ))}
         </div>
       )}
+
+      <NewAppointmentDialog
+        open={showNewAppointment}
+        onOpenChange={setShowNewAppointment}
+        professionalId=""
+        isAdmin={true}
+        onCreated={() => {
+          // Refresh appointments list
+          fetch("/api/appointments")
+            .then((res) => res.json())
+            .then((data) => setAppointments(data))
+            .catch(() => {});
+        }}
+      />
     </div>
   );
 }

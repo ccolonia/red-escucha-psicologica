@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -15,43 +15,54 @@ export async function GET() {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search")?.toLowerCase();
+
+    // Build where clause
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let where: any = {};
+
     // Admins see all patients; professionals only see patients with appointments with them
     if (role === "admin" || role === "super_admin") {
-      const patients = await db.patient.findMany({
-        include: {
-          user: {
-            select: { name: true, email: true, phone: true },
-          },
-        },
-        orderBy: { user: { name: "asc" } },
+      // All patients
+    } else {
+      // Professional: only patients who have (or had) appointments with this professional
+      const professional = await db.professional.findUnique({
+        where: { userId: session.user.id },
       });
-      return NextResponse.json(patients);
+
+      if (!professional) {
+        return NextResponse.json([]);
+      }
+
+      // Get distinct patient IDs from this professional's appointments
+      const appointmentPatientIds = await db.appointment.findMany({
+        where: { professionalId: professional.id },
+        select: { patientId: true },
+        distinct: ["patientId"],
+      });
+
+      const patientIds = appointmentPatientIds.map((a) => a.patientId);
+
+      if (patientIds.length === 0) {
+        return NextResponse.json([]);
+      }
+
+      where.id = { in: patientIds };
     }
 
-    // Professional: only patients who have (or had) appointments with this professional
-    const professional = await db.professional.findUnique({
-      where: { userId: session.user.id },
-    });
-
-    if (!professional) {
-      return NextResponse.json([]);
-    }
-
-    // Get distinct patient IDs from this professional's appointments
-    const appointmentPatientIds = await db.appointment.findMany({
-      where: { professionalId: professional.id },
-      select: { patientId: true },
-      distinct: ["patientId"],
-    });
-
-    const patientIds = appointmentPatientIds.map((a) => a.patientId);
-
-    if (patientIds.length === 0) {
-      return NextResponse.json([]);
+    // Apply search filter
+    if (search) {
+      where.user = {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+        ],
+      };
     }
 
     const patients = await db.patient.findMany({
-      where: { id: { in: patientIds } },
+      where,
       include: {
         user: {
           select: { name: true, email: true, phone: true },
