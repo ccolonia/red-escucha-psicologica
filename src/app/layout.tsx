@@ -51,14 +51,6 @@ function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', 'AW-1017920443');`}
         </Script>
-        {/* Event snippet for Chatbot Cliengo Conversion #1591993359684 */}
-        <Script id="google-gtag-conversion" strategy="afterInteractive">
-          {`gtag('event', 'conversion', {
-    'send_to': 'AW-1017920443/MmDKCKewx9MBELv3sOUD',
-    'value': 1.0,
-    'currency': 'ARS'
-});`}
-        </Script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground overflow-x-hidden`}

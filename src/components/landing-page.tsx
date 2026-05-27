@@ -310,6 +310,22 @@ export function LandingPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Google Ads conversion: Chatbot Cliengo - Register the conversion function
+  // so the Cliengo chatbot widget can trigger it when a conversation converts
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as unknown as Record<string, unknown>).triggerCliengoConversion = () => {
+        if (typeof (window as unknown as Record<string, unknown>).gtag === "function") {
+          (window as unknown as Record<string, unknown>).gtag("event", "conversion", {
+            send_to: "AW-1017920443/MmDKCKewx9MBELv3sOUD",
+            value: 1.0,
+            currency: "ARS",
+          });
+        }
+      };
+    }
+  }, []);
+
   // Close mobile menu on resize to desktop
   useEffect(() => {
     const handleResize = () => {
@@ -334,6 +350,12 @@ export function LandingPage() {
       if (res.ok) {
         setContactSent(true);
         setContactForm({ name: "", email: "", phone: "", message: "", reason: "" });
+        // Google Ads conversion: Formulario Contacto
+        if (typeof window !== "undefined" && typeof (window as unknown as Record<string, unknown>).gtag === "function") {
+          (window as unknown as Record<string, unknown>).gtag("event", "conversion", {
+            send_to: "AW-1017920443/C-7BCKj23ekBELv3sOUD",
+          });
+        }
         setTimeout(() => setContactSent(false), 4000);
       } else {
         setContactError(true);
