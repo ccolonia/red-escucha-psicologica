@@ -14,7 +14,6 @@ import {
   MessageSquare,
   FileText,
   LogOut,
-  Leaf,
   Menu,
   X,
   Shield,
@@ -98,7 +97,7 @@ export function AppNavigation() {
             className="w-full group relative overflow-hidden flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 shadow-md shadow-teal-500/25 hover:shadow-lg hover:shadow-teal-500/30 transition-all duration-300 active:scale-[0.98]"
           >
             <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            <CalendarCheck className="w-4.5 h-4.5 relative z-10" />
+            <CalendarCheck className="w-4 h-4 relative z-10" />
             <span className="relative z-10">Turnos</span>
             <Sparkles className="w-3 h-3 absolute top-1.5 right-2 text-yellow-200 animate-pulse" />
           </button>
@@ -107,7 +106,7 @@ export function AppNavigation() {
             className="w-full group relative overflow-hidden flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-md shadow-violet-500/25 hover:shadow-lg hover:shadow-violet-500/30 transition-all duration-300 active:scale-[0.98]"
           >
             <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            <UserPlus className="w-4.5 h-4.5 relative z-10" />
+            <UserPlus className="w-4 h-4 relative z-10" />
             <span className="relative z-10">Profesionales</span>
             <Sparkles className="w-3 h-3 absolute top-1.5 right-2 text-pink-200 animate-pulse" />
           </button>
@@ -202,7 +201,7 @@ export function AppNavigation() {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Creative CTA Buttons */}
+        {/* Creative CTA Buttons - Mobile */}
         <div className="px-4 pt-4 pb-2 space-y-2">
           <button
             onClick={() => {
@@ -213,7 +212,7 @@ export function AppNavigation() {
             }}
             className="w-full group relative overflow-hidden flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 shadow-md shadow-teal-500/25 transition-all active:scale-[0.98]"
           >
-            <CalendarCheck className="w-4.5 h-4.5 relative z-10" />
+            <CalendarCheck className="w-4 h-4 relative z-10" />
             <span className="relative z-10">Turnos</span>
           </button>
           <button
@@ -223,7 +222,7 @@ export function AppNavigation() {
             }}
             className="w-full group relative overflow-hidden flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-md shadow-violet-500/25 transition-all active:scale-[0.98]"
           >
-            <UserPlus className="w-4.5 h-4.5 relative z-10" />
+            <UserPlus className="w-4 h-4 relative z-10" />
             <span className="relative z-10">Profesionales</span>
           </button>
         </div>
