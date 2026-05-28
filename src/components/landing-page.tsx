@@ -546,13 +546,6 @@ export function LandingPage() {
                 Pulsar aquí
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
-              <Button
-                onClick={() => { setMobileMenuOpen(false); scrollToSection("contacto"); }}
-                className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-6 h-9 rounded-full mt-3" style={{ fontFamily: "Montserrat, sans-serif" }}
-              >
-                <CalendarPlus className="mr-2 w-4 h-4" />
-                Turno aquí
-              </Button>
             </div>
           </div>
         </div>
@@ -777,19 +770,6 @@ export function LandingPage() {
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="mt-4"
-              >
-                <Button
-                  onClick={() => scrollToSection("contacto")}
-                  className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-6 h-10 rounded-full shadow-lg" style={{ fontFamily: "Montserrat, sans-serif" }}
-                >
-                  <CalendarPlus className="mr-2 w-4 h-4" />
-                  Turno aquí
-                </Button>
-              </motion.div>
             </motion.div>
           </div>
 
@@ -819,19 +799,6 @@ export function LandingPage() {
               >
                 Pulsar aquí
                 <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.95 }}
-              className="mt-4"
-            >
-              <Button
-                onClick={() => scrollToSection("contacto")}
-                className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-6 h-10 rounded-full shadow-lg" style={{ fontFamily: "Montserrat, sans-serif" }}
-              >
-                <CalendarPlus className="mr-2 w-4 h-4" />
-                Turno aquí
               </Button>
             </motion.div>
           </motion.div>
