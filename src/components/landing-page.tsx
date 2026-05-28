@@ -405,38 +405,38 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20 md:h-22">
             {/* Logo */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center flex-shrink-0">
               <img
                 src="/images/logo.png"
                 alt="Red Escucha Psicológica"
                 className="h-12 sm:h-14 md:h-16 w-auto object-contain"
               />
+            </div>
 
-              {/* Animated tagline */}
-              <div className="hidden sm:flex items-center h-8 overflow-hidden" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={taglineIndex}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -12 }}
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
-                    className={`text-sm font-semibold tracking-widest uppercase whitespace-nowrap ${
-                      taglineIndex === 0
-                        ? "text-sage-400"
-                        : taglineIndex === 1
-                        ? "text-forest-400"
-                        : "text-amber-500"
-                    }`}
-                  >
-                    {taglines[taglineIndex]}
-                  </motion.span>
-                </AnimatePresence>
-              </div>
+            {/* Animated tagline - centered between logo and menu */}
+            <div className="hidden sm:flex flex-1 items-center justify-center h-8 overflow-hidden" style={{ fontFamily: "Montserrat, sans-serif" }}>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={taglineIndex}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                  className={`text-sm font-semibold tracking-widest uppercase whitespace-nowrap ${
+                    taglineIndex === 0
+                      ? "text-sage-400"
+                      : taglineIndex === 1
+                      ? "text-forest-400"
+                      : "text-amber-500"
+                  }`}
+                >
+                  {taglines[taglineIndex]}
+                </motion.span>
+              </AnimatePresence>
             </div>
 
             {/* Desktop nav links */}
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-8 flex-shrink-0">
               <button
                 onClick={() => scrollToSection("inicio")}
                 className="text-sm text-forest-700 hover:text-sage-300 transition-colors font-medium tracking-wide" style={{ fontFamily: "Montserrat, sans-serif" }}
@@ -551,7 +551,7 @@ export function LandingPage() {
                 className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-6 h-9 rounded-full mt-3" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 <CalendarPlus className="mr-2 w-4 h-4" />
-                Solicitar Turno
+                Turno aquí
               </Button>
             </div>
           </div>
@@ -787,7 +787,7 @@ export function LandingPage() {
                   className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-6 h-10 rounded-full shadow-lg" style={{ fontFamily: "Montserrat, sans-serif" }}
                 >
                   <CalendarPlus className="mr-2 w-4 h-4" />
-                  Solicitar Turno
+                  Turno aquí
                 </Button>
               </motion.div>
             </motion.div>
@@ -831,7 +831,7 @@ export function LandingPage() {
                 className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-6 h-10 rounded-full shadow-lg" style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 <CalendarPlus className="mr-2 w-4 h-4" />
-                Solicitar Turno
+                Turno aquí
               </Button>
             </motion.div>
           </motion.div>
@@ -1382,14 +1382,16 @@ export function LandingPage() {
         </div>
       </footer>
 
-      {/* ===== SOLICITAR TURNO FLOATING BUTTON ===== */}
+      {/* ===== TURNO AQUÍ FLOATING BUTTON (round, same size as WhatsApp) ===== */}
       <button
         onClick={() => scrollToSection("contacto")}
-        className="fixed z-50 flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm pl-4 pr-5 h-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-        style={{ bottom: 'max(5.5rem, calc(env(safe-area-inset-bottom, 1.5rem) + 4rem))', right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))', fontFamily: "Montserrat, sans-serif" }}
+        className="fixed z-50 w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-full flex flex-col items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+        style={{ bottom: 'max(5.5rem, calc(env(safe-area-inset-bottom, 1.5rem) + 4rem))', right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))' }}
+        aria-label="Solicitar Turno"
       >
         <CalendarPlus className="w-5 h-5" />
-        Solicitar Turno
+        <span className="text-[8px] font-bold leading-tight mt-0.5" style={{ fontFamily: "Montserrat, sans-serif" }}>Turno</span>
+        <span className="text-[8px] font-bold leading-tight" style={{ fontFamily: "Montserrat, sans-serif" }}>aquí</span>
       </button>
 
       {/* ===== WHATSAPP FLOATING BUTTON ===== */}
