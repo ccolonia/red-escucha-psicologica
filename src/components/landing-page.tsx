@@ -157,6 +157,17 @@ export function LandingPage() {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
+  // ===== Animated tagline in navbar =====
+  const taglines = ["Escuchar", "Acompañar", "Transformar"];
+  const [taglineIndex, setTaglineIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTaglineIndex((prev) => (prev + 1) % taglines.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [taglines.length]);
+
   // ===== CMS Dynamic Content =====
   const [cmsHeroSlides, setCmsHeroSlides] = useState(defaultHeroSlides);
 
@@ -394,11 +405,35 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20 md:h-22">
             {/* Logo */}
-            <img
-              src="/images/logo.png"
-              alt="Red Escucha Psicológica"
-              className="h-12 sm:h-14 md:h-16 w-auto object-contain"
-            />
+            <div className="flex items-center gap-4">
+              <img
+                src="/images/logo.png"
+                alt="Red Escucha Psicológica"
+                className="h-12 sm:h-14 md:h-16 w-auto object-contain"
+              />
+
+              {/* Animated tagline */}
+              <div className="hidden sm:flex items-center h-8 overflow-hidden" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={taglineIndex}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                    className={`text-sm font-semibold tracking-widest uppercase whitespace-nowrap ${
+                      taglineIndex === 0
+                        ? "text-sage-400"
+                        : taglineIndex === 1
+                        ? "text-forest-400"
+                        : "text-amber-500"
+                    }`}
+                  >
+                    {taglines[taglineIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+            </div>
 
             {/* Desktop nav links */}
             <div className="hidden md:flex items-center gap-8">
