@@ -77,30 +77,8 @@ export async function PATCH(
       );
     }
 
-    // Authorization: patients can only cancel their own appointments
-    const role = (session.user as { role: string }).role;
-    const userId = (session.user as { id: string }).id;
-
-    if (role === "patient") {
-      // Patients can only cancel (not confirm, complete, etc.)
-      if (status !== "cancelled") {
-        return NextResponse.json(
-          { error: "Los pacientes solo pueden cancelar turnos" },
-          { status: 403 }
-        );
-      }
-      // Verify the appointment belongs to this patient
-      const patient = await db.patient.findUnique({
-        where: { userId },
-      });
-      if (!patient || currentAppointment.patientId !== patient.id) {
-        return NextResponse.json(
-          { error: "No autorizado" },
-          { status: 403 }
-        );
-      }
-    } else if (role === "professional") {
-      // Professionals can only manage their own appointments
+    // Authorization: professionals can only manage their own appointments
+    if (userRole === "professional") {
       const professional = await db.professional.findUnique({
         where: { userId },
       });
