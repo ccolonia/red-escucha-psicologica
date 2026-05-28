@@ -546,6 +546,13 @@ export function LandingPage() {
                 Pulsar aquí
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
+              <Button
+                onClick={() => { setMobileMenuOpen(false); scrollToSection("contacto"); }}
+                className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-6 h-9 rounded-full mt-3" style={{ fontFamily: "Montserrat, sans-serif" }}
+              >
+                <CalendarPlus className="mr-2 w-4 h-4" />
+                Solicitar Turno
+              </Button>
             </div>
           </div>
         </div>
@@ -770,6 +777,19 @@ export function LandingPage() {
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="mt-4"
+              >
+                <Button
+                  onClick={() => scrollToSection("contacto")}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-6 h-10 rounded-full shadow-lg" style={{ fontFamily: "Montserrat, sans-serif" }}
+                >
+                  <CalendarPlus className="mr-2 w-4 h-4" />
+                  Solicitar Turno
+                </Button>
+              </motion.div>
             </motion.div>
           </div>
 
@@ -799,6 +819,19 @@ export function LandingPage() {
               >
                 Pulsar aquí
                 <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+              className="mt-4"
+            >
+              <Button
+                onClick={() => scrollToSection("contacto")}
+                className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-6 h-10 rounded-full shadow-lg" style={{ fontFamily: "Montserrat, sans-serif" }}
+              >
+                <CalendarPlus className="mr-2 w-4 h-4" />
+                Solicitar Turno
               </Button>
             </motion.div>
           </motion.div>
@@ -1348,6 +1381,16 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* ===== SOLICITAR TURNO FLOATING BUTTON ===== */}
+      <button
+        onClick={() => scrollToSection("contacto")}
+        className="fixed z-50 flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm pl-4 pr-5 h-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+        style={{ bottom: 'max(5.5rem, calc(env(safe-area-inset-bottom, 1.5rem) + 4rem))', right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))', fontFamily: "Montserrat, sans-serif" }}
+      >
+        <CalendarPlus className="w-5 h-5" />
+        Solicitar Turno
+      </button>
 
       {/* ===== WHATSAPP FLOATING BUTTON ===== */}
       {cmsConfig.whatsapp_enabled !== "false" && (
