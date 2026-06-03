@@ -38,6 +38,14 @@ export async function GET() {
       where: { status: "cancelled" },
     });
 
+    const absentAppointments = await db.appointment.count({
+      where: { status: "absent" },
+    });
+
+    const rescheduledAppointments = await db.appointment.count({
+      where: { status: "rescheduled" },
+    });
+
     // Last 7 days stats
     const last7Days: { date: string; count: number }[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -64,6 +72,8 @@ export async function GET() {
       confirmedAppointments,
       completedAppointments,
       cancelledAppointments,
+      absentAppointments,
+      rescheduledAppointments,
       last7Days,
       totalContactRequests,
     });

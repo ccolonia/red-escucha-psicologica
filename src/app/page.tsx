@@ -30,6 +30,7 @@ import {
 } from "@/components/admin-dashboard";
 import { AdminCMS } from "@/components/admin-cms";
 import { AdminPlanilla } from "@/components/admin-planilla";
+import { AdminLiquidation } from "@/components/admin-liquidation";
 import { AdminTriage } from "@/components/admin-triage";
 import { ProfessionalRegister } from "@/components/professional-register";
 import { AppNavigation } from "@/components/navigation";
@@ -57,6 +58,7 @@ function DashboardContent() {
     "admin-contacts": <AdminContacts />,
     "admin-triage": <AdminTriage />,
     "admin-planilla": <AdminPlanilla />,
+    "admin-liquidation": <AdminLiquidation />,
     "admin-cms": <AdminCMS />,
     "admin-profile": <AdminProfile />,
   };

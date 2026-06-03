@@ -54,8 +54,10 @@ interface Appointment {
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Pendiente", variant: "outline" },
   confirmed: { label: "Confirmado", variant: "default" },
-  completed: { label: "Completado", variant: "secondary" },
+  completed: { label: "Atendido", variant: "secondary" },
   cancelled: { label: "Cancelado", variant: "destructive" },
+  absent: { label: "Ausente", variant: "outline" },
+  rescheduled: { label: "Reprogramado", variant: "outline" },
 };
 
 const SPECIALTIES = [
@@ -585,7 +587,7 @@ export function PatientDashboard() {
             <p className="text-2xl font-bold text-teal-900 mt-2">
               {past.filter((a) => a.status === "completed").length}
             </p>
-            <p className="text-sm text-teal-600">Completados</p>
+            <p className="text-sm text-teal-600">Atendidos</p>
           </CardContent>
         </Card>
         <Card className="border-teal-100 col-span-2 sm:col-span-1">

@@ -20,6 +20,7 @@ import {
   Palette,
   Settings2,
   AlertCircle,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ const ADMIN_NAV: NavItem[] = [
   { view: "admin-patients", label: "Pacientes", icon: Users },
   { view: "admin-contacts", label: "Consultas", icon: MessageSquare },
   { view: "admin-planilla", label: "Planilla", icon: FileText },
+  { view: "admin-liquidation", label: "Liquidación", icon: DollarSign },
   { view: "admin-cms", label: "CMS", icon: Palette },
   { view: "admin-profile", label: "Mi Perfil", icon: Shield },
 ];

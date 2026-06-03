@@ -5,10 +5,12 @@ import { authOptions } from "@/lib/auth";
 
 // Valid status transitions
 const validTransitions: Record<string, string[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["completed", "cancelled"],
+  pending: ["confirmed", "cancelled", "rescheduled"],
+  confirmed: ["completed", "cancelled", "absent", "rescheduled"],
   completed: [],
   cancelled: [],
+  absent: [],
+  rescheduled: ["confirmed", "cancelled"],
 };
 
 export async function PATCH(

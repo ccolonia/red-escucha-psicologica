@@ -15,6 +15,7 @@ import {
   Lock,
   Save,
   Plus,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,8 +49,10 @@ interface Appointment {
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Pendiente", variant: "outline" },
   confirmed: { label: "Confirmado", variant: "default" },
-  completed: { label: "Completado", variant: "secondary" },
+  completed: { label: "Atendido", variant: "secondary" },
   cancelled: { label: "Cancelado", variant: "destructive" },
+  absent: { label: "Ausente", variant: "outline" },
+  rescheduled: { label: "Reprogramado", variant: "outline" },
 };
 
 export function ProfessionalDashboard() {
@@ -78,23 +81,28 @@ export function ProfessionalDashboard() {
 
   const handleStatusUpdate = async (
     id: string,
-    status: string
+    status: string,
+    notes?: string
   ) => {
     try {
       const res = await fetch(`/api/appointments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, notes }),
       });
       if (res.ok) {
         setAppointments((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, status } : a))
+          prev.map((a) => (a.id === id ? { ...a, status, notes: notes || a.notes } : a))
         );
         toast.success(
           status === "confirmed"
             ? "Turno confirmado"
             : status === "completed"
-            ? "Turno completado"
+            ? "Turno marcado como Atendido"
+            : status === "absent"
+            ? "Turno marcado como Ausente"
+            : status === "rescheduled"
+            ? "Turno marcado como Reprogramado"
             : "Turno cancelado"
         );
       }
@@ -223,17 +231,36 @@ export function ProfessionalDashboard() {
                       </div>
                     )}
                     {apt.status === "confirmed" && (
-                      <div className="mt-3 ml-13">
+                      <div className="mt-3 ml-13 flex gap-2 flex-wrap">
                         <Button
                           size="sm"
-                          variant="secondary"
-                          className="h-8"
+                          className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
                           onClick={() =>
                             handleStatusUpdate(apt.id, "completed")
                           }
                         >
                           <CheckCircle2 className="mr-1 w-3 h-3" />
-                          Marcar Completado
+                          Atendido
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-8 bg-amber-500 hover:bg-amber-600 text-white text-xs"
+                          onClick={() =>
+                            handleStatusUpdate(apt.id, "absent")
+                          }
+                        >
+                          <AlertCircle className="mr-1 w-3 h-3" />
+                          Ausente
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-8 bg-blue-500 hover:bg-blue-600 text-white text-xs"
+                          onClick={() =>
+                            handleStatusUpdate(apt.id, "rescheduled")
+                          }
+                        >
+                          <Calendar className="mr-1 w-3 h-3" />
+                          Reprogramado
                         </Button>
                       </div>
                     )}
@@ -312,6 +339,8 @@ export function ProfessionalSchedule() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [statusChangeId, setStatusChangeId] = useState<string | null>(null);
+  const [statusChangeType, setStatusChangeType] = useState<string>("");
   const [sessionNotes, setSessionNotes] = useState("");
   const [professionalId, setProfessionalId] = useState<string>("");
   const [showNewAppointment, setShowNewAppointment] = useState(false);
@@ -544,37 +573,76 @@ export function ProfessionalSchedule() {
                             )}
                           </div>
                         </div>
-                        {/* Complete appointment with notes - only for confirmed */}
+                        {/* Status change options for confirmed appointments */}
                         {apt.status === "confirmed" && (
                           <div className="mt-3 pt-3 border-t border-teal-100">
-                            {completingId === apt.id ? (
+                            {statusChangeId === apt.id && statusChangeType ? (
                               <div className="space-y-3">
                                 <Label className="text-sm text-teal-700">
-                                  Notas de la sesión (obligatorio para completar)
+                                  Notas {statusChangeType === "completed" ? "(obligatorio para Atendido)" : "(opcional)"}
                                 </Label>
                                 <textarea
                                   value={sessionNotes}
                                   onChange={(e) => setSessionNotes(e.target.value)}
-                                  placeholder="Registre las observaciones de la sesión..."
+                                  placeholder={
+                                    statusChangeType === "completed"
+                                      ? "Registre las observaciones de la sesión..."
+                                      : statusChangeType === "absent"
+                                      ? "Motivo de la inasistencia (opcional)..."
+                                      : "Motivo de la reprogramación (opcional)..."
+                                  }
                                   className="w-full min-h-[80px] rounded-md border border-teal-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
                                   rows={3}
                                 />
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 flex-wrap">
                                   <Button
                                     size="sm"
-                                    variant="secondary"
-                                    className="h-7 text-xs"
-                                    onClick={() => handleComplete(apt.id)}
+                                    className={`h-7 text-xs text-white ${
+                                      statusChangeType === "completed"
+                                        ? "bg-emerald-600 hover:bg-emerald-700"
+                                        : statusChangeType === "absent"
+                                        ? "bg-amber-500 hover:bg-amber-600"
+                                        : "bg-blue-500 hover:bg-blue-600"
+                                    }`}
+                                    disabled={statusChangeType === "completed" && !sessionNotes.trim()}
+                                    onClick={async () => {
+                                      const res = await fetch(`/api/appointments/${apt.id}`, {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ status: statusChangeType, notes: sessionNotes || undefined }),
+                                      });
+                                      if (res.ok) {
+                                        setAppointments((prev) =>
+                                          prev.map((a) => (a.id === apt.id ? { ...a, status: statusChangeType, notes: sessionNotes || a.notes } : a))
+                                        );
+                                        toast.success(
+                                          statusChangeType === "completed"
+                                            ? "Turno marcado como Atendido"
+                                            : statusChangeType === "absent"
+                                            ? "Turno marcado como Ausente"
+                                            : "Turno marcado como Reprogramado"
+                                        );
+                                      } else {
+                                        const data = await res.json();
+                                        toast.error(data.error || "Error al actualizar");
+                                      }
+                                      setStatusChangeId(null);
+                                      setStatusChangeType("");
+                                      setSessionNotes("");
+                                    }}
                                   >
-                                    <CheckCircle2 className="mr-1 w-3 h-3" />
-                                    Completar Turno
+                                    {statusChangeType === "completed" && <CheckCircle2 className="mr-1 w-3 h-3" />}
+                                    {statusChangeType === "absent" && <AlertCircle className="mr-1 w-3 h-3" />}
+                                    {statusChangeType === "rescheduled" && <Calendar className="mr-1 w-3 h-3" />}
+                                    Confirmar
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
                                     className="h-7 text-xs border-teal-200"
                                     onClick={() => {
-                                      setCompletingId(null);
+                                      setStatusChangeId(null);
+                                      setStatusChangeType("");
                                       setSessionNotes("");
                                     }}
                                   >
@@ -583,23 +651,49 @@ export function ProfessionalSchedule() {
                                 </div>
                               </div>
                             ) : (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="h-7 text-xs"
-                                onClick={() => {
-                                  setCompletingId(apt.id);
-                                  setSessionNotes("");
-                                }}
-                              >
-                                <CheckCircle2 className="mr-1 w-3 h-3" />
-                                Completar Turno
-                              </Button>
+                              <div className="flex gap-2 flex-wrap">
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  onClick={() => {
+                                    setStatusChangeId(apt.id);
+                                    setStatusChangeType("completed");
+                                    setSessionNotes("");
+                                  }}
+                                >
+                                  <CheckCircle2 className="mr-1 w-3 h-3" />
+                                  Atendido
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white"
+                                  onClick={() => {
+                                    setStatusChangeId(apt.id);
+                                    setStatusChangeType("absent");
+                                    setSessionNotes("");
+                                  }}
+                                >
+                                  <AlertCircle className="mr-1 w-3 h-3" />
+                                  Ausente
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs bg-blue-500 hover:bg-blue-600 text-white"
+                                  onClick={() => {
+                                    setStatusChangeId(apt.id);
+                                    setStatusChangeType("rescheduled");
+                                    setSessionNotes("");
+                                  }}
+                                >
+                                  <Calendar className="mr-1 w-3 h-3" />
+                                  Reprogramado
+                                </Button>
+                              </div>
                             )}
                           </div>
                         )}
-                        {/* Show notes for completed appointments */}
-                        {apt.status === "completed" && apt.notes && (
+                        {/* Show notes for completed/absent/rescheduled appointments */}
+                        {(apt.status === "completed" || apt.status === "absent" || apt.status === "rescheduled") && apt.notes && (
                           <div className="mt-2 pt-2 border-t border-teal-100">
                             <p className="text-xs text-teal-500">
                               <FileText className="inline w-3 h-3 mr-1" />

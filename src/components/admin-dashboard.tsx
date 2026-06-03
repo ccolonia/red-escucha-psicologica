@@ -26,6 +26,7 @@ import {
   X,
   Eye,
   EyeOff,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +70,8 @@ interface Stats {
   confirmedAppointments: number;
   completedAppointments: number;
   cancelledAppointments: number;
+  absentAppointments: number;
+  rescheduledAppointments: number;
   last7Days: { date: string; count: number }[];
   totalContactRequests: number;
 }
@@ -122,8 +125,10 @@ interface ContactRequest {
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Pendiente", variant: "outline" },
   confirmed: { label: "Confirmado", variant: "default" },
-  completed: { label: "Completado", variant: "secondary" },
+  completed: { label: "Atendido", variant: "secondary" },
   cancelled: { label: "Cancelado", variant: "destructive" },
+  absent: { label: "Ausente", variant: "outline" },
+  rescheduled: { label: "Reprogramado", variant: "outline" },
 };
 
 export function AdminDashboard() {
@@ -235,7 +240,7 @@ export function AdminDashboard() {
       </Card>
 
       {/* Status summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card className="border-teal-100">
           <CardContent className="p-4 flex items-center gap-3">
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
@@ -243,7 +248,7 @@ export function AdminDashboard() {
               <p className="text-lg font-bold text-teal-900">
                 {stats.completedAppointments}
               </p>
-              <p className="text-xs text-teal-600">Completados</p>
+              <p className="text-xs text-teal-600">Atendidos</p>
             </div>
           </CardContent>
         </Card>
@@ -277,6 +282,28 @@ export function AdminDashboard() {
                 {stats.cancelledAppointments}
               </p>
               <p className="text-xs text-teal-600">Cancelados</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-teal-100">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600" />
+            <div>
+              <p className="text-lg font-bold text-teal-900">
+                {stats.absentAppointments}
+              </p>
+              <p className="text-xs text-teal-600">Ausentes</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-teal-100">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-blue-500" />
+            <div>
+              <p className="text-lg font-bold text-teal-900">
+                {stats.rescheduledAppointments}
+              </p>
+              <p className="text-xs text-teal-600">Reprogramados</p>
             </div>
           </CardContent>
         </Card>
@@ -346,8 +373,10 @@ export function AdminAppointments() {
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="pending">Pendientes</SelectItem>
               <SelectItem value="confirmed">Confirmados</SelectItem>
-              <SelectItem value="completed">Completados</SelectItem>
+              <SelectItem value="completed">Atendidos</SelectItem>
               <SelectItem value="cancelled">Cancelados</SelectItem>
+              <SelectItem value="absent">Ausentes</SelectItem>
+              <SelectItem value="rescheduled">Reprogramados</SelectItem>
             </SelectContent>
           </Select>
         </div>
