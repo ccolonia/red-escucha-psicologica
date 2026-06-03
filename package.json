@@ -12,7 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:prod": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
-    "postinstall": "prisma generate && prisma db push --accept-data-loss"
+    "postinstall": "prisma generate",
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
