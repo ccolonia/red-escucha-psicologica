@@ -19,6 +19,7 @@ import {
   Shield,
   Palette,
   Settings2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
