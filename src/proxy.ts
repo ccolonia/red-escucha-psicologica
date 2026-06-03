@@ -21,6 +21,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/api/auth/") || // NextAuth routes: /api/auth/callback/credentials, /api/auth/session, etc.
     pathname === "/api/auth/register" ||
     pathname === "/api/contact" ||
+    pathname === "/api/patient-requests" && request.method === "POST" || // Public: patients can submit requests
     pathname === "/api/cms/content" || // Public CMS content endpoint
     pathname.match(/^\/api\/professionals\/[^/]+\/slots$/) // professional slots
   ) {

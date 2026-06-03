@@ -144,6 +144,8 @@ export function LandingPage() {
     phone: "",
     message: "",
     reason: "",
+    modality: "",
+    consultReason: "",
   });
   const [contactSent, setContactSent] = useState(false);
   const [contactSending, setContactSending] = useState(false);
@@ -353,14 +355,36 @@ export function LandingPage() {
     setContactSending(true);
     setContactError(false);
     try {
+      // If requesting an appointment, also create a PatientRequest for triage
+      if (contactForm.reason === "solicitar_turno") {
+        await fetch("/api/patient-requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: contactForm.name,
+            email: contactForm.email,
+            phone: contactForm.phone || null,
+            modality: contactForm.modality || "presencial",
+            reason: contactForm.consultReason || "consulta_general",
+            notes: contactForm.message || null,
+          }),
+        });
+      }
+
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(contactForm),
+        body: JSON.stringify({
+          name: contactForm.name,
+          email: contactForm.email,
+          phone: contactForm.phone,
+          message: contactForm.message,
+          reason: contactForm.reason,
+        }),
       });
       if (res.ok) {
         setContactSent(true);
-        setContactForm({ name: "", email: "", phone: "", message: "", reason: "" });
+        setContactForm({ name: "", email: "", phone: "", message: "", reason: "", modality: "", consultReason: "" });
         // Google Ads conversion: Formulario Contacto
         if (typeof window !== "undefined" && typeof (window as unknown as Record<string, unknown>).gtag === "function") {
           (window as unknown as Record<string, unknown>).gtag("event", "conversion", {
@@ -1231,6 +1255,9 @@ export function LandingPage() {
                               <SelectValue placeholder="Seleccioná un motivo" />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="solicitar_turno">
+                                Solicitar Turno
+                              </SelectItem>
                               <SelectItem value="consulta_general">
                                 Consulta General
                               </SelectItem>
@@ -1241,8 +1268,53 @@ export function LandingPage() {
                           </Select>
                         </div>
                       </div>
+                      {contactForm.reason === "solicitar_turno" && (
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="contact-modality" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Modalidad preferida</Label>
+                            <Select
+                              value={contactForm.modality}
+                              onValueChange={(value) =>
+                                setContactForm({ ...contactForm, modality: value })
+                              }
+                            >
+                              <SelectTrigger className="border-beige-300 bg-beige-100 focus:ring-sage-300/20">
+                                <SelectValue placeholder="Seleccioná modalidad" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="presencial">Presencial</SelectItem>
+                                <SelectItem value="online">Online</SelectItem>
+                                <SelectItem value="híbrida">Híbrida</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="consult-reason" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Motivo de consulta</Label>
+                            <Select
+                              value={contactForm.consultReason}
+                              onValueChange={(value) =>
+                                setContactForm({ ...contactForm, consultReason: value })
+                              }
+                            >
+                              <SelectTrigger className="border-beige-300 bg-beige-100 focus:ring-sage-300/20">
+                                <SelectValue placeholder="Seleccioná un motivo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ansiedad">Ansiedad</SelectItem>
+                                <SelectItem value="depresion">Depresión</SelectItem>
+                                <SelectItem value="vinculos">Vínculos / Pareja</SelectItem>
+                                <SelectItem value="duelo">Duelo / Pérdida</SelectItem>
+                                <SelectItem value="autoestima">Autoestima</SelectItem>
+                                <SelectItem value="estres">Estrés / Laboral</SelectItem>
+                                <SelectItem value="infanto_juvenil">Infanto-Juvenil</SelectItem>
+                                <SelectItem value="consulta_general">Consulta General</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
                       <div className="space-y-2">
-                        <Label htmlFor="contact-message" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Mensaje *</Label>
+                        <Label htmlFor="contact-message" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Mensaje {contactForm.reason === "solicitar_turno" ? "" : "*"}</Label>
                         <Textarea
                           id="contact-message"
                           required

@@ -47,6 +47,7 @@ const PROFESSIONAL_NAV: NavItem[] = [
 
 const ADMIN_NAV: NavItem[] = [
   { view: "admin-dashboard", label: "Inicio", icon: LayoutDashboard },
+  { view: "admin-triage", label: "Triage", icon: AlertCircle },
   { view: "admin-appointments", label: "Turnos", icon: Calendar },
   { view: "admin-professionals", label: "Profesionales", icon: Stethoscope },
   { view: "admin-patients", label: "Pacientes", icon: Users },

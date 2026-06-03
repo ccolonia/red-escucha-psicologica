@@ -51,6 +51,7 @@ model Professional {
   attendanceSheets    AttendanceSheet[]
   schedules           ProfessionalSchedule[]
   scheduleOverrides   ScheduleOverride[]
+  patientRequests     PatientRequest[]
 }
 
 model Patient {
@@ -71,7 +72,7 @@ model Appointment {
   professionalId String
   date           String // ISO date string
   time           String // "09:00", "10:00", etc.
-  modality       String       @default("P") // "P" presencial, "OL" online
+  modality       String?      @default("P") // "P" presencial, "OL" online
   status         String       @default("pending") // "pending", "confirmed", "completed", "cancelled"
   reason         String?
   notes          String?
@@ -79,6 +80,7 @@ model Appointment {
   updatedAt      DateTime     @updatedAt
   patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  patientRequest PatientRequest?
 }
 
 model ProfessionalSchedule {
@@ -109,6 +111,23 @@ model ScheduleOverride {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+}
+
+model PatientRequest {
+  id             String    @id @default(cuid())
+  name           String
+  email          String
+  phone          String?
+  modality       String    @default("presencial") // "online", "presencial", "híbrida"
+  reason         String    @default("consulta_general") // "Ansiedad", "Vínculos", "Depresión", etc.
+  notes          String?   // Notas adicionales del paciente
+  status         String    @default("pending") // "pending", "assigned", "contacted", "rejected"
+  assignedToId   String?   @unique // Professional ID when assigned
+  appointmentId  String?   @unique // Appointment ID after assignment creates one
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  assignedTo     Professional? @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  appointment    Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 }
 
 model ContactRequest {

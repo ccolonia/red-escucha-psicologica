@@ -798,3 +798,227 @@ export async function sendContactNotification({ name, email, phone, message, rea
 
   return { data, error: null };
 }
+
+// ---- Triage Assignment: Notify Professional ----
+
+interface SendTriageProfessionalNotificationParams {
+  professionalEmail: string;
+  professionalName: string;
+  patientName: string;
+  patientPhone: string | null;
+  modality: string;
+  date: string | null;
+  time: string | null;
+  reason: string;
+}
+
+const MODALITY_EMAIL_MAP: Record<string, string> = {
+  online: "Online (videollamada)",
+  presencial: "Presencial (Av. Sanabria 1616)",
+  híbrida: "Híbrida (lo que suceda primero)",
+  P: "Presencial (Av. Sanabria 1616)",
+  OL: "Online (videollamada)",
+};
+
+export async function sendTriageProfessionalNotification({
+  professionalEmail,
+  professionalName,
+  patientName,
+  patientPhone,
+  modality,
+  date,
+  time,
+  reason,
+}: SendTriageProfessionalNotificationParams) {
+  try {
+    const resend = getResend();
+    const modalityLabel = MODALITY_EMAIL_MAP[modality] || modality;
+    const appointmentInfo = date && time
+      ? `<div class="field"><div class="label">Horario asignado</div><div class="value" style="font-weight:600;font-size:17px;">${date} a las ${time} hs</div></div>`
+      : "";
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [professionalEmail],
+      subject: `🩺 Nuevo paciente asignado: ${patientName}`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Nuevo paciente asignado</title>
+          <style>
+            body { margin:0; padding:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background-color:#f5f0e8; color:#2d3b2d; }
+            .container { max-width:600px; margin:0 auto; padding:20px; }
+            .card { background-color:#fff; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.08); }
+            .header { background:linear-gradient(135deg,#2d3b2d 0%,#3d5a3d 100%); padding:30px; text-align:center; }
+            .header h1 { color:#e8e0d0; margin:0; font-size:22px; font-weight:700; }
+            .header .subtitle { color:#a8c0a8; margin-top:8px; font-size:14px; }
+            .body { padding:30px; }
+            .field { margin-bottom:16px; }
+            .field .label { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#7a8a7a; margin-bottom:4px; }
+            .field .value { font-size:15px; color:#2d3b2d; line-height:1.6; }
+            .highlight { background-color:#f0ebe0; border-radius:12px; padding:20px; margin:20px 0; }
+            .footer { background-color:#f8f4ec; padding:20px 30px; text-align:center; font-size:12px; color:#9a8a7a; line-height:1.6; }
+            .footer a { color:#6a8a6a; text-decoration:none; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="card">
+              <div class="header">
+                <h1>Red Escucha Psicológica</h1>
+                <div class="subtitle">Nuevo paciente asignado</div>
+              </div>
+              <div class="body">
+                <p style="font-size:16px;font-weight:600;color:#2d3b2d;margin-bottom:16px;">Hola, ${professionalName}:</p>
+                <p style="font-size:15px;color:#4a5a4a;margin-bottom:20px;">
+                  Se te ha asignado un nuevo paciente desde el sistema de triage. Por favor, contactalo/a a la brevedad para coordinar el inicio del proceso terapéutico.
+                </p>
+                <div class="highlight">
+                  <div class="field">
+                    <div class="label">Paciente</div>
+                    <div class="value" style="font-weight:600;font-size:17px;">${patientName}</div>
+                  </div>
+                  ${patientPhone ? `<div class="field"><div class="label">Teléfono del paciente</div><div class="value"><a href="tel:${patientPhone}" style="color:#6a8a6a;">${patientPhone}</a></div></div>` : ""}
+                  <div class="field">
+                    <div class="label">Modalidad</div>
+                    <div class="value">${modalityLabel}</div>
+                  </div>
+                  ${appointmentInfo}
+                  <div class="field">
+                    <div class="label">Motivo de consulta</div>
+                    <div class="value">${reason}</div>
+                  </div>
+                </div>
+                <p style="font-size:14px;color:#4a5a4a;margin-top:20px;">
+                  <strong>Importante:</strong> Si la modalidad es Online, enviale el enlace de videollamada. Si es Presencial, reconfirmale las indicaciones para acercarse a la clínica.
+                </p>
+              </div>
+              <div class="footer">
+                Red Escucha Psicológica<br>
+                <a href="mailto:contacto@redescuchapsicologica.com">contacto@redescuchapsicologica.com</a>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending triage professional notification:", error);
+      return { data: null, error };
+    }
+    return { data, error: null };
+  } catch (err) {
+    console.error("Error sending triage professional notification:", err);
+    return { data: null, error: err };
+  }
+}
+
+// ---- Triage Assignment: Notify Patient ----
+
+interface SendTriagePatientNotificationParams {
+  patientEmail: string;
+  patientName: string;
+  professionalName: string;
+  modality: string;
+  date: string | null;
+  time: string | null;
+}
+
+export async function sendTriagePatientNotification({
+  patientEmail,
+  patientName,
+  professionalName,
+  modality,
+  date,
+  time,
+}: SendTriagePatientNotificationParams) {
+  try {
+    const resend = getResend();
+    const modalityLabel = MODALITY_EMAIL_MAP[modality] || modality;
+    const appointmentInfo = date && time
+      ? `<div class="field"><div class="label">Fecha y hora</div><div class="value" style="font-weight:600;">${date} a las ${time} hs</div></div>`
+      : "";
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [patientEmail],
+      subject: "Tu solicitud fue procesada - Red Escucha Psicológica",
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Solicitud procesada</title>
+          <style>
+            body { margin:0; padding:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background-color:#f5f0e8; color:#2d3b2d; }
+            .container { max-width:600px; margin:0 auto; padding:20px; }
+            .card { background-color:#fff; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.08); }
+            .header { background:linear-gradient(135deg,#2d3b2d 0%,#3d5a3d 100%); padding:40px 30px; text-align:center; }
+            .header h1 { color:#e8e0d0; margin:0; font-size:24px; font-weight:700; }
+            .header .subtitle { color:#a8c0a8; margin-top:8px; font-size:14px; }
+            .body { padding:36px 30px; }
+            .highlight { background-color:#f0ebe0; border-radius:12px; padding:20px; margin:20px 0; }
+            .field { margin-bottom:16px; }
+            .field .label { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#7a8a7a; margin-bottom:4px; }
+            .field .value { font-size:15px; color:#2d3b2d; line-height:1.6; }
+            .footer { background-color:#f8f4ec; padding:24px 30px; text-align:center; font-size:12px; color:#9a8a7a; line-height:1.6; }
+            .footer a { color:#6a8a6a; text-decoration:none; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="card">
+              <div class="header">
+                <h1>Red Escucha Psicológica</h1>
+                <div class="subtitle">Tu solicitud ha sido procesada</div>
+              </div>
+              <div class="body">
+                <p style="font-size:16px;font-weight:600;color:#2d3b2d;margin-bottom:16px;">Hola, ${patientName}:</p>
+                <p style="font-size:15px;color:#4a5a4a;margin-bottom:20px;">
+                  Nos alegra informarte que tu solicitud ha sido procesada. Te hemos asignado con un/a profesional de nuestra red.
+                </p>
+                <div class="highlight">
+                  <div class="field">
+                    <div class="label">Tu profesional asignado/a</div>
+                    <div class="value" style="font-weight:600;font-size:17px;">${professionalName}</div>
+                  </div>
+                  <div class="field">
+                    <div class="label">Modalidad</div>
+                    <div class="value">${modalityLabel}</div>
+                  </div>
+                  ${appointmentInfo}
+                </div>
+                <p style="font-size:15px;color:#4a5a4a;margin-top:20px;">
+                  A la brevedad, el/la profesional se pondrá en contacto contigo para coordinar el inicio de tu proceso. Si es Online, recibiras el enlace de videollamada. Si es Presencial, te confirmará las indicaciones para tu primera sesión.
+                </p>
+                <p style="font-size:14px;color:#7a8a7a;margin-top:16px;">
+                  Si tenés alguna consulta, podés escribirnos a <a href="mailto:contacto@redescuchapsicologica.com" style="color:#6a8a6a;">contacto@redescuchapsicologica.com</a>
+                </p>
+              </div>
+              <div class="footer">
+                Red Escucha Psicológica<br>
+                <a href="mailto:contacto@redescuchapsicologica.com">contacto@redescuchapsicologica.com</a>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending triage patient notification:", error);
+      return { data: null, error };
+    }
+    return { data, error: null };
+  } catch (err) {
+    console.error("Error sending triage patient notification:", err);
+    return { data: null, error: err };
+  }
+}
