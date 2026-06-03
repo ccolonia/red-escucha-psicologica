@@ -1,11 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 // POST /api/patient-requests — Create a new patient request (public or authenticated)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, phone, modality, reason, notes } = body;
+    let { name, email, phone, modality, reason, notes } = body;
+
+    // If authenticated patient, auto-fill from session
+    const session = await getServerSession(authOptions);
+    if (session?.user) {
+      const role = (session.user as { role: string }).role;
+      if (role === "patient") {
+        // Auto-fill from session if not provided
+        if (!name) name = session.user.name || "";
+        if (!email) email = session.user.email || "";
+        // Get phone from user record if available
+        if (!phone) {
+          const user = await db.user.findUnique({
+            where: { id: (session.user as { id: string }).id },
+            select: { phone: true },
+          });
+          if (user?.phone) phone = user.phone;
+        }
+      }
+    }
 
     if (!name || !email) {
       return NextResponse.json(

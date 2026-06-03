@@ -736,35 +736,230 @@ export function PatientDashboard() {
 
 export function PatientBook() {
   const { data: session } = useSession();
-  const [patientId, setPatientId] = useState<string>("");
+  const [modality, setModality] = useState("");
+  const [reason, setReason] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [patientRequests, setPatientRequests] = useState<any[]>([]);
 
+  const MODALITY_OPTIONS = [
+    { value: "online", label: "Online", icon: Monitor, desc: "Videollamada" },
+    { value: "presencial", label: "Presencial", icon: MapPin, desc: "Av. Sanabria 1616" },
+    { value: "híbrida", label: "Híbrida", icon: CheckCircle2, desc: "Lo que suceda primero" },
+  ];
+
+  const REASON_OPTIONS = [
+    { value: "ansiedad", label: "Ansiedad" },
+    { value: "vinculos", label: "Vínculos / Pareja" },
+    { value: "depresion", label: "Depresión" },
+    { value: "duelo", label: "Duelo / Pérdida" },
+    { value: "autoestima", label: "Autoestima" },
+    { value: "estres", label: "Estrés / Laboral" },
+    { value: "infanto_juvenil", label: "Infanto-Juvenil" },
+    { value: "adicciones", label: "Adicciones" },
+    { value: "consulta_general", label: "Consulta General" },
+  ];
+
+  // Load existing patient requests
   useEffect(() => {
     if (session?.user) {
-      fetch("/api/patients")
+      fetch("/api/patient-requests?status=pending")
         .then((res) => res.json())
         .then((data) => {
-          if (Array.isArray(data)) {
-            const userId = (session.user as { id: string }).id;
-            const patient = data.find(
-              (p: { userId: string; id: string }) => p.userId === userId
-            );
-            if (patient) setPatientId(patient.id);
-          }
+          // Filter to only show this user's requests
+          const myRequests = Array.isArray(data)
+            ? data.filter((r: any) => r.email === session?.user?.email)
+            : [];
+          setPatientRequests(myRequests);
         })
         .catch(() => {});
     }
   }, [session]);
+
+  const handleSubmit = async () => {
+    if (!modality || !reason) {
+      toast.error("Completá la modalidad y el motivo de consulta");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/patient-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: session?.user?.name || "",
+          email: session?.user?.email || "",
+          phone: (session?.user as any)?.phone || null,
+          modality,
+          reason,
+          notes: notes || null,
+        }),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+        toast.success("Solicitud enviada exitosamente");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al enviar solicitud");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center py-12"
+      >
+        <CheckCircle2 className="w-20 h-20 text-emerald-500 mx-auto" />
+        <h3 className="mt-4 text-2xl font-bold text-teal-900">
+          ¡Solicitud Recibida!
+        </h3>
+        <p className="mt-2 text-teal-600 max-w-md mx-auto">
+          Tu solicitud fue recibida. Un administrador la revisará y te asignará
+          un profesional a la brevedad.
+        </p>
+        <p className="mt-3 text-sm text-teal-500">
+          Te notificaremos por email cuando se asigne tu profesional.
+        </p>
+        <Button
+          className="mt-6 bg-teal-600 hover:bg-teal-700 text-white"
+          onClick={() => {
+            setSubmitted(false);
+            setModality("");
+            setReason("");
+            setNotes("");
+          }}
+        >
+          Enviar otra solicitud
+        </Button>
+      </motion.div>
+    );
+  }
 
   return (
     <div>
       <h2 className="text-2xl font-bold text-teal-900 mb-6">
         Solicitar Turno
       </h2>
-      {patientId ? (
-        <BookingFlow patientId={patientId} />
-      ) : (
-        <p className="text-teal-600">Cargando...</p>
+
+      {/* Existing pending requests */}
+      {patientRequests.length > 0 && (
+        <Card className="border-amber-100 bg-amber-50/30 mb-6">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-amber-500" />
+              <p className="text-sm font-medium text-amber-700">
+                Tenés {patientRequests.length} solicitud{patientRequests.length > 1 ? "es" : ""} pendiente{patientRequests.length > 1 ? "s" : ""}
+              </p>
+            </div>
+            <p className="text-xs text-amber-600">
+              Un administrador las revisará y te asignará un profesional a la brevedad.
+            </p>
+          </CardContent>
+        </Card>
       )}
+
+      <Card className="border-teal-100">
+        <CardContent className="p-6 space-y-6">
+          {/* Modality Selection */}
+          <div className="space-y-3">
+            <Label className="text-teal-800 font-medium text-sm">
+              ¿Cómo preferís tu consulta?
+            </Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {MODALITY_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setModality(opt.value)}
+                    className={`p-4 rounded-xl border-2 transition-all text-left ${
+                      modality === opt.value
+                        ? "border-teal-500 bg-teal-50"
+                        : "border-teal-100 hover:border-teal-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon className={`w-5 h-5 ${modality === opt.value ? "text-teal-600" : "text-teal-400"}`} />
+                      <span className="font-medium text-teal-900">{opt.label}</span>
+                    </div>
+                    <p className="text-xs text-teal-500">{opt.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Reason Selection */}
+          <div className="space-y-3">
+            <Label className="text-teal-800 font-medium text-sm">
+              ¿Cuál es el motivo de tu consulta?
+            </Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {REASON_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setReason(opt.value)}
+                  className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left ${
+                    reason === opt.value
+                      ? "bg-teal-600 text-white"
+                      : "bg-teal-50 text-teal-700 hover:bg-teal-100"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label className="text-teal-800 font-medium text-sm">
+              Notas adicionales (opcional)
+            </Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Contanos brevemente algo que quieras que sepamos..."
+              className="border-teal-200 min-h-[80px]"
+              rows={3}
+            />
+          </div>
+
+          {/* Submit */}
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || !modality || !reason}
+            className="w-full bg-teal-600 hover:bg-teal-700 text-white h-12 text-base"
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <CalendarPlus className="mr-2 w-5 h-5" />
+                Enviar Solicitud
+              </>
+            )}
+          </Button>
+
+          <p className="text-xs text-teal-400 text-center">
+            Un administrador revisará tu solicitud y te asignará un profesional.
+            Recibirás una notificación por email.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
