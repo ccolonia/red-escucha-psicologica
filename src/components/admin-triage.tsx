@@ -19,6 +19,9 @@ import {
   AlertCircle,
   Send,
   X,
+  Monitor,
+  MapPin,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -85,6 +88,14 @@ interface Professional {
   presentialAttention: boolean;
   homeAttention: boolean;
   user: { name: string; email: string; phone: string; active: boolean };
+  schedules: ProfessionalScheduleItem[];
+}
+
+interface ProfessionalScheduleItem {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  modality: string;
 }
 
 interface Slot {
@@ -120,6 +131,10 @@ const STATUS_CONFIG: Record<
   assigned: { label: "Asignado", variant: "default", icon: CheckCircle2 },
   contacted: { label: "Contactado", variant: "secondary", icon: Send },
   rejected: { label: "Rechazado", variant: "destructive", icon: XCircle },
+};
+
+const DAY_LABELS: Record<number, string> = {
+  1: "Lun", 2: "Mar", 3: "Mié", 4: "Jue", 5: "Vie", 6: "Sáb",
 };
 
 // ---- Main Component ----
@@ -168,11 +183,25 @@ export function AdminTriage() {
       .then((res) => res.json())
       .then((data) => {
         // Only show active, available professionals
-        setProfessionals(
-          data.filter(
-            (p: Professional) => p.user.active && p.available
-          )
+        const activeProfs = data.filter(
+          (p: Professional) => p.user.active && p.available
         );
+        // Load schedules for each professional
+        return Promise.all(
+          activeProfs.map(async (prof: Professional) => {
+            try {
+              const schedRes = await fetch(`/api/professionals/${prof.id}/schedule`);
+              if (schedRes.ok) {
+                const schedData = await schedRes.json();
+                return { ...prof, schedules: Array.isArray(schedData) ? schedData : [] };
+              }
+            } catch {}
+            return { ...prof, schedules: [] };
+          })
+        );
+      })
+      .then((profsWithSchedules) => {
+        setProfessionals(profsWithSchedules || []);
       })
       .catch(() => {
         toast.error("Error al cargar profesionales");
@@ -233,6 +262,35 @@ export function AdminTriage() {
       matchingSpecialties.includes(p.specialty)
     );
     return matched.length > 0 ? matched : professionals;
+  };
+
+  // Get schedule summary for a professional
+  const getScheduleSummary = (prof: Professional) => {
+    if (!prof.schedules || prof.schedules.length === 0) {
+      return "Sin horario configurado";
+    }
+    const days = prof.schedules
+      .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+      .map((s) => DAY_LABELS[s.dayOfWeek] || `D${s.dayOfWeek}`);
+    
+    if (days.length >= 5) {
+      const firstTime = prof.schedules[0]?.startTime;
+      const lastEndTime = prof.schedules.reduce((max, s) => 
+        s.endTime > max ? s.endTime : max, prof.schedules[0]?.endTime || ""
+      );
+      return `Lun-Vie ${firstTime?.slice(0,5)}-${lastEndTime?.slice(0,5)}`;
+    }
+    return `${days.join(", ")} ${prof.schedules[0]?.startTime?.slice(0,5)}-${prof.schedules[0]?.endTime?.slice(0,5)}`;
+  };
+
+  // Get modality badges for professional
+  const getModalityBadges = (prof: Professional) => {
+    const badges: string[] = [];
+    if (prof.onlineAttention) badges.push("Online");
+    if (prof.presentialAttention) badges.push("Presencial");
+    if (prof.homeAttention) badges.push("Domicilio");
+    if (badges.length === 0) badges.push("Sin modalidad");
+    return badges;
   };
 
   const handleAssign = async () => {
@@ -315,12 +373,19 @@ export function AdminTriage() {
     }
   };
 
-  const openAssignDialog = (request: PatientRequest) => {
+  const openAssignDialog = (request: PatientRequest, professionalId?: string) => {
     setSelectedRequest(request);
-    setSelectedProfessionalId("");
+    setSelectedProfessionalId(professionalId || "");
     setSelectedDate("");
     setSelectedTime("");
     setAssignDialogOpen(true);
+  };
+
+  // Click-to-assign: when admin clicks on a professional while a request is selected
+  const handleProfessionalClick = (prof: Professional) => {
+    if (selectedRequest) {
+      openAssignDialog(selectedRequest, prof.id);
+    }
   };
 
   // Filter requests
@@ -353,6 +418,9 @@ export function AdminTriage() {
     }
     return dates;
   };
+
+  // Get matched professionals for the selected request
+  const matchedProfs = selectedRequest ? getMatchingProfessionals(selectedRequest) : professionals;
 
   return (
     <div>
@@ -422,231 +490,339 @@ export function AdminTriage() {
         </Card>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
-          <Input
-            placeholder="Buscar por nombre o email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 border-teal-200"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 border-teal-200">
-            <Filter className="w-4 h-4 mr-2 text-teal-400" />
-            <SelectValue placeholder="Filtrar" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="pending">Pendientes</SelectItem>
-            <SelectItem value="assigned">Asignados</SelectItem>
-            <SelectItem value="contacted">Contactados</SelectItem>
-            <SelectItem value="rejected">Rechazados</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Two-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Patient Requests */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-teal-900">Solicitudes de Pacientes</h3>
+            <div className="flex gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+                <Input
+                  placeholder="Buscar..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 border-teal-200 w-48"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-36 border-teal-200">
+                  <Filter className="w-4 h-4 mr-2 text-teal-400" />
+                  <SelectValue placeholder="Filtrar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pending">Pendientes</SelectItem>
+                  <SelectItem value="assigned">Asignados</SelectItem>
+                  <SelectItem value="contacted">Contactados</SelectItem>
+                  <SelectItem value="rejected">Rechazados</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-      {/* Requests List */}
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-24 bg-teal-50 animate-pulse rounded-lg"
-            />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <Card className="border-teal-100">
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="w-12 h-12 text-teal-200 mx-auto" />
-            <p className="text-teal-600 mt-2">
-              No hay solicitudes{" "}
-              {statusFilter !== "all"
-                ? `con estado "${STATUS_CONFIG[statusFilter]?.label || statusFilter}"`
-                : ""}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3 max-h-[calc(100vh-440px)] overflow-y-auto custom-scrollbar">
-          {filtered.map((req) => {
-            const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending;
-            const StatusIcon = statusCfg.icon;
-            const isExpanded = expandedId === req.id;
-            const matchedProfs = getMatchingProfessionals(req);
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-24 bg-teal-50 animate-pulse rounded-lg"
+                />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <Card className="border-teal-100">
+              <CardContent className="py-12 text-center">
+                <AlertCircle className="w-12 h-12 text-teal-200 mx-auto" />
+                <p className="text-teal-600 mt-2">
+                  No hay solicitudes{" "}
+                  {statusFilter !== "all"
+                    ? `con estado "${STATUS_CONFIG[statusFilter]?.label || statusFilter}"`
+                    : ""}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3 max-h-[calc(100vh-380px)] overflow-y-auto custom-scrollbar">
+              {filtered.map((req) => {
+                const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending;
+                const StatusIcon = statusCfg.icon;
+                const isExpanded = expandedId === req.id;
+                const isSelected = selectedRequest?.id === req.id;
 
-            return (
-              <Card
-                key={req.id}
-                className={`border-teal-100 ${
-                  req.status === "pending"
-                    ? "border-l-4 border-l-amber-400"
-                    : req.status === "assigned"
-                    ? "border-l-4 border-l-teal-400"
-                    : ""
-                }`}
-              >
-                <CardContent className="p-4">
-                  {/* Main Row */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-teal-900">{req.name}</p>
-                        <Badge variant={statusCfg.variant}>
-                          <StatusIcon className="w-3 h-3 mr-1" />
-                          {statusCfg.label}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {MODALITY_LABELS[req.modality] || req.modality}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-teal-600">
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3.5 h-3.5" />
-                          {req.email}
-                        </span>
-                        {req.phone && (
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3.5 h-3.5" />
-                            {req.phone}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 text-sm">
-                        <span className="text-teal-500">
-                          {REASON_LABELS[req.reason] || req.reason}
-                        </span>
-                        <span className="text-teal-300">•</span>
-                        <span className="text-teal-400 text-xs">
-                          {new Date(req.createdAt).toLocaleDateString("es-AR", {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      {req.assignedTo && (
-                        <div className="mt-2 flex items-center gap-2 text-sm bg-teal-50 px-3 py-1.5 rounded-lg w-fit">
-                          <Stethoscope className="w-4 h-4 text-teal-500" />
-                          <span className="text-teal-700 font-medium">
-                            {req.assignedTo.user.name}
-                          </span>
-                          <span className="text-teal-400">•</span>
-                          <span className="text-teal-500">
-                            {req.assignedTo.specialty}
-                          </span>
-                          {req.appointment && (
-                            <>
-                              <span className="text-teal-400">•</span>
-                              <span className="text-teal-600">
-                                {req.appointment.date} {req.appointment.time} hs
+                return (
+                  <Card
+                    key={req.id}
+                    className={`border-teal-100 cursor-pointer transition-all ${
+                      req.status === "pending"
+                        ? "border-l-4 border-l-amber-400"
+                        : req.status === "assigned"
+                        ? "border-l-4 border-l-teal-400"
+                        : ""
+                    } ${isSelected ? "ring-2 ring-teal-300" : ""}`}
+                    onClick={() => {
+                      setSelectedRequest(isSelected ? null : req);
+                      setExpandedId(isExpanded ? null : req.id);
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      {/* Main Row */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-teal-900">{req.name}</p>
+                            <Badge variant={statusCfg.variant}>
+                              <StatusIcon className="w-3 h-3 mr-1" />
+                              {statusCfg.label}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {MODALITY_LABELS[req.modality] || req.modality}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 mt-1 text-sm text-teal-600">
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3.5 h-3.5" />
+                              {req.email}
+                            </span>
+                            {req.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="w-3.5 h-3.5" />
+                                {req.phone}
                               </span>
-                            </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-sm">
+                            <span className="text-teal-500">
+                              {REASON_LABELS[req.reason] || req.reason}
+                            </span>
+                            <span className="text-teal-300">•</span>
+                            <span className="text-teal-400 text-xs">
+                              {new Date(req.createdAt).toLocaleDateString("es-AR", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                          {req.assignedTo && (
+                            <div className="mt-2 flex items-center gap-2 text-sm bg-teal-50 px-3 py-1.5 rounded-lg w-fit">
+                              <Stethoscope className="w-4 h-4 text-teal-500" />
+                              <span className="text-teal-700 font-medium">
+                                {req.assignedTo.user.name}
+                              </span>
+                              <span className="text-teal-400">•</span>
+                              <span className="text-teal-500">
+                                {req.assignedTo.specialty}
+                              </span>
+                              {req.appointment && (
+                                <>
+                                  <span className="text-teal-400">•</span>
+                                  <span className="text-teal-600">
+                                    {req.appointment.date} {req.appointment.time} hs
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {req.status === "pending" && (
+                            <Button
+                              size="sm"
+                              className="bg-teal-600 hover:bg-teal-700 text-white h-8 text-xs"
+                              onClick={() => openAssignDialog(req)}
+                            >
+                              <UserCheck className="mr-1 w-3.5 h-3.5" />
+                              Asignar
+                            </Button>
+                          )}
+                          {req.status === "assigned" && (
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs"
+                              onClick={() =>
+                                handleStatusChange(req.id, "contacted")
+                              }
+                            >
+                              <Send className="mr-1 w-3.5 h-3.5" />
+                              Contactado
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-red-400 hover:text-red-600"
+                            onClick={() => handleDelete(req.id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Expanded Details */}
+                      {isExpanded && (
+                        <div className="mt-3 pt-3 border-t border-teal-100 space-y-2 text-sm">
+                          {req.notes && (
+                            <div>
+                              <span className="text-teal-500 font-medium">
+                                Notas del paciente:
+                              </span>
+                              <p className="text-teal-700 mt-0.5 bg-teal-50 p-2 rounded">
+                                {req.notes}
+                              </p>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <span className="text-teal-500">Modalidad preferida:</span>{" "}
+                              <span className="text-teal-700 font-medium">
+                                {MODALITY_LABELS[req.modality] || req.modality}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-teal-500">Motivo:</span>{" "}
+                              <span className="text-teal-700 font-medium">
+                                {REASON_LABELS[req.reason] || req.reason}
+                              </span>
+                            </div>
+                          </div>
+                          {req.status === "rejected" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs border-teal-200"
+                              onClick={() =>
+                                handleStatusChange(req.id, "pending")
+                              }
+                            >
+                              Reabrir solicitud
+                            </Button>
                           )}
                         </div>
                       )}
-                    </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {req.status === "pending" && (
-                        <Button
-                          size="sm"
-                          className="bg-teal-600 hover:bg-teal-700 text-white h-8 text-xs"
-                          onClick={() => openAssignDialog(req)}
-                        >
-                          <UserCheck className="mr-1 w-3.5 h-3.5" />
-                          Asignar
-                        </Button>
-                      )}
-                      {req.status === "assigned" && (
-                        <Button
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs"
-                          onClick={() =>
-                            handleStatusChange(req.id, "contacted")
-                          }
-                        >
-                          <Send className="mr-1 w-3.5 h-3.5" />
-                          Contactado
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 text-teal-400 hover:text-teal-600"
-                        onClick={() =>
-                          setExpandedId(isExpanded ? null : req.id)
-                        }
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 text-red-400 hover:text-red-600"
-                        onClick={() => handleDelete(req.id)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
+        {/* Right Column: Professional Availability */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-teal-900 flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Profesionales
+            </h3>
+            <Badge variant="outline" className="text-xs">
+              {professionals.length} disponibles
+            </Badge>
+          </div>
 
-                  {/* Expanded Details */}
-                  {isExpanded && (
-                    <div className="mt-3 pt-3 border-t border-teal-100 space-y-2 text-sm">
-                      {req.notes && (
-                        <div>
-                          <span className="text-teal-500 font-medium">
-                            Notas del paciente:
-                          </span>
-                          <p className="text-teal-700 mt-0.5 bg-teal-50 p-2 rounded">
-                            {req.notes}
-                          </p>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <span className="text-teal-500">Modalidad preferida:</span>{" "}
-                          <span className="text-teal-700 font-medium">
-                            {MODALITY_LABELS[req.modality] || req.modality}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-teal-500">Motivo:</span>{" "}
-                          <span className="text-teal-700 font-medium">
-                            {REASON_LABELS[req.reason] || req.reason}
-                          </span>
-                        </div>
+          {selectedRequest && (
+            <div className="mb-4 p-3 bg-teal-50 rounded-lg border border-teal-200">
+              <p className="text-xs text-teal-600 font-medium">
+                Hacé clic en un profesional para asignar a:
+              </p>
+              <p className="text-sm text-teal-900 font-semibold mt-1">
+                {selectedRequest.name}
+              </p>
+              <p className="text-xs text-teal-500">
+                {REASON_LABELS[selectedRequest.reason] || selectedRequest.reason} • {MODALITY_LABELS[selectedRequest.modality] || selectedRequest.modality}
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-2 max-h-[calc(100vh-380px)] overflow-y-auto custom-scrollbar">
+            {professionals.map((prof) => {
+              const modalityBadges = getModalityBadges(prof);
+              const scheduleSummary = getScheduleSummary(prof);
+              const isMatch = selectedRequest
+                ? getMatchingProfessionals(selectedRequest).some((p) => p.id === prof.id)
+                : true;
+
+              return (
+                <Card
+                  key={prof.id}
+                  className={`border-teal-100 cursor-pointer transition-all hover:shadow-md ${
+                    isMatch && selectedRequest ? "border-l-4 border-l-teal-400" : ""
+                  } ${!isMatch && selectedRequest ? "opacity-50" : ""}`}
+                  onClick={() => handleProfessionalClick(prof)}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-teal-900 text-sm truncate">
+                          {prof.user.name}
+                        </p>
+                        <p className="text-xs text-teal-500">
+                          {prof.specialty}
+                        </p>
                       </div>
-                      {req.status === "rejected" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs border-teal-200"
-                          onClick={() =>
-                            handleStatusChange(req.id, "pending")
-                          }
-                        >
-                          Reabrir solicitud
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 shrink-0 text-teal-500 hover:text-teal-700 hover:bg-teal-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openAssignDialog(
+                            selectedRequest || requests.find((r) => r.status === "pending")!,
+                            prof.id
+                          );
+                        }}
+                        disabled={!selectedRequest && !requests.some((r) => r.status === "pending")}
+                      >
+                        <UserCheck className="w-4 h-4" />
+                      </Button>
                     </div>
-                  )}
+
+                    {/* Modality badges */}
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {modalityBadges.map((badge) => (
+                        <Badge
+                          key={badge}
+                          variant="outline"
+                          className={`text-[10px] px-1.5 py-0 ${
+                            badge === "Online"
+                              ? "bg-blue-50 border-blue-200 text-blue-600"
+                              : badge === "Presencial"
+                              ? "bg-teal-50 border-teal-200 text-teal-600"
+                              : "bg-purple-50 border-purple-200 text-purple-600"
+                          }`}
+                        >
+                          {badge === "Online" && <Monitor className="w-2.5 h-2.5 mr-0.5" />}
+                          {badge === "Presencial" && <MapPin className="w-2.5 h-2.5 mr-0.5" />}
+                          {badge}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    {/* Schedule summary */}
+                    <p className="text-[10px] text-teal-400 mt-1.5 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {scheduleSummary}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {professionals.length === 0 && (
+              <Card className="border-teal-100">
+                <CardContent className="py-8 text-center">
+                  <Stethoscope className="w-8 h-8 text-teal-200 mx-auto" />
+                  <p className="text-teal-500 text-sm mt-2">No hay profesionales disponibles</p>
                 </CardContent>
               </Card>
-            );
-          })}
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Assignment Dialog */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
