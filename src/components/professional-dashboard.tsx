@@ -33,7 +33,6 @@ import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
 
-
 interface Appointment {
   id: string;
   date: string;

@@ -13,11 +13,9 @@ import {
   XCircle,
   MapPin,
   Monitor,
-  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   format,
@@ -32,7 +30,6 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 
-
 // ===== Types =====
 interface Appointment {
   id: string;
@@ -41,7 +38,6 @@ interface Appointment {
   status: string;
   reason: string | null;
   modality: string | null;
-  notes: string | null;
   patient: { user: { name: string } };
   professional: { user: { name: string } };
 }
@@ -59,6 +55,7 @@ interface OverrideEntry {
   type: "block" | "extra";
   startTime?: string | null;
   endTime?: string | null;
+  modality?: string | null;
 }
 
 // ===== Constants =====
@@ -92,6 +89,18 @@ const STATUS_COLORS: Record<
     border: "border-red-200",
     badge: "bg-red-100 text-red-600 border-red-200",
   },
+  absent: {
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+    border: "border-orange-200",
+    badge: "bg-orange-100 text-orange-700 border-orange-200",
+  },
+  rescheduled: {
+    bg: "bg-blue-50",
+    text: "text-blue-600",
+    border: "border-blue-200",
+    badge: "bg-blue-100 text-blue-600 border-blue-200",
+  },
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -103,27 +112,30 @@ const STATUS_LABELS: Record<string, string> = {
   rescheduled: "Reprogramado",
 };
 
-const STATUS_COLORS_EXTENDED: Record<string, { bg: string; text: string; border: string; badge: string }> = {
-  ...STATUS_COLORS,
-  absent: {
-    bg: "bg-amber-50",
-    text: "text-amber-800",
-    border: "border-amber-200",
-    badge: "bg-amber-100 text-amber-700 border-amber-200",
-  },
-  rescheduled: {
-    bg: "bg-blue-50",
-    text: "text-blue-800",
-    border: "border-blue-200",
-    badge: "bg-blue-100 text-blue-700 border-blue-200",
-  },
+// Modality display for available cells (grid background)
+const MODALITY_CELL_DISPLAY: Record<
+  string,
+  { icon: React.ComponentType<{ className?: string }>; label: string }
+> = {
+  OL: { icon: Monitor, label: "Online" },
+  P: { icon: MapPin, label: "Presencial" },
+  ambas: { icon: MapPin, label: "Presencial y Online" },
+  H: { icon: MapPin, label: "Híbrida" },
 };
 
-const MODALITY_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
-  P: { label: "Presencial", icon: MapPin },
-  OL: { label: "Online", icon: Monitor },
-  H: { label: "Híbrida", icon: CheckCircle2 },
-  ambas: { label: "Ambas", icon: CheckCircle2 },
+// Modality display for appointment cards
+const MODALITY_BADGE: Record<
+  string,
+  {
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+    color: string;
+  }
+> = {
+  OL: { icon: Monitor, label: "OL", color: "bg-blue-50 text-blue-600 border-blue-200" },
+  P: { icon: MapPin, label: "P", color: "bg-purple-50 text-purple-600 border-purple-200" },
+  ambas: { icon: MapPin, label: "Ambas", color: "bg-indigo-50 text-indigo-600 border-indigo-200" },
+  H: { icon: MapPin, label: "H", color: "bg-violet-50 text-violet-600 border-violet-200" },
 };
 
 // Generate time slots from 07:00 to 22:00 in 30-min blocks
@@ -187,7 +199,7 @@ export function ProfessionalWeeklyAgenda({
 
   // Load professional ID if not provided via prop
   useEffect(() => {
-    if (propProfessionalId) return; // prop takes precedence, no fetch needed
+    if (propProfessionalId) return;
     if (session?.user) {
       const userId = (session.user as { id: string }).id;
       fetch("/api/professionals")
@@ -223,7 +235,7 @@ export function ProfessionalWeeklyAgenda({
     }
   }, [professionalId]);
 
-  // Load appointments - inline fetch to avoid lint error
+  // Load appointments
   useEffect(() => {
     if (!professionalId) return;
     fetch("/api/appointments")
@@ -237,19 +249,6 @@ export function ProfessionalWeeklyAgenda({
         setLoading(false);
       });
   }, [professionalId, currentWeekStart]);
-
-  // Reload appointments function (for dialog success callback)
-  const reloadAppointments = useCallback(() => {
-    if (!professionalId) return;
-    fetch("/api/appointments")
-      .then((res) => res.json())
-      .then((data) => {
-        setAppointments(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        toast.error("Error al cargar turnos");
-      });
-  }, [professionalId]);
 
   // Week navigation
   const goToPrevWeek = () =>
@@ -270,6 +269,29 @@ export function ProfessionalWeeklyAgenda({
       });
     },
     [schedules]
+  );
+
+  // Get the modality for a specific available cell
+  const getModalityForCell = useCallback(
+    (dateStr: string, dayOfWeek: number, time: string): string | null => {
+      // First check weekly schedule
+      const daySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek);
+      const scheduleMatch = daySchedules.find(
+        (s) => time >= s.startTime && time < s.endTime
+      );
+      if (scheduleMatch) return scheduleMatch.modality;
+
+      // Then check extra overrides for this specific date
+      const extraMatch = overrides.find((o) => {
+        if (o.date !== dateStr || o.type !== "extra") return false;
+        if (!o.startTime || !o.endTime) return false;
+        return time >= o.startTime && time < o.endTime;
+      });
+      if (extraMatch?.modality) return extraMatch.modality;
+
+      return null;
+    },
+    [schedules, overrides]
   );
 
   // Check if a date is blocked by an override
@@ -331,31 +353,35 @@ export function ProfessionalWeeklyAgenda({
     [isDateBlocked, isTimeSlotBlocked, getAppointmentForCell, isSlotInSchedule, overrides]
   );
 
-  // Handle status change for appointments
-  const handleStatusChange = async (appointmentId: string, newStatus: string) => {
-    try {
-      const res = await fetch(`/api/appointments/${appointmentId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        setAppointments((prev) =>
-          prev.map((a) => (a.id === appointmentId ? { ...a, status: newStatus } : a))
-        );
-        toast.success(
-          newStatus === "completed" ? "Turno marcado como Atendido" :
-          newStatus === "absent" ? "Turno marcado como Ausente" :
-          "Estado actualizado"
-        );
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Error al actualizar");
+  // Handle status update for appointments (Atendido / Ausente)
+  const handleStatusUpdate = useCallback(
+    async (id: string, status: string) => {
+      try {
+        const res = await fetch(`/api/appointments/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+        if (res.ok) {
+          setAppointments((prev) =>
+            prev.map((a) => (a.id === id ? { ...a, status } : a))
+          );
+          toast.success(
+            status === "completed"
+              ? "Turno marcado como Atendido"
+              : status === "absent"
+                ? "Turno marcado como Ausente"
+                : "Estado actualizado"
+          );
+        } else {
+          toast.error("Error al actualizar turno");
+        }
+      } catch {
+        toast.error("Error al actualizar turno");
       }
-    } catch {
-      toast.error("Error de conexión");
-    }
-  };
+    },
+    []
+  );
 
   // Format week range for header
   const weekRangeText = useMemo(() => {
@@ -368,15 +394,27 @@ export function ProfessionalWeeklyAgenda({
     return `${start} - ${end}`;
   }, [currentWeekStart]);
 
-  // Render a single appointment block with modality and status actions
+  // Render modality icon for an available cell
+  const renderModalityIndicator = (modality: string | null) => {
+    if (!modality) return null;
+    const display = MODALITY_CELL_DISPLAY[modality];
+    if (!display) return null;
+    const Icon = display.icon;
+    return (
+      <div
+        className="flex items-center justify-center w-full h-full"
+        title={display.label}
+      >
+        <Icon className="w-3 h-3 text-emerald-500/70" />
+      </div>
+    );
+  };
+
+  // Render a single appointment block
   const renderAppointment = (apt: Appointment) => {
-    const colors = STATUS_COLORS_EXTENDED[apt.status] || STATUS_COLORS.pending;
-    const modInfo = MODALITY_LABELS[apt.modality || "P"] || MODALITY_LABELS.P;
-    const ModIcon = modInfo.icon;
-    // Check if this confirmed appointment is past (can mark as attended/absent)
-    const now = new Date();
-    const aptDateTime = new Date(`${apt.date}T${apt.time}:00`);
-    const isPastConfirmed = apt.status === "confirmed" && aptDateTime < now;
+    const colors = STATUS_COLORS[apt.status] || STATUS_COLORS.pending;
+    const modalityInfo = apt.modality ? MODALITY_BADGE[apt.modality] : null;
+    const ModIcon = modalityInfo?.icon;
 
     return (
       <motion.div
@@ -387,6 +425,7 @@ export function ProfessionalWeeklyAgenda({
       >
         <div className="flex items-center justify-between gap-1">
           <span className="font-medium truncate">{apt.patient.user.name}</span>
+          {ModIcon && <ModIcon className="w-3 h-3 flex-shrink-0 opacity-60" />}
         </div>
         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
           <span
@@ -394,25 +433,32 @@ export function ProfessionalWeeklyAgenda({
           >
             {STATUS_LABELS[apt.status] || apt.status}
           </span>
-          <span className="inline-flex items-center gap-0.5 text-[10px] text-teal-500">
-            <ModIcon className="w-2.5 h-2.5" />
-            {modInfo.label}
-          </span>
+          {modalityInfo && (
+            <span
+              className={`inline-flex items-center gap-0.5 px-1 py-0 rounded text-[10px] font-medium border ${modalityInfo.color}`}
+            >
+              {modalityInfo.label}
+            </span>
+          )}
         </div>
-        {isPastConfirmed && (
+        {apt.status === "confirmed" && (
           <div className="flex gap-1 mt-1">
             <button
-              onClick={(e) => { e.stopPropagation(); handleStatusChange(apt.id, "completed"); }}
-              className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStatusUpdate(apt.id, "completed");
+              }}
+              className="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded text-[9px] font-medium transition-colors"
             >
-              <CheckCircle2 className="inline w-2.5 h-2.5 mr-0.5" />
               Atendido
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); handleStatusChange(apt.id, "absent"); }}
-              className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStatusUpdate(apt.id, "absent");
+              }}
+              className="px-1.5 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded text-[9px] font-medium transition-colors"
             >
-              <AlertCircle className="inline w-2.5 h-2.5 mr-0.5" />
               Ausente
             </button>
           </div>
@@ -484,7 +530,8 @@ export function ProfessionalWeeklyAgenda({
                 if (state === "outside" || state === "blocked") {
                   cellClass += "bg-gray-50/50 ";
                 } else if (state === "available") {
-                  cellClass += "bg-teal-50/30 ";
+                  // Soft green background for availability
+                  cellClass += "bg-emerald-50/60 ";
                 } else if (state === "booked") {
                   cellClass += "bg-white ";
                 }
@@ -493,12 +540,19 @@ export function ProfessionalWeeklyAgenda({
                   cellClass += "border-l-2 border-l-teal-300 ";
                 }
 
+                // Get modality for this cell
+                const modality =
+                  state === "available"
+                    ? getModalityForCell(dateStr, dayOfWeek, time)
+                    : null;
+
                 return (
                   <div
                     key={`${dateStr}-${time}`}
                     className={cellClass}
                   >
                     {state === "booked" && apt && renderAppointment(apt)}
+                    {state === "available" && renderModalityIndicator(modality)}
                   </div>
                 );
               })}
@@ -546,6 +600,14 @@ export function ProfessionalWeeklyAgenda({
           {TIME_SLOTS.map((time) => {
             const state = getCellState(dateStr, time, dayOfWeek);
             const apt = getAppointmentForCell(dateStr, time);
+            const modality =
+              state === "available"
+                ? getModalityForCell(dateStr, dayOfWeek, time)
+                : null;
+            const modalityDisplay = modality
+              ? MODALITY_CELL_DISPLAY[modality]
+              : null;
+            const ModIcon = modalityDisplay?.icon;
 
             let rowClass =
               "flex items-start min-h-[36px] rounded-md px-2 py-1 transition-colors ";
@@ -553,7 +615,7 @@ export function ProfessionalWeeklyAgenda({
             if (state === "outside" || state === "blocked") {
               rowClass += "bg-gray-50/30 ";
             } else if (state === "available") {
-              rowClass += "bg-teal-50/30 ";
+              rowClass += "bg-emerald-50/50 ";
             } else if (state === "booked") {
               rowClass += "bg-white ";
             }
@@ -571,8 +633,11 @@ export function ProfessionalWeeklyAgenda({
                     <div className="ml-2">{renderAppointment(apt)}</div>
                   )}
                   {state === "available" && (
-                    <div className="ml-2 flex items-center gap-1 text-teal-400">
-                      <span className="text-[11px]">Disponible</span>
+                    <div className="ml-2 flex items-center gap-1 text-emerald-600">
+                      {ModIcon && <ModIcon className="w-3 h-3" />}
+                      <span className="text-[11px] font-medium">
+                        {modalityDisplay?.label || "Disponible"}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -683,8 +748,16 @@ export function ProfessionalWeeklyAgenda({
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-[11px] text-teal-600">
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-sm bg-teal-50/50 border border-teal-200" />
+          <div className="w-3 h-3 rounded-sm bg-emerald-50 border border-emerald-200" />
           Disponible
+        </div>
+        <div className="flex items-center gap-1">
+          <Monitor className="w-3 h-3 text-emerald-500/70" />
+          Online
+        </div>
+        <div className="flex items-center gap-1">
+          <MapPin className="w-3 h-3 text-emerald-500/70" />
+          Presencial / Híbrida
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-sm bg-amber-50 border border-amber-200" />
@@ -696,19 +769,15 @@ export function ProfessionalWeeklyAgenda({
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-sm bg-gray-50 border border-gray-200" />
-          Completado
+          Atendido
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-sm bg-red-50 border border-red-200" />
           Cancelado
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-sm bg-amber-50 border border-amber-200" />
+          <div className="w-3 h-3 rounded-sm bg-orange-50 border border-orange-200" />
           Ausente
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-sm bg-blue-50 border border-blue-200" />
-          Reprogramado
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-sm bg-gray-100 border border-gray-200" />
