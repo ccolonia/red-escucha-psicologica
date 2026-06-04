@@ -27,6 +27,8 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,6 +93,7 @@ interface Professional {
   id: string;
   userId: string;
   license: string;
+  licenseVerified: boolean;
   specialty: string;
   available: boolean;
   title: string | null;
@@ -511,6 +514,7 @@ export function AdminProfessionals() {
   }, []);
 
   const pendingCount = professionals.filter((p) => !p.user.active).length;
+  const unverifiedLicenseCount = professionals.filter((p) => !p.licenseVerified).length;
 
   const handleToggleActive = async (userId: string, currentActive: boolean) => {
     try {
@@ -574,6 +578,32 @@ export function AdminProfessionals() {
       }
     } catch {
       toast.error("Error al actualizar");
+    }
+  };
+
+  const handleToggleLicenseVerified = async (id: string, currentVerified: boolean) => {
+    try {
+      const res = await fetch("/api/professionals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, licenseVerified: !currentVerified }),
+      });
+      if (res.ok) {
+        setProfessionals((prev) =>
+          prev.map((p) =>
+            p.id === id ? { ...p, licenseVerified: !currentVerified } : p
+          )
+        );
+        toast.success(
+          currentVerified
+            ? "Matrícula desmarcada como verificada"
+            : "Matrícula verificada exitosamente"
+        );
+      } else {
+        toast.error("Error al verificar matrícula");
+      }
+    } catch {
+      toast.error("Error de conexión");
     }
   };
 
@@ -706,6 +736,12 @@ export function AdminProfessionals() {
           {pendingCount > 0 && (
             <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               {pendingCount} {pendingCount === 1 ? "pendiente" : "pendientes"}
+            </span>
+          )}
+          {unverifiedLicenseCount > 0 && (
+            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <ShieldAlert className="w-3 h-3" />
+              {unverifiedLicenseCount} sin verificar
             </span>
           )}
         </div>
@@ -963,6 +999,17 @@ export function AdminProfessionals() {
                                   Pendiente de aprobación
                                 </Badge>
                               )}
+                              {prof.licenseVerified ? (
+                                <Badge variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">
+                                  <ShieldCheck className="w-3 h-3 mr-0.5" />
+                                  Matrícula verificada
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs bg-red-50 border-red-200 text-red-600">
+                                  <ShieldAlert className="w-3 h-3 mr-0.5" />
+                                  Matrícula sin verificar
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-teal-600">
                               {prof.specialty} • MP: {prof.license}
@@ -981,6 +1028,23 @@ export function AdminProfessionals() {
                               Aprobar
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={`h-8 text-xs ${
+                              prof.licenseVerified
+                                ? "border-emerald-200 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                                : "border-red-200 text-red-600 hover:text-red-800 hover:bg-red-50"
+                            }`}
+                            onClick={() => handleToggleLicenseVerified(prof.id, prof.licenseVerified)}
+                            title={prof.licenseVerified ? "Desmarcar verificación de matrícula" : "Verificar matrícula"}
+                          >
+                            {prof.licenseVerified ? (
+                              <><ShieldCheck className="mr-1 w-3.5 h-3.5" /> Verificada</>
+                            ) : (
+                              <><ShieldAlert className="mr-1 w-3.5 h-3.5" /> Verificar</>
+                            )}
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"

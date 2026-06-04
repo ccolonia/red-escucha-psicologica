@@ -27,6 +27,7 @@ model Professional {
   id                  String        @id @default(cuid())
   userId              String        @unique
   license             String        @unique
+  licenseVerified     Boolean       @default(false) // Matrícula verificada por admin
   specialty           String
   bio                 String?
   available           Boolean       @default(true)

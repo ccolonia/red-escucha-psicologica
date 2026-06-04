@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         id: true,
         userId: true,
         license: true,
+        licenseVerified: true,
         specialty: true,
         bio: true,
         available: true,
@@ -69,7 +70,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, available, license, specialty, bio } = body;
+    const { id, available, license, licenseVerified, specialty, bio } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -89,7 +90,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const data: { available?: boolean; license?: string; specialty?: string; bio?: string | null } = {};
+    const data: { available?: boolean; license?: string; licenseVerified?: boolean; specialty?: string; bio?: string | null } = {};
 
     if (available !== undefined) {
       data.available = available;
@@ -102,6 +103,9 @@ export async function PATCH(request: NextRequest) {
     }
     if (bio !== undefined) {
       data.bio = bio;
+    }
+    if (licenseVerified !== undefined) {
+      data.licenseVerified = licenseVerified;
     }
 
     const professional = await db.professional.update({
