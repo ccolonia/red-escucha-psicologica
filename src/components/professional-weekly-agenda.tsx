@@ -441,7 +441,7 @@ export function ProfessionalWeeklyAgenda({
             </span>
           )}
         </div>
-        {apt.status === "confirmed" && apt.date <= new Date().toISOString().split("T")[0] && (
+        {apt.status === "confirmed" && apt.date <= new Date().toLocaleDateString("sv-SE") && (
           <div className="flex gap-1 mt-1">
             <button
               onClick={(e) => {
