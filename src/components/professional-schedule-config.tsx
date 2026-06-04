@@ -73,8 +73,9 @@ const DAYS_SHORT: Record<number, string> = {
 };
 
 const MODALITY_MAP: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
-  P: { label: "Presencial", icon: MapPin },
+  P: { label: "Presencial (Av. Sanabria 1616)", icon: MapPin },
   OL: { label: "Online", icon: Monitor },
+  H: { label: "Híbrida (lo que suceda primero)", icon: CheckCircle2 },
   ambas: { label: "Presencial y Online", icon: CheckCircle2 },
 };
 
@@ -499,8 +500,9 @@ export function ProfessionalScheduleConfig() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="P">Presencial</SelectItem>
+                        <SelectItem value="P">Presencial (Av. Sanabria 1616)</SelectItem>
                         <SelectItem value="OL">Online</SelectItem>
+                        <SelectItem value="H">Híbrida</SelectItem>
                         <SelectItem value="ambas">Ambas</SelectItem>
                       </SelectContent>
                     </Select>
@@ -782,8 +784,9 @@ export function ProfessionalScheduleConfig() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="P">Presencial</SelectItem>
+                          <SelectItem value="P">Presencial (Av. Sanabria 1616)</SelectItem>
                           <SelectItem value="OL">Online</SelectItem>
+                          <SelectItem value="H">Híbrida</SelectItem>
                           <SelectItem value="ambas">Ambas</SelectItem>
                         </SelectContent>
                       </Select>

@@ -335,7 +335,7 @@ function BookingFlow({ patientId }: { patientId: string }) {
                   <Label>Horario disponible</Label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {availableSlots.map((slot) => {
-                      const ModIcon = slot.modality === "OL" ? Monitor : slot.modality === "P" ? MapPin : CheckCircle2;
+                      const ModIcon = slot.modality === "OL" ? Monitor : slot.modality === "P" ? MapPin : slot.modality === "H" ? CheckCircle2 : CheckCircle2;
                       return (
                         <button
                           key={slot.time}
@@ -349,7 +349,7 @@ function BookingFlow({ patientId }: { patientId: string }) {
                           <span>{slot.time}</span>
                           <span className={`text-[10px] flex items-center gap-0.5 ${selectedTime === slot.time ? "text-teal-100" : "text-teal-400"}`}>
                             <ModIcon className="w-3 h-3" />
-                            {slot.modality === "P" ? "Pres." : slot.modality === "OL" ? "Online" : "Ambas"}
+                            {slot.modality === "P" ? "Presencial" : slot.modality === "OL" ? "Online" : slot.modality === "H" ? "Híbrida" : "Ambas"}
                           </span>
                         </button>
                       );
