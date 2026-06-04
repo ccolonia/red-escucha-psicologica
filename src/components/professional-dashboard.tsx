@@ -14,7 +14,6 @@ import {
   FileText,
   Lock,
   Save,
-  Plus,
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
-import { NewAppointmentDialog } from "@/components/new-appointment-dialog";
+
 
 interface Appointment {
   id: string;
@@ -343,7 +342,6 @@ export function ProfessionalSchedule() {
   const [statusChangeType, setStatusChangeType] = useState<string>("");
   const [sessionNotes, setSessionNotes] = useState("");
   const [professionalId, setProfessionalId] = useState<string>("");
-  const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [activeTab, setActiveTab] = useState("agenda");
 
   // Load professional ID
@@ -456,16 +454,9 @@ export function ProfessionalSchedule() {
 
   return (
     <div>
-      {/* Header with title and new appointment button */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-teal-900">Mi Agenda</h2>
-        <Button
-          onClick={() => setShowNewAppointment(true)}
-          className="bg-teal-600 hover:bg-teal-700 text-white"
-        >
-          <Plus className="mr-2 w-4 h-4" />
-          Nuevo Turno
-        </Button>
       </div>
 
       {/* Tabs: Agenda Visual / Lista */}
@@ -711,15 +702,6 @@ export function ProfessionalSchedule() {
         </TabsContent>
       </Tabs>
 
-      {/* New appointment dialog */}
-      {professionalId && (
-        <NewAppointmentDialog
-          open={showNewAppointment}
-          onOpenChange={setShowNewAppointment}
-          professionalId={professionalId}
-          onSuccess={loadAppointments}
-        />
-      )}
     </div>
   );
 }

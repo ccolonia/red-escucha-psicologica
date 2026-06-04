@@ -8,12 +8,12 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  Plus,
   Users,
   CheckCircle2,
   XCircle,
   MapPin,
   Monitor,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,7 +31,7 @@ import {
   parseISO,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { NewAppointmentDialog } from "@/components/new-appointment-dialog";
+
 
 // ===== Types =====
 interface Appointment {
@@ -40,6 +40,8 @@ interface Appointment {
   time: string;
   status: string;
   reason: string | null;
+  modality: string | null;
+  notes: string | null;
   patient: { user: { name: string } };
   professional: { user: { name: string } };
 }
@@ -95,8 +97,33 @@ const STATUS_COLORS: Record<
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pendiente",
   confirmed: "Confirmado",
-  completed: "Completado",
+  completed: "Atendido",
   cancelled: "Cancelado",
+  absent: "Ausente",
+  rescheduled: "Reprogramado",
+};
+
+const STATUS_COLORS_EXTENDED: Record<string, { bg: string; text: string; border: string; badge: string }> = {
+  ...STATUS_COLORS,
+  absent: {
+    bg: "bg-amber-50",
+    text: "text-amber-800",
+    border: "border-amber-200",
+    badge: "bg-amber-100 text-amber-700 border-amber-200",
+  },
+  rescheduled: {
+    bg: "bg-blue-50",
+    text: "text-blue-800",
+    border: "border-blue-200",
+    badge: "bg-blue-100 text-blue-700 border-blue-200",
+  },
+};
+
+const MODALITY_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  P: { label: "Presencial", icon: MapPin },
+  OL: { label: "Online", icon: Monitor },
+  H: { label: "Híbrida", icon: CheckCircle2 },
+  ambas: { label: "Ambas", icon: CheckCircle2 },
 };
 
 // Generate time slots from 07:00 to 22:00 in 30-min blocks
@@ -130,9 +157,6 @@ export function ProfessionalWeeklyAgenda({
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
-  const [showNewAppointment, setShowNewAppointment] = useState(false);
-  const [prefillDate, setPrefillDate] = useState("");
-  const [prefillTime, setPrefillTime] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [userSelectedDay, setUserSelectedDay] = useState<Date | null>(null);
 
@@ -307,12 +331,29 @@ export function ProfessionalWeeklyAgenda({
     [isDateBlocked, isTimeSlotBlocked, getAppointmentForCell, isSlotInSchedule, overrides]
   );
 
-  // Handle cell click (for available slots)
-  const handleCellClick = (dateStr: string, time: string, state: string) => {
-    if (state === "available") {
-      setPrefillDate(dateStr);
-      setPrefillTime(time);
-      setShowNewAppointment(true);
+  // Handle status change for appointments
+  const handleStatusChange = async (appointmentId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setAppointments((prev) =>
+          prev.map((a) => (a.id === appointmentId ? { ...a, status: newStatus } : a))
+        );
+        toast.success(
+          newStatus === "completed" ? "Turno marcado como Atendido" :
+          newStatus === "absent" ? "Turno marcado como Ausente" :
+          "Estado actualizado"
+        );
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al actualizar");
+      }
+    } catch {
+      toast.error("Error de conexión");
     }
   };
 
@@ -327,9 +368,16 @@ export function ProfessionalWeeklyAgenda({
     return `${start} - ${end}`;
   }, [currentWeekStart]);
 
-  // Render a single appointment block
+  // Render a single appointment block with modality and status actions
   const renderAppointment = (apt: Appointment) => {
-    const colors = STATUS_COLORS[apt.status] || STATUS_COLORS.pending;
+    const colors = STATUS_COLORS_EXTENDED[apt.status] || STATUS_COLORS.pending;
+    const modInfo = MODALITY_LABELS[apt.modality || "P"] || MODALITY_LABELS.P;
+    const ModIcon = modInfo.icon;
+    // Check if this confirmed appointment is past (can mark as attended/absent)
+    const now = new Date();
+    const aptDateTime = new Date(`${apt.date}T${apt.time}:00`);
+    const isPastConfirmed = apt.status === "confirmed" && aptDateTime < now;
+
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -340,13 +388,35 @@ export function ProfessionalWeeklyAgenda({
         <div className="flex items-center justify-between gap-1">
           <span className="font-medium truncate">{apt.patient.user.name}</span>
         </div>
-        <div className="flex items-center gap-1 mt-0.5">
+        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
           <span
             className={`inline-flex items-center px-1 py-0 rounded text-[10px] font-medium ${colors.badge} border`}
           >
             {STATUS_LABELS[apt.status] || apt.status}
           </span>
+          <span className="inline-flex items-center gap-0.5 text-[10px] text-teal-500">
+            <ModIcon className="w-2.5 h-2.5" />
+            {modInfo.label}
+          </span>
         </div>
+        {isPastConfirmed && (
+          <div className="flex gap-1 mt-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); handleStatusChange(apt.id, "completed"); }}
+              className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
+            >
+              <CheckCircle2 className="inline w-2.5 h-2.5 mr-0.5" />
+              Atendido
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleStatusChange(apt.id, "absent"); }}
+              className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+            >
+              <AlertCircle className="inline w-2.5 h-2.5 mr-0.5" />
+              Ausente
+            </button>
+          </div>
+        )}
       </motion.div>
     );
   };
@@ -414,8 +484,7 @@ export function ProfessionalWeeklyAgenda({
                 if (state === "outside" || state === "blocked") {
                   cellClass += "bg-gray-50/50 ";
                 } else if (state === "available") {
-                  cellClass +=
-                    "bg-teal-50/30 hover:bg-teal-100/50 cursor-pointer group ";
+                  cellClass += "bg-teal-50/30 ";
                 } else if (state === "booked") {
                   cellClass += "bg-white ";
                 }
@@ -428,14 +497,8 @@ export function ProfessionalWeeklyAgenda({
                   <div
                     key={`${dateStr}-${time}`}
                     className={cellClass}
-                    onClick={() => handleCellClick(dateStr, time, state)}
                   >
                     {state === "booked" && apt && renderAppointment(apt)}
-                    {state === "available" && (
-                      <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Plus className="w-3 h-3 text-teal-400" />
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -490,7 +553,7 @@ export function ProfessionalWeeklyAgenda({
             if (state === "outside" || state === "blocked") {
               rowClass += "bg-gray-50/30 ";
             } else if (state === "available") {
-              rowClass += "bg-teal-50/30 hover:bg-teal-100/50 cursor-pointer ";
+              rowClass += "bg-teal-50/30 ";
             } else if (state === "booked") {
               rowClass += "bg-white ";
             }
@@ -499,7 +562,6 @@ export function ProfessionalWeeklyAgenda({
               <div
                 key={time}
                 className={rowClass}
-                onClick={() => handleCellClick(dateStr, time, state)}
               >
                 <span className="text-[11px] text-teal-400 w-12 flex-shrink-0 pt-0.5">
                   {time}
@@ -509,8 +571,7 @@ export function ProfessionalWeeklyAgenda({
                     <div className="ml-2">{renderAppointment(apt)}</div>
                   )}
                   {state === "available" && (
-                    <div className="ml-2 flex items-center gap-1 text-teal-400 hover:text-teal-600">
-                      <Plus className="w-3 h-3" />
+                    <div className="ml-2 flex items-center gap-1 text-teal-400">
                       <span className="text-[11px]">Disponible</span>
                     </div>
                   )}
@@ -642,22 +703,18 @@ export function ProfessionalWeeklyAgenda({
           Cancelado
         </div>
         <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-amber-50 border border-amber-200" />
+          Ausente
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-blue-50 border border-blue-200" />
+          Reprogramado
+        </div>
+        <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-sm bg-gray-100 border border-gray-200" />
           Fuera de agenda
         </div>
       </div>
-
-      {/* New appointment dialog */}
-      {professionalId && (
-        <NewAppointmentDialog
-          open={showNewAppointment}
-          onOpenChange={setShowNewAppointment}
-          professionalId={professionalId}
-          prefillDate={prefillDate}
-          prefillTime={prefillTime}
-          onSuccess={reloadAppointments}
-        />
-      )}
     </div>
   );
 }
