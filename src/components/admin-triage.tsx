@@ -407,8 +407,10 @@ export function AdminTriage() {
       d.setDate(today.getDate() + i);
       const dayOfWeek = d.getDay();
       if (dayOfWeek === 0) continue; // Skip Sundays
+      // Use sv-SE locale for YYYY-MM-DD — evaluates in local timezone, not UTC
+      // toISOString() would shift date after 21:00 in Argentina (UTC-3)
       dates.push({
-        value: d.toISOString().split("T")[0],
+        value: d.toLocaleDateString("sv-SE"),
         label: d.toLocaleDateString("es-AR", {
           weekday: "short",
           day: "numeric",
