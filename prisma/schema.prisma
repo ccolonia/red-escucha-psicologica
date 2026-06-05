@@ -123,7 +123,7 @@ model PatientRequest {
   reason         String    @default("consulta_general") // "Ansiedad", "Vínculos", "Depresión", etc.
   notes          String?   // Notas adicionales del paciente
   status         String    @default("pending") // "pending", "assigned", "contacted", "rejected"
-  assignedToId   String?   @unique // Professional ID when assigned
+  assignedToId   String?   // Professional ID when assigned (multiple requests can point to same professional)
   appointmentId  String?   @unique // Appointment ID after assignment creates one
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

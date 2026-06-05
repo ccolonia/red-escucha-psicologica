@@ -113,6 +113,9 @@ export async function GET(
     for (const schedule of schedules) {
       const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
       for (const time of slots) {
+        // Strict endTime clamp: reject any slot that would START at or after endTime
+        if (time >= schedule.endTime) continue;
+
         // Check if this specific time is blocked by a partial block override
         const isBlocked = blockOverrides.some((block) => {
           if (block.startTime && block.endTime) {
@@ -133,6 +136,9 @@ export async function GET(
         const duration = extra.slotDuration || 45;
         const slots = generateSlots(extra.startTime, extra.endTime, duration);
         for (const time of slots) {
+          // Strict endTime clamp for overrides too
+          if (time >= extra.endTime) continue;
+
           // Don't add duplicates
           if (!allSlots.find((s) => s.time === time)) {
             allSlots.push({ time, modality: extra.modality || "ambas" });
