@@ -40,52 +40,69 @@ export async function PATCH(
 
       // ===== ATOMIC ASSIGNMENT VIA TRANSACTION =====
       const updated = await db.$transaction(async (tx) => {
+        // 0. Verify the PatientRequest exists BEFORE any mutation
+        //    id is a cuid string — do NOT parseInt (schema: String @id @default(cuid()))
+        const existingRequest = await tx.patientRequest.findUnique({
+          where: { id },
+        });
+
+        if (!existingRequest) {
+          throw new Error(`PatientRequest no encontrada con id: ${id}`);
+        }
+
+        if (existingRequest.status === "assigned") {
+          throw new Error(
+            `PatientRequest ya fue asignada (status=assigned). id: ${id}`
+          );
+        }
+
         // 1. Find or create patient
         let patient = await tx.patient.findFirst({
           where: {
-            user: { email: body.patientEmail || undefined },
+            user: body.patientEmail
+              ? { email: body.patientEmail }
+              : { id: "__never__" }, // avoid matching random patients when no email
           },
           include: { user: true },
         });
 
         // 2. If no patient exists, create user + patient
-        if (!patient) {
-          const existingUser = body.patientEmail
-            ? await tx.user.findUnique({
-                where: { email: body.patientEmail },
-              })
-            : null;
+        if (!patient && body.patientEmail) {
+          const existingUser = await tx.user.findUnique({
+            where: { email: body.patientEmail },
+          });
 
           if (existingUser) {
             patient = await tx.patient.findUnique({
               where: { userId: existingUser.id },
             });
           }
+        }
 
-          if (!patient) {
-            const bcrypt = await import("bcryptjs");
-            const tempPassword = await bcrypt.hash(
-              Math.random().toString(36).slice(2),
-              10
-            );
-            const newUser = await tx.user.create({
-              data: {
-                name: body.patientName || "Paciente",
-                email:
-                  body.patientEmail ||
-                  `pending-${Date.now()}@redescucha.temp`,
-                password: tempPassword,
-                role: "patient",
-                active: false,
-              },
-            });
-            patient = await tx.patient.create({
-              data: {
-                userId: newUser.id,
-                notes: `Creado desde solicitud de triage`,
-              },
-            });
-          }
+        if (!patient) {
+          const bcrypt = await import("bcryptjs");
+          const tempPassword = await bcrypt.hash(
+            Math.random().toString(36).slice(2),
+            10
+          );
+          const newUser = await tx.user.create({
+            data: {
+              name: body.patientName || existingRequest.name || "Paciente",
+              email:
+                body.patientEmail ||
+                existingRequest.email ||
+                `pending-${Date.now()}@redescucha.temp`,
+              password: tempPassword,
+              role: "patient",
+              active: false,
+            },
+          });
+          patient = await tx.patient.create({
+            data: {
+              userId: newUser.id,
+              notes: `Creado desde solicitud de triage`,
+            },
+          });
         }
 
         // 3. Create appointment if date and time provided
@@ -99,13 +116,14 @@ export async function PATCH(
               time,
               modality: appointmentModality || "P",
               status: "confirmed",
-              reason: `Solicitud de paciente: ${body.patientReason || "consulta_general"}`,
+              reason: `Solicitud de paciente: ${body.patientReason || existingRequest.reason || "consulta_general"}`,
             },
           });
           appointmentId = appointment.id;
         }
 
-        // 4. Update the patient request
+        // 4. Update the patient request — status must be "assigned" (lowercase, String field)
+        //    Schema: status String @default("pending") // "pending", "assigned", "contacted", "rejected"
         const result = await tx.patientRequest.update({
           where: { id },
           data: {
@@ -188,8 +206,18 @@ export async function PATCH(
       { error: "Acción no especificada" },
       { status: 400 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error al actualizar la solicitud";
     console.error("Error updating patient request:", error);
+
+    // Return specific error for transaction validation failures
+    if (message.includes("PatientRequest no encontrada")) {
+      return NextResponse.json({ error: message }, { status: 404 });
+    }
+    if (message.includes("ya fue asignada")) {
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
+
     return NextResponse.json(
       { error: "Error al actualizar la solicitud" },
       { status: 500 }
