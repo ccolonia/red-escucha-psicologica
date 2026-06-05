@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { unstable_noStore } from "next/cache";
 import { db } from "@/lib/db";
 
+// Argentina timezone constant — all date/time comparisons use this
+const ARG_TZ = "America/Argentina/Buenos_Aires";
+
 // Generate time slots from start to end with given duration
 function generateSlots(startTime: string, endTime: string, duration: number): string[] {
   const slots: string[] = [];
@@ -55,23 +58,33 @@ export async function GET(
       return NextResponse.json([]);
     }
 
-    // Check if date is in the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const requestedDate = new Date(date + "T00:00:00");
+    // ===== TIMEZONE-SAFE DATE PARSING =====
+    // Parse date string directly by splitting to avoid any UTC interpretation.
+    // "2026-06-04" → year=2026, month=6, day=4
+    const [year, month, day] = date.split("-").map(Number);
 
-    if (requestedDate < today) {
-      return NextResponse.json([]);
-    }
+    // Compute dayOfWeek from date components using numeric constructor,
+    // which interprets arguments as local calendar date (no UTC shift).
+    // For any calendar date, the day of week is an absolute fact
+    // (June 4 2026 is always Thursday), so numeric constructor is safe.
+    const dayOfWeekJS = new Date(year, month - 1, day).getDay(); // 0=Sun, 1=Mon..6=Sat
 
     // Sunday = 0, no slots
-    const dayOfWeekJS = requestedDate.getDay(); // 0=Sun, 1=Mon...
     if (dayOfWeekJS === 0) {
       return NextResponse.json([]);
     }
 
-    // Convert JS day (0=Sun,1=Mon..6=Sat) to our dayOfWeek (1=Mon..6=Sat)
     const dayOfWeek = dayOfWeekJS; // 1=Lun, 2=Mar...6=Sab
+
+    // ===== TIMEZONE-SAFE "IS PAST" CHECK =====
+    // Use Argentina timezone to determine "today" — avoids UTC shift where
+    // Thursday 21:00 Arg becomes Friday 00:00 UTC, incorrectly marking
+    // Thursday as "past".
+    const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+
+    if (date < todayStr) {
+      return NextResponse.json([]);
+    }
 
     // 1. Get the professional's weekly schedule for this day
     const schedules = await db.professionalSchedule.findMany({
@@ -140,21 +153,18 @@ export async function GET(
 
     const bookedTimes = new Set(existingAppointments.map((a) => a.time));
 
-    // 5. Filter out past times if date is today
-    const isToday = requestedDate.getTime() === today.getTime();
-    const now = isToday ? new Date() : null;
+    // 5. Filter out past times if date is today (using Argentina timezone)
+    const isToday = date === todayStr;
+    const nowArgTime = isToday
+      ? new Date().toLocaleTimeString("en-GB", { timeZone: ARG_TZ, hour: "2-digit", minute: "2-digit" })
+      : null;
 
     const availableSlots = allSlots.filter((slot) => {
       // Remove booked
       if (bookedTimes.has(slot.time)) return false;
 
-      // Remove past times for today
-      if (now) {
-        const [hours, minutes] = slot.time.split(":").map(Number);
-        const slotDate = new Date();
-        slotDate.setHours(hours, minutes, 0, 0);
-        if (slotDate <= now) return false;
-      }
+      // Remove past times for today — compare HH:MM strings directly
+      if (nowArgTime && slot.time <= nowArgTime) return false;
 
       return true;
     });
