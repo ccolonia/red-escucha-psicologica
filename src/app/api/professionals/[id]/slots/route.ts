@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_noStore } from "next/cache";
 import { db } from "@/lib/db";
 
 // Generate time slots from start to end with given duration
@@ -25,6 +26,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  unstable_noStore();
+
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
