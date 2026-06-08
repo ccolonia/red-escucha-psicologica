@@ -1433,7 +1433,7 @@ export function LandingPage() {
             <defs>
               <path id="prof-circle" d="M 28,28 m -21,0 a 21,21 0 1,1 42,0 a 21,21 0 1,1 -42,0" />
             </defs>
-            <text fontSize="6.5" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="1.8">
+            <text fontSize="8.5" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="1.8">
               <textPath href="#prof-circle" startOffset="0%">
                 Profesionales ✦
               </textPath>
@@ -1455,7 +1455,7 @@ export function LandingPage() {
             <defs>
               <path id="turno-circle" d="M 28,28 m -21,0 a 21,21 0 1,1 42,0 a 21,21 0 1,1 -42,0" />
             </defs>
-            <text fontSize="7.2" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="1.8">
+            <text fontSize="9.2" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="1.8">
               <textPath href="#turno-circle" startOffset="0%">
                 Turno aquí ✦
               </textPath>
