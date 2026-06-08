@@ -1421,7 +1421,19 @@ export function LandingPage() {
         </div>
       </footer>
 
-      {/* ===== TURNO AQUÍ FLOATING BUTTON (round, same size as WhatsApp) ===== */}
+      {/* ===== PROFESIONALES FLOATING BUTTON (top of the stack) ===== */}
+      <button
+        onClick={() => { window.location.href = "https://redescuchapsicologica.com/#registro-profesional"; }}
+        className="fixed z-50 w-14 h-14 bg-sage-500 hover:bg-sage-600 text-white rounded-full flex flex-col items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+        style={{ bottom: 'max(9.5rem, calc(env(safe-area-inset-bottom, 1.5rem) + 8rem))', right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))' }}
+        aria-label="Registro de Profesionales"
+      >
+        <Users className="w-5 h-5" />
+        <span className="text-[7px] font-bold leading-tight mt-0.5" style={{ fontFamily: "Montserrat, sans-serif" }}>Profesio-</span>
+        <span className="text-[7px] font-bold leading-tight" style={{ fontFamily: "Montserrat, sans-serif" }}>nales</span>
+      </button>
+
+      {/* ===== TURNO AQUÍ FLOATING BUTTON (middle of the stack) ===== */}
       <button
         onClick={() => scrollToSection("contacto")}
         className="fixed z-50 w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-full flex flex-col items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
@@ -1433,7 +1445,7 @@ export function LandingPage() {
         <span className="text-[8px] font-bold leading-tight" style={{ fontFamily: "Montserrat, sans-serif" }}>aquí</span>
       </button>
 
-      {/* ===== WHATSAPP FLOATING BUTTON ===== */}
+      {/* ===== WHATSAPP FLOATING BUTTON (bottom of the stack) ===== */}
       {cmsConfig.whatsapp_enabled !== "false" && (
       <a
         href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
