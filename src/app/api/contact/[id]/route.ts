@@ -18,8 +18,65 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status } = body;
+    const { status, action } = body;
 
+    // Action: habilitar_turno — create PatientRequest from ContactRequest data
+    if (action === "habilitar_turno") {
+      const existing = await db.contactRequest.findUnique({ where: { id } });
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Consulta no encontrada" },
+          { status: 404 }
+        );
+      }
+
+      if (existing.turnoHabilitado) {
+        return NextResponse.json(
+          { error: "El turno ya fue habilitado para esta consulta" },
+          { status: 409 }
+        );
+      }
+
+      // Map contact reason to patient request reason
+      const reasonMap: Record<string, string> = {
+        solicitar_turno: "consulta_general",
+        consulta_general: "consulta_general",
+        informacion: "consulta_general",
+      };
+      const mappedReason = reasonMap[existing.reason || ""] || "consulta_general";
+
+      // Create PatientRequest and mark contact as turnoHabilitado atomically
+      const result = await db.$transaction(async (tx) => {
+        const patientRequest = await tx.patientRequest.create({
+          data: {
+            name: existing.name,
+            email: existing.email,
+            phone: existing.phone || null,
+            modality: "presencial",
+            reason: mappedReason,
+            notes: existing.message
+              ? `Consulta de contacto: ${existing.message}`
+              : null,
+            status: "pending",
+          },
+        });
+
+        const updatedContact = await tx.contactRequest.update({
+          where: { id },
+          data: { turnoHabilitado: true, status: existing.status === "nuevo" ? "leido" : existing.status },
+        });
+
+        return { patientRequest, updatedContact };
+      });
+
+      return NextResponse.json({
+        message: "Turno habilitado exitosamente",
+        patientRequest: result.patientRequest,
+        contact: result.updatedContact,
+      });
+    }
+
+    // Default: status update
     if (!status || !VALID_STATUSES.includes(status)) {
       return NextResponse.json(
         { error: "Estado inválido. Debe ser: nuevo, leido, respondido o resuelto" },

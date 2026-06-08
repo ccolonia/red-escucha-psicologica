@@ -121,6 +121,7 @@ interface ContactRequest {
   message: string;
   reason: string | null;
   status: string;
+  turnoHabilitado: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -1365,6 +1366,28 @@ export function AdminContacts() {
     }
   };
 
+  const handleHabilitarTurno = async (id: string) => {
+    try {
+      const res = await fetch(`/api/contact/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "habilitar_turno" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setContacts((prev) =>
+          prev.map((c) => (c.id === id ? { ...c, turnoHabilitado: true, status: data.contact?.status || c.status } : c))
+        );
+        toast.success("Turno habilitado — el paciente ya aparece en Triage");
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Error al habilitar turno");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de que querés eliminar esta consulta?")) return;
     try {
@@ -1445,6 +1468,11 @@ export function AdminContacts() {
                             {REASON_MAP[contact.reason] || contact.reason}
                           </Badge>
                         )}
+                        {contact.turnoHabilitado && (
+                          <Badge variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">
+                            Turno habilitado
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-teal-600">{contact.email}</p>
                       {contact.phone && (
@@ -1458,6 +1486,15 @@ export function AdminContacts() {
                       </p>
                     </div>
                     <div className="flex items-center gap-1 ml-3 shrink-0">
+                      {!contact.turnoHabilitado && (
+                        <Button
+                          size="sm"
+                          className="bg-amber-500 hover:bg-amber-600 text-white h-7 text-xs"
+                          onClick={() => handleHabilitarTurno(contact.id)}
+                        >
+                          Habilitar turno
+                        </Button>
+                      )}
                       {nextStatus && (
                         <Button
                           size="sm"
