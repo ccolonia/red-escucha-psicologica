@@ -1424,25 +1424,41 @@ export function LandingPage() {
       {/* ===== PROFESIONALES FLOATING BUTTON (top of the stack) ===== */}
       <button
         onClick={() => { window.location.href = "https://redescuchapsicologica.com/#registro-profesional"; }}
-        className="fixed z-50 w-14 h-14 bg-sage-500 hover:bg-sage-600 text-white rounded-full flex flex-col items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
-        style={{ bottom: 'max(9.5rem, calc(env(safe-area-inset-bottom, 1.5rem) + 8rem))', right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))' }}
+        className="fixed z-50 w-[72px] h-[72px] bg-sage-500 hover:bg-sage-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 relative"
+        style={{ bottom: 'max(11rem, calc(env(safe-area-inset-bottom, 1.5rem) + 9.5rem))', right: 'max(1.25rem, env(safe-area-inset-right, 1.5rem))' }}
         aria-label="Registro de Profesionales"
       >
-        <Users className="w-5 h-5" />
-        <span className="text-[7px] font-bold leading-tight mt-0.5" style={{ fontFamily: "Montserrat, sans-serif" }}>Profesio-</span>
-        <span className="text-[7px] font-bold leading-tight" style={{ fontFamily: "Montserrat, sans-serif" }}>nales</span>
+        <svg viewBox="0 0 72 72" className="absolute inset-0 w-full h-full animate-[spin_20s_linear_infinite]">
+          <defs>
+            <path id="prof-circle" d="M 36,36 m -27,0 a 27,27 0 1,1 54,0 a 27,27 0 1,1 -54,0" />
+          </defs>
+          <text fontSize="8" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="2.5">
+            <textPath href="#prof-circle" startOffset="0%">
+              Profesionales ✦
+            </textPath>
+          </text>
+        </svg>
+        <Users className="w-5 h-5 relative z-10" />
       </button>
 
       {/* ===== TURNO AQUÍ FLOATING BUTTON (middle of the stack) ===== */}
       <button
         onClick={() => scrollToSection("contacto")}
-        className="fixed z-50 w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-full flex flex-col items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
-        style={{ bottom: 'max(5.5rem, calc(env(safe-area-inset-bottom, 1.5rem) + 4rem))', right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))' }}
+        className="fixed z-50 w-[72px] h-[72px] bg-amber-500 hover:bg-amber-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 relative"
+        style={{ bottom: 'max(6rem, calc(env(safe-area-inset-bottom, 1.5rem) + 4.5rem))', right: 'max(1.25rem, env(safe-area-inset-right, 1.5rem))' }}
         aria-label="Solicitar Turno"
       >
-        <CalendarPlus className="w-5 h-5" />
-        <span className="text-[8px] font-bold leading-tight mt-0.5" style={{ fontFamily: "Montserrat, sans-serif" }}>Turno</span>
-        <span className="text-[8px] font-bold leading-tight" style={{ fontFamily: "Montserrat, sans-serif" }}>aquí</span>
+        <svg viewBox="0 0 72 72" className="absolute inset-0 w-full h-full animate-[spin_20s_linear_infinite]">
+          <defs>
+            <path id="turno-circle" d="M 36,36 m -27,0 a 27,27 0 1,1 54,0 a 27,27 0 1,1 -54,0" />
+          </defs>
+          <text fontSize="9" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="2">
+            <textPath href="#turno-circle" startOffset="0%">
+              Turno aquí ✦
+            </textPath>
+          </text>
+        </svg>
+        <CalendarPlus className="w-5 h-5 relative z-10" />
       </button>
 
       {/* ===== WHATSAPP FLOATING BUTTON (bottom of the stack) ===== */}
