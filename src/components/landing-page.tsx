@@ -120,8 +120,8 @@ const defaultHeroSlides = [
   },
   {
     badge: "CONFIDENCIALIDAD GARANTIZADA",
-    title: <>Tu privacidad, <span className="text-sage-300">nuestra prioridad</span></>,
-    description: "Escucharte es nuestra prioridad, te garantizamos un espacio donde podés expresarte libremente, en el que un profesional capacitado te acompañará en cada paso de tu proceso.",
+    title: <>Escucharte es nuestra <span className="text-sage-300">prioridad</span></>,
+    description: "Te garantizamos un espacio donde podés expresarte libremente, en el que un profesional capacitado te acompañará en cada paso de tu proceso.",
     cta: "Contactanos",
     ctaIcon: Phone,
     secondaryCta: "Conocer Especialidades",
