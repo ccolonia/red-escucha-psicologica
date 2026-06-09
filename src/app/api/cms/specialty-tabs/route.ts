@@ -22,8 +22,19 @@ export async function POST(req: NextRequest) {
     if (!session || (session.user as { role: string }).role !== "super_admin") {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
-    const data = await req.json();
-    const item = await db.cmsSpecialtyTab.create({ data });
+    const body = await req.json();
+    // Only accept expected fields — prevent Prisma errors from extra fields
+    const { label, order, active } = body;
+    if (!label) {
+      return NextResponse.json({ error: "El nombre es obligatorio" }, { status: 400 });
+    }
+    const item = await db.cmsSpecialtyTab.create({
+      data: {
+        label,
+        order: order ?? 0,
+        active: active !== false,
+      },
+    });
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
     console.error("Error creating specialty tab:", error);

@@ -19,8 +19,22 @@ export async function POST(req: NextRequest) {
     if (!session || (session.user as { role: string }).role !== "super_admin") {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
-    const data = await req.json();
-    const item = await db.cmsSpecialty.create({ data });
+    const body = await req.json();
+    // Only accept expected fields — prevent Prisma errors from extra fields
+    const { icon, label, description, tabId, order, active } = body;
+    if (!label || !tabId) {
+      return NextResponse.json({ error: "Nombre y pestaña son obligatorios" }, { status: 400 });
+    }
+    const item = await db.cmsSpecialty.create({
+      data: {
+        icon: icon || "Brain",
+        label,
+        description: description || "",
+        tabId,
+        order: order ?? 0,
+        active: active !== false,
+      },
+    });
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
     console.error("Error creating specialty:", error);

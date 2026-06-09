@@ -10,7 +10,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
     const { id } = await params;
-    const data = await req.json();
+    const body = await req.json();
+    // Only accept expected fields — prevent Prisma errors from extra fields
+    const { label, order, active } = body;
+    const data: Record<string, unknown> = {};
+    if (label !== undefined) data.label = label;
+    if (order !== undefined) data.order = order;
+    if (active !== undefined) data.active = active;
+
     const item = await db.cmsSpecialtyTab.update({ where: { id }, data });
     return NextResponse.json(item);
   } catch (error) {

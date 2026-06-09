@@ -27,6 +27,7 @@ import {
   HandHeart,
   BookOpen,
   MessageCircle,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,26 +48,30 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Brain, Heart, Shield, Users, Baby, UserCheck,
   HeartHandshake, Sparkles, HandHeart, BookOpen,
   CalendarPlus, MessageCircle, Leaf, Phone, Mail,
-  MapPin, Clock, Send, CheckCircle2,
+  MapPin, Clock, Send, CheckCircle2, FileText,
 };
 
 // ===== Default (fallback) data =====
 const defaultSpecialties = [
-  { icon: Brain, label: "Ansiedad y Estrés", desc: "Técnicas de manejo y afrontamiento para recuperar la calma" },
-  { icon: Heart, label: "Depresión", desc: "Acompañamiento y terapia integral para transitar el dolor" },
-  { icon: Sparkles, label: "Crisis Vitales", desc: "Soporte profesional en momentos de transformación" },
-  { icon: HeartHandshake, label: "Conflictos Vinculares", desc: "Mejora de relaciones interpersonales y comunicación" },
-  { icon: Baby, label: "Niños", desc: "Psicología infanto-juvenil con abordaje lúdico" },
-  { icon: UserCheck, label: "Adolescentes", desc: "Acompañamiento respetuoso en la adolescencia" },
-  { icon: Users, label: "Adultos", desc: "Terapia individual para adultos en todas las etapas" },
-  { icon: HeartHandshake, label: "Parejas", desc: "Terapia vincular y de pareja para reconstruir vínculos" },
-  { icon: Shield, label: "Familias", desc: "Terapia familiar sistémica para armonizar el hogar" },
+  { icon: Baby, label: "Niños/Niñas", desc: "Psicología infanto-juvenil con abordaje lúdico y adaptado a cada etapa del desarrollo" },
+  { icon: UserCheck, label: "Adolescentes", desc: "Acompañamiento respetuoso en la adolescencia, entendiendo sus necesidades y desafíos" },
+  { icon: Users, label: "Jóvenes", desc: "Terapia para jóvenes que transitan momentos de cambio, búsqueda y crecimiento personal" },
+  { icon: Users, label: "Adultos", desc: "Terapia individual para adultos en todas las etapas de la vida" },
+  { icon: Heart, label: "Adulto Mayor", desc: "Acompañamiento psicológico para adultos mayores, atendiendo sus necesidades específicas" },
+  { icon: Shield, label: "Discapacidad (CUD)", desc: "Atención psicológica para personas con discapacidad, con certificado CUD" },
+  { icon: HeartHandshake, label: "Parejas", desc: "Terapia vincular y de pareja para reconstruir y fortalecer la relación" },
+  { icon: Baby, label: "Materno filial", desc: "Acompañamiento en el vínculo madre e hijo/a, fortaleciendo la relación y la crianza" },
+  { icon: Baby, label: "Paterno filial", desc: "Acompañamiento en el vínculo padre e hijo/a, fortaleciendo la relación y la crianza" },
+  { icon: Shield, label: "Familias", desc: "Terapia familiar sistémica para armonizar el hogar y mejorar la comunicación" },
+  { icon: FileText, label: "Pericias de parte", desc: "Evaluaciones periciales realizadas por profesionales matriculados, con rigor y confidencialidad" },
+  { icon: Brain, label: "Psicodiagnósticos", desc: "Evaluaciones psicológicas integrales para orientar el diagnóstico y el plan terapéutico" },
+  { icon: CheckCircle2, label: "Apto psicológico", desc: "Evaluaciones psicológicas para aptitud laboral, conducción y otros requisitos" },
 ];
 
 const defaultSpecialtyTabs = [
-  { id: "individual", label: "Individual", items: [0, 1, 2, 6] },
-  { id: "vincular", label: "Vínculos", items: [3, 7, 8] },
-  { id: "infanto", label: "Infanto-Juvenil", items: [4, 5] },
+  { id: "individual", label: "Individual", items: [0, 1, 2, 3, 4, 5] },
+  { id: "vincular", label: "Vincular", items: [6, 7, 8, 9] },
+  { id: "evaluaciones", label: "Evaluaciones", items: [10, 11, 12] },
 ];
 
 const defaultTestimonials = [
@@ -224,7 +229,10 @@ export function LandingPage() {
             return { id: tab.id, label: tab.label, items: itemIndices };
           });
           if (allSpecs.length > 0) setCmsSpecialties(allSpecs);
-          if (tabs.length > 0) setCmsSpecialtyTabs(tabs);
+          if (tabs.length > 0) {
+            setCmsSpecialtyTabs(tabs);
+            setActiveTab(tabs[0].id); // Fix: set activeTab to first CMS tab id
+          }
         }
         if (data.philosophies?.length) {
           setCmsPhilosophies(data.philosophies);
