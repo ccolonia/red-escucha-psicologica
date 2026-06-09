@@ -242,6 +242,22 @@ model CmsSiteConfig {
   updatedAt DateTime @updatedAt
 }
 
+model CmsRegistrationField {
+  id          String   @id @default(cuid())
+  label       String                    // Display label: "Título", "Sexo", etc.
+  fieldKey    String   @unique          // Internal key: "title", "gender", etc.
+  fieldType   String   @default("text") // "text", "select", "textarea"
+  options     String?                    // JSON array of options for select fields: ["Lic.","Dr.","Dra."]
+  required    Boolean  @default(false)   // Whether the field is mandatory
+  active      Boolean  @default(true)    // Whether the field is shown on the form
+  placeholder String?                    // Placeholder text
+  helperText  String?                    // Helper/hint text below the field
+  order       Int      @default(0)       // Display order
+  section     String   @default("personal") // "personal" for Datos Personales
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model AttendanceSheet {
   id             String       @id @default(cuid())
   professionalId String

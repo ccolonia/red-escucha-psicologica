@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   UserPlus,
@@ -175,6 +175,39 @@ export function ProfessionalRegister() {
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvFileName, setCvFileName] = useState<string>("");
 
+  // Dynamic registration fields from CMS
+  const [regFields, setRegFields] = useState<Array<{
+    id: string;
+    label: string;
+    fieldKey: string;
+    fieldType: string;
+    options: string[] | null;
+    required: boolean;
+    placeholder: string | null;
+    helperText: string | null;
+    order: number;
+    section: string;
+  }>>([]);
+  const [regFieldsLoaded, setRegFieldsLoaded] = useState(false);
+
+  // Fetch dynamic registration fields on mount
+  useEffect(() => {
+    fetch("/api/settings/registration-fields")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setRegFields(data);
+        }
+        setRegFieldsLoaded(true);
+      })
+      .catch(() => {
+        setRegFieldsLoaded(true);
+      });
+  }, []);
+
+  // Dynamic field values (for CMS-managed fields)
+  const [dynamicValues, setDynamicValues] = useState<Record<string, string>>({});
+
   const [form, setForm] = useState({
     // Step 1: Cuenta
     email: "",
@@ -296,7 +329,22 @@ export function ProfessionalRegister() {
         }
         return true;
 
-      case 2:
+      case 2: {
+        // Dynamic validation based on CMS fields
+        if (regFields.length > 0) {
+          const personalFields = regFields.filter((f) => f.section === "personal");
+          for (const field of personalFields) {
+            if (field.required) {
+              const val = dynamicValues[field.fieldKey];
+              if (!val || !val.trim()) {
+                toast.error(`"${field.label}" es obligatorio`);
+                return false;
+              }
+            }
+          }
+          return true;
+        }
+        // Fallback to hardcoded validation
         if (!form.firstName.trim() || !form.lastName.trim()) {
           toast.error("Nombre y apellido son obligatorios");
           return false;
@@ -306,6 +354,7 @@ export function ProfessionalRegister() {
           return false;
         }
         return true;
+      }
 
       case 3:
         if (!form.profession) {
@@ -369,7 +418,18 @@ export function ProfessionalRegister() {
 
     setSubmitting(true);
     try {
-      const fullName = `${form.title !== "Ninguno" ? form.title + " " : ""}${form.firstName} ${form.lastName}`;
+      // Build name from dynamic fields or hardcoded form
+      const useDynamic = regFields.length > 0;
+      const dv = dynamicValues;
+
+      const titleVal = useDynamic ? (dv.title || "") : form.title;
+      const firstNameVal = useDynamic ? (dv.first_name || dv.firstName || "") : form.firstName;
+      const lastNameVal = useDynamic ? (dv.last_name || dv.lastName || "") : form.lastName;
+      const phoneVal = useDynamic ? (dv.phone || "") : form.phone;
+      const cuilVal = useDynamic ? (dv.cuil || dv.cuit || "") : form.cuil;
+      const genderVal = useDynamic ? (dv.gender || dv.sexo || "") : form.gender;
+
+      const fullName = `${titleVal && titleVal !== "Ninguno" ? titleVal + " " : ""}${firstNameVal} ${lastNameVal}`;
 
       // Convert CV to base64
       let cvBase64: string | null = null;
@@ -387,33 +447,46 @@ export function ProfessionalRegister() {
         cvBase64 = btoa(binary);
       }
 
+      // Build the payload, merging dynamic values with the form
+      const payload: Record<string, unknown> = {
+        name: fullName,
+        email: form.email,
+        phone: phoneVal,
+        password: form.password,
+        role: "professional",
+        profession: form.profession,
+        license: form.license,
+        specialty: form.specialty,
+        bio: form.bio || null,
+        title: titleVal || null,
+        cuil: cuilVal || null,
+        gender: genderVal || null,
+        therapyTypes: form.therapyTypes,
+        targetAudience: form.targetAudience,
+        therapyModality: form.therapyModality,
+        onlineAttention: form.onlineAttention,
+        presentialAttention: form.presentialAttention,
+        homeAttention: form.homeAttention,
+        zones: form.zones,
+        cvBase64,
+        cvOriginalName,
+        cvMimeType,
+      };
+
+      // Add any extra dynamic fields that aren't in the standard form
+      if (useDynamic) {
+        const standardKeys = new Set(["title", "first_name", "firstName", "last_name", "lastName", "phone", "cuil", "cuit", "gender", "sexo"]);
+        for (const [key, value] of Object.entries(dv)) {
+          if (!standardKeys.has(key) && value) {
+            payload[key] = value;
+          }
+        }
+      }
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: fullName,
-          email: form.email,
-          phone: form.phone,
-          password: form.password,
-          role: "professional",
-          profession: form.profession,
-          license: form.license,
-          specialty: form.specialty,
-          bio: form.bio || null,
-          title: form.title,
-          cuil: form.cuil || null,
-          gender: form.gender || null,
-          therapyTypes: form.therapyTypes,
-          targetAudience: form.targetAudience,
-          therapyModality: form.therapyModality,
-          onlineAttention: form.onlineAttention,
-          presentialAttention: form.presentialAttention,
-          homeAttention: form.homeAttention,
-          zones: form.zones,
-          cvBase64,
-          cvOriginalName,
-          cvMimeType,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -643,78 +716,130 @@ export function ProfessionalRegister() {
                 {/* STEP 2: Datos Personales */}
                 {step === 2 && (
                   <div className="space-y-4">
-                    <div className="grid sm:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Título *</Label>
-                        <Select value={form.title} onValueChange={(v) => updateForm("title", v)}>
-                          <SelectTrigger className="border-beige-300 bg-beige-50">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TITLES.map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Nombre *</Label>
-                        <Input
-                          value={form.firstName}
-                          onChange={(e) => updateForm("firstName", e.target.value)}
-                          className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
-                          placeholder="Tu nombre"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Apellido *</Label>
-                        <Input
-                          value={form.lastName}
-                          onChange={(e) => updateForm("lastName", e.target.value)}
-                          className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
-                          placeholder="Tu apellido"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Teléfono *</Label>
-                        <Input
-                          value={form.phone}
-                          onChange={(e) => updateForm("phone", e.target.value)}
-                          className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
-                          placeholder="1149999999 (sin 0 ni 15)"
-                        />
-                        <p className="text-xs text-forest-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                          Ingresá tu número con código de área sin el 0 y sin el 15
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>CUIT / CUIL</Label>
-                        <div className="relative">
-                          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300" />
-                          <Input
-                            value={form.cuil}
-                            onChange={(e) => updateForm("cuil", e.target.value)}
-                            className="border-beige-300 bg-beige-50 pl-10 focus:ring-sage-300/20"
-                            placeholder="20-12345678-9"
-                          />
+                    {regFields.length > 0 ? (
+                      /* Dynamic fields from CMS */
+                      regFields
+                        .filter((f) => f.section === "personal")
+                        .sort((a, b) => a.order - b.order)
+                        .map((field) => (
+                          <div key={field.fieldKey} className="space-y-2">
+                            <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                              {field.label}{field.required ? " *" : ""}
+                            </Label>
+                            {field.fieldType === "select" && field.options ? (
+                              <Select
+                                value={dynamicValues[field.fieldKey] || ""}
+                                onValueChange={(v) => setDynamicValues((prev) => ({ ...prev, [field.fieldKey]: v }))}
+                              >
+                                <SelectTrigger className="border-beige-300 bg-beige-50">
+                                  <SelectValue placeholder={field.placeholder || "Seleccionar"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {field.options.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : field.fieldType === "textarea" ? (
+                              <Textarea
+                                value={dynamicValues[field.fieldKey] || ""}
+                                onChange={(e) => setDynamicValues((prev) => ({ ...prev, [field.fieldKey]: e.target.value }))}
+                                className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
+                                placeholder={field.placeholder || ""}
+                                rows={3}
+                              />
+                            ) : (
+                              <Input
+                                value={dynamicValues[field.fieldKey] || ""}
+                                onChange={(e) => setDynamicValues((prev) => ({ ...prev, [field.fieldKey]: e.target.value }))}
+                                className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
+                                placeholder={field.placeholder || ""}
+                              />
+                            )}
+                            {field.helperText && (
+                              <p className="text-xs text-forest-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                {field.helperText}
+                              </p>
+                            )}
+                          </div>
+                        ))
+                    ) : (
+                      /* Fallback: hardcoded fields */
+                      <>
+                        <div className="grid sm:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Título *</Label>
+                            <Select value={form.title} onValueChange={(v) => updateForm("title", v)}>
+                              <SelectTrigger className="border-beige-300 bg-beige-50">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TITLES.map((t) => (
+                                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Nombre *</Label>
+                            <Input
+                              value={form.firstName}
+                              onChange={(e) => updateForm("firstName", e.target.value)}
+                              className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
+                              placeholder="Tu nombre"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Apellido *</Label>
+                            <Input
+                              value={form.lastName}
+                              onChange={(e) => updateForm("lastName", e.target.value)}
+                              className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
+                              placeholder="Tu apellido"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Sexo</Label>
-                      <Select value={form.gender} onValueChange={(v) => updateForm("gender", v)}>
-                        <SelectTrigger className="border-beige-300 bg-beige-50 w-full sm:w-48">
-                          <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Femenino">Femenino</SelectItem>
-                          <SelectItem value="Masculino">Masculino</SelectItem>
-                          <SelectItem value="Otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Teléfono *</Label>
+                            <Input
+                              value={form.phone}
+                              onChange={(e) => updateForm("phone", e.target.value)}
+                              className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
+                              placeholder="1149999999 (sin 0 ni 15)"
+                            />
+                            <p className="text-xs text-forest-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                              Ingresá tu número con código de área sin el 0 y sin el 15
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>CUIT / CUIL</Label>
+                            <div className="relative">
+                              <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300" />
+                              <Input
+                                value={form.cuil}
+                                onChange={(e) => updateForm("cuil", e.target.value)}
+                                className="border-beige-300 bg-beige-50 pl-10 focus:ring-sage-300/20"
+                                placeholder="20-12345678-9"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Sexo</Label>
+                          <Select value={form.gender} onValueChange={(v) => updateForm("gender", v)}>
+                            <SelectTrigger className="border-beige-300 bg-beige-50 w-full sm:w-48">
+                              <SelectValue placeholder="Seleccionar" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Femenino">Femenino</SelectItem>
+                              <SelectItem value="Masculino">Masculino</SelectItem>
+                              <SelectItem value="Otro">Otro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
