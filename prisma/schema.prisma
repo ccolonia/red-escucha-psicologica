@@ -132,16 +132,15 @@ model PatientRequest {
 }
 
 model ContactRequest {
-  id               String   @id @default(cuid())
-  name             String
-  email            String
-  phone            String?
-  message          String
-  reason           String? // "consulta_general", "solicitar_turno", "informacion"
-  status           String   @default("nuevo") // "nuevo", "leido", "respondido", "resuelto"
-  turnoHabilitado  Boolean  @default(false) // true when admin enables appointment for this contact
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  reason    String? // "consulta_general", "solicitar_turno", "informacion"
+  status    String   @default("nuevo") // "nuevo", "leido", "respondido", "resuelto"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PasswordToken {
