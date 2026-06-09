@@ -1163,7 +1163,7 @@ export function LandingPage() {
                   ...(cmsConfig.contact_address ? [{ icon: MapPin, title: "Dirección", text: cmsConfig.contact_address }] : []),
                   { icon: Phone, title: "Teléfono", text: cmsConfig.contact_phone || "+54 11 7668-3429" },
                   { icon: Mail, title: "Email", text: cmsConfig.contact_email || "contacto@redescuchapsicologica.com" },
-                  { icon: Clock, title: "Horarios", text: `${cmsConfig.contact_hours_weekday || "Lunes a Viernes: 9:00 - 20:00"}\n${cmsConfig.contact_hours_saturday || "Sábados: 9:00 - 13:00"}` },
+                  { icon: Clock, title: "Horarios", text: [cmsConfig.contact_hours_weekday || "24 horas, los 365 días del año", ...(cmsConfig.contact_hours_saturday ? [cmsConfig.contact_hours_saturday] : [])].join("\n") },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
                     <div className="w-10 h-10 bg-sage-300/15 rounded-lg flex items-center justify-center shrink-0">
