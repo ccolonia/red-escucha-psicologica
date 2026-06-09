@@ -190,6 +190,11 @@ async function main() {
     { key: "cta_description", value: "No estás solo/a. Nuestro equipo de profesionales está listo para acompañarte. Sin listas de espera, con turnos disponibles.", group: "sections" },
     { key: "contact_title", value: "Contactanos", group: "sections" },
     { key: "contact_description", value: "Completá el formulario y nos comunicaremos con vos a la brevedad.", group: "sections" },
+    // Social Media
+    { key: "social_facebook_url", value: "", group: "social" },
+    { key: "social_instagram_url", value: "", group: "social" },
+    { key: "social_tiktok_url", value: "", group: "social" },
+    { key: "social_linkedin_url", value: "", group: "social" },
   ];
 
   for (const config of configs) {

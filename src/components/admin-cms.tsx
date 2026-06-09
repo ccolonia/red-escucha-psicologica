@@ -18,6 +18,7 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -144,6 +145,7 @@ type CMSTab =
   | "steps"
   | "stats"
   | "testimonials"
+  | "social"
   | "config";
 
 const TABS: {
@@ -157,6 +159,7 @@ const TABS: {
   { id: "steps", label: "Cómo Funciona", icon: HandHeart },
   { id: "stats", label: "Estadísticas", icon: BarChart3 },
   { id: "testimonials", label: "Testimonios", icon: MessageSquare },
+  { id: "social", label: "Redes Sociales", icon: Share2 },
   { id: "config", label: "Configuración", icon: Settings },
 ];
 
@@ -165,6 +168,7 @@ const GROUP_LABELS: Record<string, string> = {
   contact: "Contacto",
   whatsapp: "WhatsApp",
   sections: "Secciones",
+  social: "Redes Sociales",
 };
 
 // ===== Main Component =====
@@ -209,6 +213,7 @@ export function AdminCMS() {
       {activeTab === "steps" && <StepsTab />}
       {activeTab === "stats" && <StatsTab />}
       {activeTab === "testimonials" && <TestimonialsTab />}
+      {activeTab === "social" && <SocialLinksTab />}
       {activeTab === "config" && <ConfigTab />}
     </div>
   );
@@ -1917,6 +1922,196 @@ function TestimonialsTab() {
         </Card>
       )}
     />
+  );
+}
+
+// ===== Social Links Tab =====
+function SocialLinksTab() {
+  const [links, setLinks] = useState({
+    facebook: "",
+    instagram: "",
+    tiktok: "",
+    linkedin: "",
+  });
+  const [originalLinks, setOriginalLinks] = useState({
+    facebook: "",
+    instagram: "",
+    tiktok: "",
+    linkedin: "",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(() => {
+    fetch("/api/settings/social-links")
+      .then((r) => r.json())
+      .then((data) => {
+        const loaded = {
+          facebook: data.facebook || "",
+          instagram: data.instagram || "",
+          tiktok: data.tiktok || "",
+          linkedin: data.linkedin || "",
+        };
+        setLinks(loaded);
+        setOriginalLinks(loaded);
+        setLoading(false);
+      })
+      .catch(() => {
+        toast.error("Error al cargar las redes sociales");
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleChange = (field: keyof typeof links, value: string) => {
+    setLinks((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const hasChanges =
+    links.facebook !== originalLinks.facebook ||
+    links.instagram !== originalLinks.instagram ||
+    links.tiktok !== originalLinks.tiktok ||
+    links.linkedin !== originalLinks.linkedin;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/settings/social-links", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(links),
+      });
+      if (res.ok) {
+        toast.success("Redes sociales actualizadas correctamente");
+        setOriginalLinks({ ...links });
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al guardar las redes sociales");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const socialFields = [
+    {
+      key: "facebook" as const,
+      label: "Facebook",
+      placeholder: "https://facebook.com/redescucha",
+      iconPrefix: "fb",
+      color: "bg-blue-600",
+    },
+    {
+      key: "instagram" as const,
+      label: "Instagram",
+      placeholder: "https://instagram.com/redescucha",
+      iconPrefix: "ig",
+      color: "bg-gradient-to-br from-purple-600 to-pink-500",
+    },
+    {
+      key: "tiktok" as const,
+      label: "TikTok",
+      placeholder: "https://tiktok.com/@redescucha",
+      iconPrefix: "tt",
+      color: "bg-gray-900",
+    },
+    {
+      key: "linkedin" as const,
+      label: "LinkedIn",
+      placeholder: "https://linkedin.com/company/redescucha",
+      iconPrefix: "in",
+      color: "bg-blue-700",
+    },
+  ];
+
+  if (loading) return <LoadingSkeleton />;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xl font-bold text-teal-900">
+            Redes Sociales
+          </h2>
+          <p className="text-sm text-teal-600 mt-0.5">
+            Administrá los enlaces de las redes sociales que se muestran en el pie de página
+          </p>
+          {hasChanges && (
+            <p className="text-sm text-amber-600 mt-0.5">
+              Hay cambios sin guardar
+            </p>
+          )}
+        </div>
+        <Button
+          onClick={handleSave}
+          disabled={saving || !hasChanges}
+          className="bg-teal-600 hover:bg-teal-700 text-white"
+        >
+          {saving ? (
+            <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 w-4 h-4" />
+          )}
+          Guardar Cambios
+        </Button>
+      </div>
+
+      <Card className="border-teal-100">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg text-teal-800">
+            Enlaces de Redes Sociales
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {socialFields.map((field) => {
+            const isChanged = links[field.key] !== originalLinks[field.key];
+            const hasValue = links[field.key].trim() !== "";
+            return (
+              <div key={field.key} className="space-y-1.5">
+                <Label
+                  className={`text-sm flex items-center gap-2 ${
+                    isChanged
+                      ? "text-amber-700 font-medium"
+                      : "text-teal-700"
+                  }`}
+                >
+                  <span
+                    className={`inline-flex items-center justify-center w-6 h-6 rounded text-white text-xs font-bold ${field.color}`}
+                  >
+                    {field.iconPrefix}
+                  </span>
+                  {field.label}
+                  {isChanged && (
+                    <span className="text-xs text-amber-500">(modificado)</span>
+                  )}
+                  {!hasValue && (
+                    <span className="text-xs text-teal-400 font-normal">
+                      (no se mostrará en el footer)
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  value={links[field.key]}
+                  onChange={(e) => handleChange(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  className={`border-teal-200 ${
+                    isChanged ? "border-amber-300 bg-amber-50/30" : ""
+                  }`}
+                />
+                <p className="text-xs text-teal-500">
+                  Dejá vacío para ocultar este ícono del pie de página
+                </p>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
