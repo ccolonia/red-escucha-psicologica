@@ -121,7 +121,7 @@ const defaultHeroSlides = [
   {
     badge: "CONFIDENCIALIDAD GARANTIZADA",
     title: <>Tu privacidad, <span className="text-sage-300">nuestra prioridad</span></>,
-    description: "El secreto profesional es el pilar de nuestra práctica. Garantizamos un espacio donde podés expresarte libremente, sabiendo que tu privacidad está protegida en todo momento.",
+    description: "Escucharte es nuestra prioridad, te garantizamos un espacio donde podés expresarte libremente, en el que un profesional capacitado te acompañará en cada paso de tu proceso.",
     cta: "Contactanos",
     ctaIcon: Phone,
     secondaryCta: "Conocer Especialidades",
@@ -908,7 +908,7 @@ export function LandingPage() {
               {
                 icon: "Shield",
                 title: "Confidencialidad",
-                description: "El secreto profesional es el pilar de nuestra práctica. Garantizamos un espacio seguro donde podés expresarte libremente, sabiendo que tu privacidad está protegida en todo momento.",
+                description: "Escucharte es nuestra prioridad, te garantizamos un espacio seguro donde podés expresarte libremente, en el que un profesional capacitado te acompañará en cada paso de tu proceso.",
               },
               {
                 icon: "BookOpen",
