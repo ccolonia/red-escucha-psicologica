@@ -1008,6 +1008,11 @@ export function LandingPage() {
                 );
               })}
           </motion.div>
+
+          {/* Listado de especialidades */}
+          <p className="text-center mt-10 text-forest-400 text-sm font-light italic" style={{ fontFamily: "Montserrat, sans-serif" }}>
+            Depresión, ansiedad, fobias, trastornos alimentarios, discapacidad, psiconutrición, duelos, adicciones, estrés, estrés laboral, autoestima, problemas conductuales, problemas vinculares, crisis vital, autolesión, rendimiento escolar, otros.
+          </p>
         </div>
       </section>
 
