@@ -948,7 +948,7 @@ export function LandingPage() {
               {cmsConfig.specialties_title || "Nuestras Especialidades"}
             </h2>
             <p className="mt-4 text-forest-400 text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              {cmsConfig.specialties_description || "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos, atendemos tus necesidades y garantizamos absoluta confidencialidad en cada acompañamiento."}
+              {cmsConfig.specialties_description || "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos y necesidades, garantizando confidencialidad y profesionalismo en cada acompañamiento."}
             </p>
           </motion.div>
 
