@@ -89,6 +89,19 @@ export async function POST(request: NextRequest) {
       const cvMimeType = body.cvMimeType || null;
       const hasValidCv = cvBase64 && cvOriginalName && cvMimeType && allowedMimeTypes.includes(cvMimeType);
 
+      // Store dynamic fields data (custom fields from admin-managed form)
+      const dynamicFieldsData = body.dynamicFields || null;
+      // Separate known columns from extra dynamic fields
+      const knownFieldKeys = ["title", "firstName", "lastName", "phone", "cuil", "gender"];
+      const extraDynamicFields: Record<string, string> = {};
+      if (dynamicFieldsData && typeof dynamicFieldsData === "object") {
+        for (const [key, value] of Object.entries(dynamicFieldsData as Record<string, string>)) {
+          if (!knownFieldKeys.includes(key)) {
+            extraDynamicFields[key] = value;
+          }
+        }
+      }
+
       await db.professional.create({
         data: {
           userId: user.id,
@@ -109,6 +122,7 @@ export async function POST(request: NextRequest) {
           cvData: hasValidCv ? cvBase64 : null,
           cvFileName: hasValidCv ? cvOriginalName : null,
           cvMimeType: hasValidCv ? cvMimeType : null,
+          dynamicData: Object.keys(extraDynamicFields).length > 0 ? JSON.stringify(extraDynamicFields) : null,
         },
       });
 
