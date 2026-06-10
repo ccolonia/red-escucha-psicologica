@@ -738,9 +738,14 @@ export function ProfessionalRegister() {
                             <SelectItem value="Licenciado en Psicología">Lic. en Psicología</SelectItem>
                             <SelectItem value="Doctor en Psicología">Dr. en Psicología</SelectItem>
                             <SelectItem value="Neuropsicólogo">Neuropsicólogo/a</SelectItem>
-                            <SelectItem value="Terapeuta Ocupacional">Terapeuta Ocupacional</SelectItem>
+                            <SelectItem value="Terapista Ocupacional">Terapista Ocupacional</SelectItem>
                             <SelectItem value="Trabajador Social">Trabajador/a Social</SelectItem>
                             <SelectItem value="Coach Profesional">Coach Profesional</SelectItem>
+                            <SelectItem value="Estimulador/ora Temprana">Estimulador/ora Temprana</SelectItem>
+                            <SelectItem value="Neuropsicomotrista">Neuropsicomotrista</SelectItem>
+                            <SelectItem value="Neuropsicolingüista">Neuropsicolingüista</SelectItem>
+                            <SelectItem value="Nutricionista">Nutricionista</SelectItem>
+                            <SelectItem value="Fonoaudiólogo/a">Fonoaudiólogo/a</SelectItem>
                             <SelectItem value="Otra">Otra</SelectItem>
                           </SelectContent>
                         </Select>
