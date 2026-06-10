@@ -582,6 +582,18 @@ export function AdminProfessionals() {
   };
 
   const handleToggleLicenseVerified = async (id: string, currentVerified: boolean) => {
+    // No permitir verificar matrículas con formato inválido
+    if (!currentVerified) {
+      const prof = professionals.find((p) => p.id === id);
+      if (prof) {
+        const licenseClean = prof.license.replace(/[\s.-]/g, "");
+        const licenseRegex = /^(MN|MP)(\d{4,6})$/;
+        if (!licenseRegex.test(licenseClean)) {
+          toast.error("No se puede verificar una matrícula con formato inválido. Corregí la matrícula primero (MN o MP + 4-6 dígitos).");
+          return;
+        }
+      }
+    }
     try {
       const res = await fetch("/api/professionals", {
         method: "PATCH",
@@ -615,6 +627,13 @@ export function AdminProfessionals() {
     }
     if (!addForm.license || !addForm.specialty) {
       toast.error("Matrícula y especialidad son obligatorias");
+      return;
+    }
+    // Validar formato de matrícula
+    const addLicenseClean = addForm.license.replace(/[\s.-]/g, "");
+    const addLicenseRegex = /^(MN|MP)(\d{4,6})$/;
+    if (!addLicenseRegex.test(addLicenseClean)) {
+      toast.error("La matrícula debe ser MN o MP seguido de 4 a 6 dígitos (ej: MN-12345 o MP-5432)");
       return;
     }
     setAdding(true);
@@ -673,6 +692,13 @@ export function AdminProfessionals() {
   };
 
   const handleSaveEdit = async (id: string) => {
+    // Validar formato de matrícula
+    const editLicenseClean = editForm.license.replace(/[\s.-]/g, "");
+    const editLicenseRegex = /^(MN|MP)(\d{4,6})$/;
+    if (!editLicenseRegex.test(editLicenseClean)) {
+      toast.error("La matrícula debe ser MN o MP seguido de 4 a 6 dígitos (ej: MN-12345 o MP-5432)");
+      return;
+    }
     setSaving(true);
     try {
       // Find the professional to get userId
@@ -809,9 +835,9 @@ export function AdminProfessionals() {
                       required
                       value={addForm.license}
                       onChange={(e) =>
-                        setAddForm({ ...addForm, license: e.target.value })
+                        setAddForm({ ...addForm, license: e.target.value.replace(/[^0-9MNMPmnmp.\-\s]/g, "").toUpperCase() })
                       }
-                      placeholder="MN-XXXXX"
+                      placeholder="MN-12345 o MP-5432"
                       className="border-teal-200"
                     />
                   </div>
@@ -935,7 +961,7 @@ export function AdminProfessionals() {
                           <Label>Matrícula</Label>
                           <Input
                             value={editForm.license}
-                            onChange={(e) => setEditForm({ ...editForm, license: e.target.value })}
+                            onChange={(e) => setEditForm({ ...editForm, license: e.target.value.replace(/[^0-9MNMPmnmp.\-\s]/g, "").toUpperCase() })}
                             className="border-teal-200"
                           />
                         </div>

@@ -96,6 +96,15 @@ export async function PATCH(request: NextRequest) {
       data.available = available;
     }
     if (license !== undefined) {
+      // Validar formato de matrícula: MN o MP + 4-6 dígitos
+      const licenseClean = license.replace(/[\s.-]/g, "");
+      const licenseRegex = /^(MN|MP)(\d{4,6})$/;
+      if (!licenseRegex.test(licenseClean)) {
+        return NextResponse.json(
+          { error: "La matrícula debe ser MN o MP seguido de 4 a 6 dígitos (ej: MN-12345 o MP-5432)" },
+          { status: 400 }
+        );
+      }
       data.license = license;
     }
     if (specialty !== undefined) {
