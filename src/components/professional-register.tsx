@@ -903,11 +903,11 @@ export function ProfessionalRegister() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Modalidad de Terapia</Label>
-                      <div className="grid grid-cols-2 gap-2 border border-beige-300 rounded-lg p-3 bg-beige-50">
+                      <div className="flex gap-2 overflow-x-auto border border-beige-300 rounded-lg p-3 bg-beige-50 scrollbar-thin">
                         {["Individual", "Vincular", "Evaluaciones", "Terapia Grupal", "Orientación a Padres", "Asesoría a Empresas"].map((m) => (
                           <label
                             key={m}
-                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-1 py-0.5 transition-colors"
+                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-2 py-1 transition-colors whitespace-nowrap border border-beige-200 shrink-0"
                           >
                             <Checkbox
                               checked={form.therapyModality.includes(m)}
