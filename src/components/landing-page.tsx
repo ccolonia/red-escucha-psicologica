@@ -1324,6 +1324,7 @@ export function LandingPage() {
                                 <SelectItem value="estres">Estrés / Laboral</SelectItem>
                                 <SelectItem value="infanto_juvenil">Infanto-Juvenil</SelectItem>
                                 <SelectItem value="consulta_general">Consulta General</SelectItem>
+                                <SelectItem value="otros">Otros</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
