@@ -141,5 +141,4 @@ export const cmsModels = {
   stat: db.cmsStat,
   testimonial: db.cmsTestimonial,
   siteConfig: db.cmsSiteConfig,
-  registrationField: db.cmsRegistrationField,
 } as const;

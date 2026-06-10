@@ -45,7 +45,6 @@ model Professional {
   cvData              String?       // Base64-encoded CV file content
   cvFileName          String?       // Original CV file name
   cvMimeType          String?       // CV file MIME type
-  dynamicData         String?       // JSON object string for dynamic form field values
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -243,23 +242,6 @@ model CmsSiteConfig {
   updatedAt DateTime @updatedAt
 }
 
-model CmsRegistrationField {
-  id          String   @id @default(cuid())
-  label       String                    // Display label: "Título", "Sexo", etc.
-  fieldKey    String   @unique          // Internal key: "title", "gender", etc.
-  fieldType   String   @default("text") // "text", "select", "textarea", "email", "tel", "number"
-  options     String?                    // JSON array of options for select fields: ["Lic.","Dr.","Dra."]
-  required    Boolean  @default(false)   // Whether the field is mandatory
-  active      Boolean  @default(true)    // Whether the field is shown on the form
-  placeholder String?                    // Placeholder text
-  helperText  String?                    // Helper/hint text below the field
-  icon        String?                    // Icon name from lucide-react: "CreditCard", "Phone", etc.
-  colSpan     Int      @default(1)       // Grid column span: 1, 2, or 3
-  order       Int      @default(0)       // Display order
-  section     String   @default("personal") // "personal" for Datos Personales
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
 
 model AttendanceSheet {
   id             String       @id @default(cuid())
