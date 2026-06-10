@@ -68,16 +68,28 @@ const THERAPY_TYPES = [
   "Psicología geriátrica",
   "Psicología deportiva",
   "Psicología perinatal",
+  "Terapia humanista",
+  "Terapia junguiana",
+  "Psicodrama",
+  "Psicoterapia Integral",
+  "Terapia de Pareja y Familia",
+  "Psicología Infanto-Juvenil",
+  "Deportología",
+  "Psicocorporal Reichiana",
+  "Terapia transpersonal",
+  "Terapia constructivista",
   "Otras terapias",
 ];
 
 const TARGET_AUDIENCES = [
-  "Adultos",
+  "Niños/as",
   "Adolescentes",
-  "Niños",
-  "Pareja",
-  "Familiar",
-  "Mayores",
+  "Adultos mayores",
+  "Adultos",
+  "Jóvenes",
+  "Parejas",
+  "Familias",
+  "Orientación a padres",
 ];
 
 const ZONES_HIERARCHY: { region: string; areas: string[] }[] = [
