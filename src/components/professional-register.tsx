@@ -741,7 +741,6 @@ export function ProfessionalRegister() {
                             <SelectItem value="Terapeuta Ocupacional">Terapeuta Ocupacional</SelectItem>
                             <SelectItem value="Trabajador Social">Trabajador/a Social</SelectItem>
                             <SelectItem value="Coach Profesional">Coach Profesional</SelectItem>
-                            <SelectItem value="Counselor">Counselor</SelectItem>
                             <SelectItem value="Otra">Otra</SelectItem>
                           </SelectContent>
                         </Select>
