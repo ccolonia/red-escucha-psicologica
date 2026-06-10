@@ -217,8 +217,24 @@ export function ProfessionalRegister() {
 
   const totalSteps = 4;
 
+  // --- Restricción de entrada en tiempo real ---
+  const onlyLetters = (v: string) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, "");
+  const onlyNumbers = (v: string) => v.replace(/[^0-9]/g, "");
+  const onlyCuitFormat = (v: string) => v.replace(/[^0-9-]/g, "");
+  const onlyLicenseFormat = (v: string) => v.replace(/[^0-9MNMPmnmp.\-\s]/g, "").toUpperCase();
+
   const updateForm = (field: string, value: unknown) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    let sanitized = value as string;
+    if (field === "firstName" || field === "lastName") {
+      sanitized = onlyLetters(sanitized);
+    } else if (field === "phone") {
+      sanitized = onlyNumbers(sanitized);
+    } else if (field === "cuil") {
+      sanitized = onlyCuitFormat(sanitized);
+    } else if (field === "license") {
+      sanitized = onlyLicenseFormat(sanitized);
+    }
+    setForm((prev) => ({ ...prev, [field]: sanitized }));
   };
 
   const toggleArrayItem = (field: "therapyTypes" | "targetAudience" | "therapyModality" | "zones", item: string) => {
@@ -313,9 +329,33 @@ export function ProfessionalRegister() {
           toast.error("Nombre y apellido son obligatorios");
           return false;
         }
+        if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(form.firstName.trim())) {
+          toast.error("El nombre solo puede contener letras");
+          return false;
+        }
+        if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(form.lastName.trim())) {
+          toast.error("El apellido solo puede contener letras");
+          return false;
+        }
         if (!form.phone.trim()) {
           toast.error("Ingresá tu teléfono");
           return false;
+        }
+        if (!/^[0-9]+$/.test(form.phone.trim())) {
+          toast.error("El teléfono solo puede contener números");
+          return false;
+        }
+        if (form.phone.trim().length < 8 || form.phone.trim().length > 12) {
+          toast.error("Ingresá un teléfono válido (código de área + número, sin 0 ni 15)");
+          return false;
+        }
+        // CUIT/CUIL validation (optional but if filled must be valid)
+        if (form.cuil.trim()) {
+          const cuilClean = form.cuil.replace(/[\s.-]/g, "");
+          if (!/^\d{2}\d{8}\d$/.test(cuilClean) && !/^\d{2}-\d{7,8}-\d$/.test(form.cuil.trim())) {
+            toast.error("El CUIT/CUIL debe tener el formato XX-XXXXXXXX-X (11 dígitos)");
+            return false;
+          }
         }
         return true;
 
@@ -326,6 +366,13 @@ export function ProfessionalRegister() {
         }
         if (!form.license.trim()) {
           toast.error("Ingresá tu número de matrícula");
+          return false;
+        }
+        // Matrícula: MN o MP + 4-6 dígitos
+        const licenseDigits = form.license.replace(/[\s.-]/g, "");
+        const licenseMatch = licenseDigits.match(/^(MN|MP)(\d{4,6})$/);
+        if (!licenseMatch) {
+          toast.error("La matrícula debe ser MN o MP seguido de 4 a 6 dígitos (ej: MN-12345 o MP-5432)");
           return false;
         }
         if (!form.specialty) {
@@ -768,7 +815,7 @@ export function ProfessionalRegister() {
                           value={form.license}
                           onChange={(e) => updateForm("license", e.target.value)}
                           className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
-                          placeholder="MN-XXXXX"
+                          placeholder="MN-12345 o MP-5432"
                         />
                       </div>
                     </div>
