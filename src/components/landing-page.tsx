@@ -889,7 +889,7 @@ export function LandingPage() {
                 Brindamos un espacio de escucha, orientación, acompañamiento y tratamiento para aquellas personas que atraviesan situaciones que generan malestar, incertidumbre o sufrimiento emocional. Entendemos que cada historia es única; por ello, nuestros abordajes son personalizados y adaptados a las necesidades de cada consultante. El profesional interviniente evaluará la modalidad terapéutica más adecuada para cada caso.
               </p>
               <p className="text-forest-500 text-base sm:text-lg leading-relaxed font-light mb-5" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                Con más de <strong className="text-forest-600 font-semibold">35 años de trayectoria</strong>, contamos con una extensa red de consultorios en distintos barrios de CABA y GBA, además de ofrecer alternativas de atención que facilitan el acceso al acompañamiento profesional. <strong className="text-forest-600 font-semibold">Contamos con turnos disponibles.</strong>
+                Con más de <strong className="text-forest-600 font-semibold">30 años de trayectoria</strong>, contamos con una extensa red de consultorios en distintos barrios de CABA y GBA, además de ofrecer alternativas de atención que facilitan el acceso al acompañamiento profesional. <strong className="text-forest-600 font-semibold">Contamos con turnos disponibles.</strong>
               </p>
             </motion.div>
           </div>
