@@ -964,12 +964,12 @@ export function LandingPage() {
           </motion.div>
 
           {/* Tabs */}
-          <div className="flex justify-center gap-2 mb-10">
+          <div className="flex justify-start sm:justify-center gap-2 mb-10 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
             {cmsSpecialtyTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap shrink-0 ${
                   activeTab === tab.id
                     ? "bg-forest-500 text-beige-50 shadow-md"
                     : "bg-beige-200 text-forest-600 hover:bg-beige-300"
