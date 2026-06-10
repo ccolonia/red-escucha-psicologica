@@ -854,8 +854,8 @@ export function ProfessionalRegister() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Modalidad de Terapia</Label>
-                      <div className="grid grid-cols-2 gap-2 border border-beige-300 rounded-lg p-3 bg-beige-50">
-                        {["Individual", "Grupal"].map((m) => (
+                      <div className="grid grid-cols-3 gap-2 border border-beige-300 rounded-lg p-3 bg-beige-50">
+                        {["Online", "Presencial", "Híbrido"].map((m) => (
                           <label
                             key={m}
                             className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-1 py-0.5 transition-colors"
