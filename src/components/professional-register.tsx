@@ -306,12 +306,14 @@ export function ProfessionalRegister() {
           toast.error("Ingresá tu email y confirmalo");
           return false;
         }
-        if (form.email !== form.confirmEmail) {
-          toast.error("Los emails no coinciden");
+        // Validación completa de email
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
+        if (!emailRegex.test(form.email.trim())) {
+          toast.error("Ingresá un email válido con @ y dominio (ej: nombre@dominio.com)");
           return false;
         }
-        if (!form.email.includes("@")) {
-          toast.error("Ingresá un email válido");
+        if (form.email !== form.confirmEmail) {
+          toast.error("Los emails no coinciden");
           return false;
         }
         if (!form.password || form.password.length < 6) {
