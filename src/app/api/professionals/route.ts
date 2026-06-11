@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
         zones: true,
         cvFileName: true,
         cvMimeType: true,
+        internalNotes: true,
+        evaluationStatus: true,
         createdAt: true,
         updatedAt: true,
         user: {
@@ -70,7 +72,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, available, license, licenseVerified, specialty, bio } = body;
+    const { id, available, license, licenseVerified, specialty, bio, internalNotes, evaluationStatus } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -90,7 +92,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const data: { available?: boolean; license?: string; licenseVerified?: boolean; specialty?: string; bio?: string | null } = {};
+    const data: { available?: boolean; license?: string; licenseVerified?: boolean; specialty?: string; bio?: string | null; internalNotes?: string | null; evaluationStatus?: string | null } = {};
 
     if (available !== undefined) {
       data.available = available;
@@ -115,6 +117,12 @@ export async function PATCH(request: NextRequest) {
     }
     if (licenseVerified !== undefined) {
       data.licenseVerified = licenseVerified;
+    }
+    if (internalNotes !== undefined) {
+      data.internalNotes = internalNotes;
+    }
+    if (evaluationStatus !== undefined) {
+      data.evaluationStatus = evaluationStatus;
     }
 
     const professional = await db.professional.update({

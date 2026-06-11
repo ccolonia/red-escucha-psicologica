@@ -109,6 +109,8 @@ interface Professional {
   zones: string | null;
   bio: string | null;
   cvFileName: string | null;
+  internalNotes: string | null;
+  evaluationStatus: string | null;
   createdAt: string;
   user: { name: string; email: string; phone: string; active: boolean; createdAt: string };
 }
@@ -476,6 +478,7 @@ export function AdminProfessionals() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -515,6 +518,32 @@ export function AdminProfessionals() {
 
   const pendingCount = professionals.filter((p) => !p.user.active).length;
   const unverifiedLicenseCount = professionals.filter((p) => !p.licenseVerified).length;
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/admin/professionals/export");
+      if (!res.ok) {
+        toast.error("Error al exportar profesionales");
+        setExporting(false);
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "profesionales-rep.csv";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Archivo descargado exitosamente");
+    } catch {
+      toast.error("Error al exportar");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleToggleActive = async (userId: string, currentActive: boolean) => {
     try {
@@ -771,13 +800,28 @@ export function AdminProfessionals() {
             </span>
           )}
         </div>
-        <Button
-          className="bg-teal-600 hover:bg-teal-700 text-white"
-          onClick={() => setShowAdd(!showAdd)}
-        >
-          <UserPlus className="mr-2 w-4 h-4" />
-          Agregar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="border-sage-300 text-forest-600 hover:bg-sage-50"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <RefreshCw className="mr-2 w-4 h-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="mr-2 w-4 h-4" />
+            )}
+            {exporting ? "Exportando..." : "Exportar Datos"}
+          </Button>
+          <Button
+            className="bg-teal-600 hover:bg-teal-700 text-white"
+            onClick={() => setShowAdd(!showAdd)}
+          >
+            <UserPlus className="mr-2 w-4 h-4" />
+            Agregar
+          </Button>
+        </div>
       </div>
 
       {showAdd && (
@@ -1244,6 +1288,55 @@ export function AdminProfessionals() {
                                 <FileSpreadsheet className="w-4 h-4" />
                                 <span className="font-medium">Ver todas las planillas</span>
                               </a>
+                            </div>
+                          </div>
+
+                          {/* Observaciones Internas y Estado de Evaluación */}
+                          <div className="grid sm:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-teal-500 text-sm mb-1">Observaciones Internas:</p>
+                              <textarea
+                                rows={2}
+                                className="w-full border border-red-200 bg-red-50 rounded-lg p-2 text-sm text-red-800 placeholder-red-300 focus:ring-red-200 focus:border-red-300"
+                                placeholder="Notas internas del administrador..."
+                                value={prof.internalNotes || ""}
+                                onChange={(e) => {
+                                  setProfessionals((prev) =>
+                                    prev.map((p) =>
+                                      p.id === prof.id ? { ...p, internalNotes: e.target.value } : p
+                                    )
+                                  );
+                                }}
+                                onBlur={(e) => {
+                                  fetch("/api/professionals", {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ id: prof.id, internalNotes: e.target.value || null }),
+                                  });
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <p className="text-teal-500 text-sm mb-1">Estado de Evaluación:</p>
+                              <Input
+                                className="border-amber-200 bg-amber-50 text-amber-800 placeholder-amber-300"
+                                placeholder="✓, CV, ?, observaciones..."
+                                value={prof.evaluationStatus || ""}
+                                onChange={(e) => {
+                                  setProfessionals((prev) =>
+                                    prev.map((p) =>
+                                      p.id === prof.id ? { ...p, evaluationStatus: e.target.value } : p
+                                    )
+                                  );
+                                }}
+                                onBlur={(e) => {
+                                  fetch("/api/professionals", {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ id: prof.id, evaluationStatus: e.target.value || null }),
+                                  });
+                                }}
+                              />
                             </div>
                           </div>
 
