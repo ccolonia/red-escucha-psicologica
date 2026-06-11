@@ -958,7 +958,7 @@ export function ProfessionalRegister() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-forest-500 font-medium text-base" style={{ fontFamily: "Montserrat, sans-serif" }}>Zonas de atención * (seleccioná al menos una)</Label>
+                      <Label className="text-forest-500 font-medium text-base" style={{ fontFamily: "Montserrat, sans-serif" }}>Zonas de atención * (Por favor, marque únicamente las zonas donde atiende de manera presencial)</Label>
                       {form.zones.length > 0 && (
                         <p className="text-xs text-sage-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
                           {form.zones.length} zona{form.zones.length !== 1 ? "s" : ""} seleccionada{form.zones.length !== 1 ? "s" : ""}
