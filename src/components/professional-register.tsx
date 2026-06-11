@@ -257,22 +257,7 @@ export function ProfessionalRegister() {
       }
       return next;
     });
-  };
-
-  const selectAllInRegion = (region: string, areas: string[]) => {
-    setForm((prev) => {
-      const currentZones = prev.zones as string[];
-      const allSelected = areas.every((a) => currentZones.includes(a));
-      if (allSelected) {
-        // Deselect all in this region
-        return { ...prev, zones: currentZones.filter((z) => !areas.includes(z)) };
-      } else {
-        // Select all in this region (add missing ones)
-        const newZones = [...new Set([...currentZones, ...areas])];
-        return { ...prev, zones: newZones };
-      }
-    });
-  };
+   };
 
   const handleCvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -983,29 +968,22 @@ export function ProfessionalRegister() {
                         {ZONES_HIERARCHY.map((zoneGroup) => {
                           const isExpanded = expandedRegions.has(zoneGroup.region);
                           const selectedInRegion = zoneGroup.areas.filter((a) => form.zones.includes(a));
-                          const allSelected = zoneGroup.areas.length > 0 && selectedInRegion.length === zoneGroup.areas.length;
-                          const someSelected = selectedInRegion.length > 0 && !allSelected;
 
                           return (
                             <div key={zoneGroup.region} className="border-b border-beige-200 last:border-b-0">
-                              {/* Region header */}
+                              {/* Region header — solo acordeón, sin seleccionar todo */}
                               <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-sage-300/10 cursor-pointer transition-colors" onClick={() => toggleRegion(zoneGroup.region)}>
                                 {isExpanded ? (
                                   <ChevronDown className="w-4 h-4 text-forest-400 shrink-0" />
                                 ) : (
                                   <ChevronRight className="w-4 h-4 text-forest-400 shrink-0" />
                                 )}
-                                <Checkbox
-                                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
-                                  onCheckedChange={() => selectAllInRegion(zoneGroup.region, zoneGroup.areas)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
                                 <span className="text-sm font-semibold text-forest-600 flex-1" style={{ fontFamily: "Montserrat, sans-serif" }}>
                                   {zoneGroup.region}
                                 </span>
                                 {selectedInRegion.length > 0 && (
                                   <span className="text-xs text-sage-500 bg-sage-300/20 px-2 py-0.5 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                                    {selectedInRegion.length}/{zoneGroup.areas.length}
+                                    {selectedInRegion.length} seleccionada{selectedInRegion.length !== 1 ? "s" : ""}
                                   </span>
                                 )}
                               </div>
