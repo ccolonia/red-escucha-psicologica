@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 
 // POST /api/admin/patients — Admin manually creates a patient
+// Optional: enableTriage=true also creates a PatientRequest (Triage entry)
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +18,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email, phone, password, dateOfBirth, emergencyContact, notes } = body;
+    const {
+      name,
+      email,
+      phone,
+      password,
+      dateOfBirth,
+      emergencyContact,
+      notes,
+      enableTriage,
+      modality,
+      reason,
+    } = body;
 
     // Basic validations
     if (!name?.trim()) {
@@ -40,8 +52,12 @@ export async function POST(req: NextRequest) {
     const finalPassword = password?.trim() || Math.random().toString(36).slice(-10) + "A1!";
     const hashedPassword = await hashPassword(finalPassword);
 
-    // Create User + Patient in a transaction
-    const patient = await db.$transaction(async (tx) => {
+    // Determine if we need to create a triage request
+    const shouldEnableTriage = enableTriage === true;
+
+    // Create User + Patient (+ PatientRequest if triage) in a transaction
+    const result = await db.$transaction(async (tx) => {
+      // 1. Create User
       const user = await tx.user.create({
         data: {
           name: name.trim(),
@@ -53,6 +69,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // 2. Create Patient
       const newPatient = await tx.patient.create({
         data: {
           userId: user.id,
@@ -65,10 +82,44 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      return newPatient;
+      // 3. If enableTriage, create PatientRequest for the Triage queue
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let patientRequest: any = null;
+      if (shouldEnableTriage) {
+        const validModalities = ["online", "presencial", "híbrida"];
+        const validReasons = [
+          "ansiedad", "vinculos", "depresion", "duelo", "autoestima",
+          "estres", "infanto_juvenil", "adiciones", "consulta_general",
+        ];
+
+        const triageModality = validModalities.includes(modality) ? modality : "presencial";
+        const triageReason = validReasons.includes(reason) ? reason : "consulta_general";
+
+        patientRequest = await tx.patientRequest.create({
+          data: {
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            phone: phone?.trim() || null,
+            modality: triageModality,
+            reason: triageReason,
+            notes: notes?.trim() || null,
+            status: "pending",
+          },
+        });
+      }
+
+      return { patient: newPatient, patientRequest };
     });
 
-    return NextResponse.json(patient, { status: 201 });
+    // Return appropriate response message
+    const message = shouldEnableTriage
+      ? "Paciente creado con éxito e ingresado al sistema de Triage"
+      : "Paciente creado con éxito";
+
+    return NextResponse.json(
+      { ...result, message },
+      { status: 201 }
+    );
   } catch (error: unknown) {
     const prismaError = error as { code?: string; meta?: unknown; message?: string };
     console.error("Error en Prisma al crear paciente:", {

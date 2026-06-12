@@ -66,6 +66,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   BarChart,
   Bar,
@@ -1411,6 +1412,9 @@ export function AdminPatients() {
     dateOfBirth: "",
     emergencyContact: "",
     notes: "",
+    enableTriage: true,
+    modality: "presencial",
+    reason: "consulta_general",
   });
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1448,9 +1452,9 @@ export function AdminPatients() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success("Paciente creado exitosamente");
+        toast.success(data.message || "Paciente creado exitosamente");
         setShowAdd(false);
-        setAddForm({ name: "", email: "", phone: "", password: "", dateOfBirth: "", emergencyContact: "", notes: "" });
+        setAddForm({ name: "", email: "", phone: "", password: "", dateOfBirth: "", emergencyContact: "", notes: "", enableTriage: true, modality: "presencial", reason: "consulta_general" });
         loadPatients();
       } else {
         toast.error(data.error || "Error al crear paciente");
@@ -1703,6 +1707,73 @@ export function AdminPatients() {
                 rows={2}
                 placeholder="Observaciones adicionales..."
               />
+            </div>
+
+            {/* ── Triage Integration ── */}
+            <div className="border border-teal-200 rounded-xl p-4 bg-teal-50/40 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <Label className="text-teal-900 font-medium cursor-pointer" htmlFor="enable-triage">
+                    Habilitar ingreso a Triage y Solicitud de Turno
+                  </Label>
+                  <p className="text-xs text-teal-500 mt-0.5">
+                    El paciente aparecerá en el panel de Triage para asignarle un profesional
+                  </p>
+                </div>
+                <Switch
+                  id="enable-triage"
+                  checked={addForm.enableTriage}
+                  onCheckedChange={(checked) => setAddForm({ ...addForm, enableTriage: checked })}
+                />
+              </div>
+
+              {addForm.enableTriage && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <div className="space-y-2">
+                    <Label className="text-teal-700 text-sm">Modalidad preferida</Label>
+                    <Select
+                      value={addForm.modality}
+                      onValueChange={(value) => setAddForm({ ...addForm, modality: value })}
+                    >
+                      <SelectTrigger className="border-teal-200 bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="presencial">Presencial</SelectItem>
+                        <SelectItem value="online">Online</SelectItem>
+                        <SelectItem value="híbrida">Híbrida</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-teal-700 text-sm">Motivo de consulta</Label>
+                    <Select
+                      value={addForm.reason}
+                      onValueChange={(value) => setAddForm({ ...addForm, reason: value })}
+                    >
+                      <SelectTrigger className="border-teal-200 bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="consulta_general">Consulta General</SelectItem>
+                        <SelectItem value="ansiedad">Ansiedad</SelectItem>
+                        <SelectItem value="vinculos">Vínculos</SelectItem>
+                        <SelectItem value="depresion">Depresión</SelectItem>
+                        <SelectItem value="duelo">Duelo</SelectItem>
+                        <SelectItem value="autoestima">Autoestima</SelectItem>
+                        <SelectItem value="estres">Estrés</SelectItem>
+                        <SelectItem value="infanto_juvenil">Infanto-Juvenil</SelectItem>
+                        <SelectItem value="adiciones">Adicciones</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </div>
           <DialogFooter>
