@@ -51,6 +51,8 @@ export function createListHandlers(delegate: ModelDelegate, options?: ListOption
   async function POST(request: NextRequest) {
     try {
       const body = await request.json();
+      // Strip empty id so Prisma auto-generates a CUID via @default(cuid())
+      if (!body.id) delete body.id;
       const item = await delegate.create({ data: body });
       revalidatePath("/");
       return NextResponse.json(item, { status: 201 });

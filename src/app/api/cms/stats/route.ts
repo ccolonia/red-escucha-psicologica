@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
     const data = await req.json();
+    // Strip empty id so Prisma auto-generates a CUID via @default(cuid())
+    if (!data.id) delete data.id;
     const item = await db.cmsStat.create({ data });
     revalidatePath("/");
     return NextResponse.json(item, { status: 201 });

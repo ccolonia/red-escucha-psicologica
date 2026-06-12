@@ -1188,10 +1188,12 @@ function GenericCRUDTab<T extends { id: string; order: number; active: boolean }
       const url = isNew
         ? `/api/cms/${apiPath}`
         : `/api/cms/${apiPath}/${editItem!.id}`;
+      // On create (POST): strip the empty id so Prisma auto-generates a CUID
+      const body = isNew ? (() => { const { id, ...rest } = editItem!; return rest; })() : editItem;
       const res = await fetch(url, {
         method: isNew ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editItem),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         toast.success(isNew ? "Creado exitosamente" : "Actualizado exitosamente");
