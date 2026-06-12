@@ -1214,7 +1214,12 @@ function GenericCRUDTab<T extends { id: string; order: number; active: boolean }
       if (res.ok) {
         toast.success("Eliminado exitosamente");
         load();
-      } else toast.error("Error al eliminar");
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.error || "Error al eliminar";
+        const errorDetail = errorData.detail ? ` (${errorData.detail})` : "";
+        toast.error(`${errorMsg}${errorDetail}`);
+      }
     } catch {
       toast.error("Error de conexión");
     }

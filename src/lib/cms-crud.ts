@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { revalidatePath } from "next/cache";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -51,11 +52,17 @@ export function createListHandlers(delegate: ModelDelegate, options?: ListOption
     try {
       const body = await request.json();
       const item = await delegate.create({ data: body });
+      revalidatePath("/");
       return NextResponse.json(item, { status: 201 });
-    } catch (error) {
-      console.error("CMS create error:", error);
+    } catch (error: unknown) {
+      const prismaError = error as { code?: string; meta?: unknown; message?: string };
+      console.error("CMS create error:", {
+        code: prismaError.code,
+        meta: prismaError.meta,
+        message: prismaError.message,
+      });
       return NextResponse.json(
-        { error: "Error al crear el elemento" },
+        { error: "Error al crear el elemento", detail: prismaError.code || "unknown" },
         { status: 500 },
       );
     }
@@ -79,22 +86,37 @@ export function createItemHandlers(delegate: ModelDelegate) {
   ) {
     try {
       const { id } = await params;
+
+      // ID validation: all CMS models use String @id @default(cuid()) — never parseInt
+      if (!id || typeof id !== "string") {
+        return NextResponse.json(
+          { error: "ID inválido" },
+          { status: 400 },
+        );
+      }
+
       const body = await request.json();
 
       const existing = await delegate.findUnique({ where: { id } });
       if (!existing) {
         return NextResponse.json(
-          { error: "Elemento no encontrado" },
+          { error: "Elemento no encontrado", detail: "P2025" },
           { status: 404 },
         );
       }
 
       const updated = await delegate.update({ where: { id }, data: body });
+      revalidatePath("/");
       return NextResponse.json(updated);
-    } catch (error) {
-      console.error("CMS update error:", error);
+    } catch (error: unknown) {
+      const prismaError = error as { code?: string; meta?: unknown; message?: string };
+      console.error("CMS update error:", {
+        code: prismaError.code,
+        meta: prismaError.meta,
+        message: prismaError.message,
+      });
       return NextResponse.json(
-        { error: "Error al actualizar el elemento" },
+        { error: "Error al actualizar el elemento", detail: prismaError.code || "unknown" },
         { status: 500 },
       );
     }
@@ -107,20 +129,49 @@ export function createItemHandlers(delegate: ModelDelegate) {
     try {
       const { id } = await params;
 
+      // ID validation: all CMS models use String @id @default(cuid()) — never parseInt
+      if (!id || typeof id !== "string") {
+        return NextResponse.json(
+          { error: "ID inválido" },
+          { status: 400 },
+        );
+      }
+
       const existing = await delegate.findUnique({ where: { id } });
       if (!existing) {
         return NextResponse.json(
-          { error: "Elemento no encontrado" },
+          { error: "Elemento no encontrado", detail: "P2025" },
           { status: 404 },
         );
       }
 
       await delegate.delete({ where: { id } });
+      revalidatePath("/");
       return NextResponse.json({ message: "Elemento eliminado exitosamente" });
-    } catch (error) {
-      console.error("CMS delete error:", error);
+    } catch (error: unknown) {
+      const prismaError = error as { code?: string; meta?: unknown; message?: string };
+      console.error("Error en Prisma al eliminar elemento CMS:", {
+        code: prismaError.code,
+        meta: prismaError.meta,
+        message: prismaError.message,
+      });
+
+      // Map known Prisma error codes
+      if (prismaError.code === "P2025") {
+        return NextResponse.json(
+          { error: "Elemento no encontrado (P2025)", detail: "P2025" },
+          { status: 404 },
+        );
+      }
+      if (prismaError.code === "P2003") {
+        return NextResponse.json(
+          { error: "No se puede eliminar: existen datos vinculados (P2003)", detail: "P2003" },
+          { status: 409 },
+        );
+      }
+
       return NextResponse.json(
-        { error: "Error al eliminar el elemento" },
+        { error: "Error al eliminar el elemento", detail: prismaError.code || "unknown" },
         { status: 500 },
       );
     }

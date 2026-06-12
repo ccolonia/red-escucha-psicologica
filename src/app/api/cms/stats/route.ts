@@ -24,8 +24,16 @@ export async function POST(req: NextRequest) {
     const item = await db.cmsStat.create({ data });
     revalidatePath("/");
     return NextResponse.json(item, { status: 201 });
-  } catch (error) {
-    console.error("Error creating stat:", error);
-    return NextResponse.json({ error: "Error creating stat" }, { status: 500 });
+  } catch (error: unknown) {
+    const prismaError = error as { code?: string; meta?: unknown; message?: string };
+    console.error("Error en Prisma al crear estadística:", {
+      code: prismaError.code,
+      meta: prismaError.meta,
+      message: prismaError.message,
+    });
+    return NextResponse.json(
+      { error: "Error al crear estadística", detail: prismaError.code || "unknown" },
+      { status: 500 }
+    );
   }
 }

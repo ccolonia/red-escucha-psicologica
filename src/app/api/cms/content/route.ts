@@ -33,7 +33,7 @@ export async function GET() {
       config[c.key] = c.value;
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       heroSlides,
       specialtyTabs,
       specialties,
@@ -43,6 +43,12 @@ export async function GET() {
       testimonials,
       config,
     });
+
+    // Prevent CDN/browser caching to ensure stats sync with admin changes
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    response.headers.set("CDN-Cache-Control", "no-store");
+
+    return response;
   } catch (error) {
     console.error("Error fetching CMS content:", error);
     return NextResponse.json({ error: "Error fetching content" }, { status: 500 });
