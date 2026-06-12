@@ -6,6 +6,7 @@ import { useAppStore } from "@/lib/store";
 import { LandingPage } from "@/components/landing-page";
 import { AuthLogin } from "@/components/auth-login";
 import { AuthRegister } from "@/components/auth-register";
+import { AuthForgotPassword } from "@/components/auth-forgot-password";
 import {
   PatientDashboard,
   PatientBook,
@@ -131,7 +132,8 @@ function AppContent() {
         currentView !== "landing" &&
         currentView !== "login" &&
         currentView !== "register" &&
-        currentView !== "professional-register"
+        currentView !== "professional-register" &&
+        currentView !== "forgot-password"
       ) {
         setCurrentView("landing");
       }
@@ -140,6 +142,9 @@ function AppContent() {
 
   // Show professional registration (accessible even when unauthenticated)
   if (currentView === "professional-register") return <ProfessionalRegister />;
+
+  // Show forgot-password (accessible even when unauthenticated)
+  if (currentView === "forgot-password") return <AuthForgotPassword />;
 
   // Show landing/auth when not logged in
   if (status === "unauthenticated" || (!session && status === "loading")) {

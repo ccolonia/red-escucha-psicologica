@@ -109,6 +109,16 @@ export function AuthLogin() {
                 </motion.p>
               )}
 
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setCurrentView("forgot-password")}
+                  className="text-sm text-sage-500 hover:text-sage-700 font-light transition-colors"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+
               <Button
                 type="submit"
                 disabled={loading}
@@ -117,8 +127,6 @@ export function AuthLogin() {
                 {loading ? "Ingresando..." : "Ingresar"}
               </Button>
             </form>
-
-            {/* "¿No tenés cuenta? Registrate" deshabilitado temporalmente */}
           </CardContent>
         </Card>
 

@@ -24,6 +24,7 @@ export type AppView =
   | "admin-liquidation"
   | "admin-cms"
   | "admin-profile"
+  | "forgot-password"
   | "professional-register";
 
 interface AppState {
