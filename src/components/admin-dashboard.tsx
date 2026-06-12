@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -18,6 +18,7 @@ import {
   FileText,
   FileSpreadsheet,
   Download,
+  Loader2,
   MessageSquare,
   Pencil,
   Trash2,
@@ -47,6 +48,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   BarChart,
   Bar,
@@ -1367,59 +1386,448 @@ export function AdminPatients() {
   const [patients, setPatients] = useState<
     {
       id: string;
-      user: { name: string; email: string; phone: string };
+      dateOfBirth: string | null;
+      emergencyContact: string | null;
+      notes: string | null;
+      user: { name: string; email: string; phone: string; active: boolean; createdAt: string };
     }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    emergencyContact: "",
+    notes: "",
+  });
+  const [addForm, setAddForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    dateOfBirth: "",
+    emergencyContact: "",
+    notes: "",
+  });
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    fetch("/api/patients")
+  const loadPatients = useCallback(() => {
+    const url = searchQuery
+      ? `/api/patients?search=${encodeURIComponent(searchQuery)}`
+      : "/api/patients";
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         setPatients(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    loadPatients();
+  }, [loadPatients]);
+
+  const handleAdd = async () => {
+    if (!addForm.name.trim() || !addForm.email.trim()) {
+      toast.error("Nombre y email son obligatorios");
+      return;
+    }
+    setAdding(true);
+    try {
+      const res = await fetch("/api/admin/patients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(addForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Paciente creado exitosamente");
+        setShowAdd(false);
+        setAddForm({ name: "", email: "", phone: "", password: "", dateOfBirth: "", emergencyContact: "", notes: "" });
+        loadPatients();
+      } else {
+        toast.error(data.error || "Error al crear paciente");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleEdit = (patient: typeof patients[0]) => {
+    setEditingId(patient.id);
+    setEditForm({
+      name: patient.user.name,
+      email: patient.user.email,
+      phone: patient.user.phone || "",
+      dateOfBirth: patient.dateOfBirth || "",
+      emergencyContact: patient.emergencyContact || "",
+      notes: patient.notes || "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/patients/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Paciente actualizado");
+        setEditingId(null);
+        loadPatients();
+      } else {
+        toast.error(data.error || "Error al actualizar");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(null);
+    try {
+      const res = await fetch(`/api/admin/patients/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Paciente eliminado exitosamente");
+        loadPatients();
+      } else {
+        // Show specific business-rule error (e.g. has appointments)
+        toast.error(data.error || "Error al eliminar");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    }
+  };
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-teal-900 mb-6">Pacientes</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-teal-900">Pacientes</h2>
+          <Badge variant="outline" className="bg-teal-50 border-teal-200 text-teal-700">
+            {patients.length}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Input
+              placeholder="Buscar paciente..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 w-48 border-teal-200"
+            />
+            <Users className="w-4 h-4 text-teal-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+          </div>
+          <Button
+            className="bg-teal-600 hover:bg-teal-700 text-white"
+            onClick={() => setShowAdd(true)}
+          >
+            <UserPlus className="mr-2 w-4 h-4" /> Nuevo Paciente
+          </Button>
+        </div>
+      </div>
+
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-teal-50 animate-pulse rounded-lg" />
+            <div key={i} className="h-20 bg-teal-50 animate-pulse rounded-lg" />
           ))}
         </div>
       ) : patients.length === 0 ? (
         <Card className="border-teal-100">
           <CardContent className="py-12 text-center">
             <Users className="w-12 h-12 text-teal-200 mx-auto" />
-            <p className="text-teal-600 mt-2">No hay pacientes registrados</p>
+            <p className="text-teal-600 mt-2">
+              {searchQuery ? "No se encontraron pacientes con esa búsqueda" : "No hay pacientes registrados"}
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto custom-scrollbar">
           {patients.map((patient) => (
-            <Card key={patient.id} className="border-teal-100">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
-                  <Users className="w-5 h-5 text-teal-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-teal-900">
-                    {patient.user.name}
-                  </p>
-                  <p className="text-sm text-teal-600">{patient.user.email}</p>
-                  {patient.user.phone && (
-                    <p className="text-sm text-teal-500">{patient.user.phone}</p>
-                  )}
+            <Card
+              key={patient.id}
+              className={`border-teal-100 ${!patient.user.active ? "opacity-60" : ""}`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                      <Users className="w-5 h-5 text-teal-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-teal-900">
+                          {patient.user.name}
+                        </p>
+                        {!patient.user.active && (
+                          <Badge variant="outline" className="text-xs bg-red-50 border-red-200 text-red-600">
+                            Inactivo
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-teal-600">{patient.user.email}</p>
+                      {patient.user.phone && (
+                        <p className="text-sm text-teal-500">{patient.user.phone}</p>
+                      )}
+                      {(patient.dateOfBirth || patient.emergencyContact || patient.notes) && (
+                        <div className="mt-1 text-xs text-teal-400 space-y-0.5">
+                          {patient.dateOfBirth && <p>Fecha nac.: {patient.dateOfBirth}</p>}
+                          {patient.emergencyContact && <p>Contacto emerg.: {patient.emergencyContact}</p>}
+                          {patient.notes && <p className="truncate max-w-xs">Notas: {patient.notes}</p>}
+                        </div>
+                      )}
+                      <p className="text-xs text-teal-300 mt-1">
+                        Registrado: {new Date(patient.user.createdAt).toLocaleDateString("es-AR")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 border-teal-200 text-teal-600"
+                      onClick={() => handleEdit(patient)}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 border-red-200 text-red-500"
+                      onClick={() => setDeletingId(patient.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* ── Add Patient Dialog ── */}
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-teal-900">Nuevo Paciente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nombre y Apellido *</Label>
+                <Input
+                  value={addForm.name}
+                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                  className="border-teal-200"
+                  placeholder="Juan Pérez"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email *</Label>
+                <Input
+                  type="email"
+                  value={addForm.email}
+                  onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+                  className="border-teal-200"
+                  placeholder="juan@email.com"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Teléfono</Label>
+                <Input
+                  value={addForm.phone}
+                  onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+                  className="border-teal-200"
+                  placeholder="3515551234"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Contraseña</Label>
+                <Input
+                  type="text"
+                  value={addForm.password}
+                  onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
+                  className="border-teal-200"
+                  placeholder="Se autogenera si queda vacía"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fecha de Nacimiento</Label>
+                <Input
+                  type="date"
+                  value={addForm.dateOfBirth}
+                  onChange={(e) => setAddForm({ ...addForm, dateOfBirth: e.target.value })}
+                  className="border-teal-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Contacto de Emergencia</Label>
+                <Input
+                  value={addForm.emergencyContact}
+                  onChange={(e) => setAddForm({ ...addForm, emergencyContact: e.target.value })}
+                  className="border-teal-200"
+                  placeholder="María Pérez - 3515559999"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Notas</Label>
+              <Textarea
+                value={addForm.notes}
+                onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
+                className="border-teal-200"
+                rows={2}
+                placeholder="Observaciones adicionales..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdd(false)} className="border-teal-300">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAdd}
+              disabled={adding}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              {adding ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : <Save className="mr-2 w-4 h-4" />}
+              Crear Paciente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Patient Dialog ── */}
+      <Dialog open={!!editingId} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-teal-900">Editar Paciente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nombre y Apellido</Label>
+                <Input
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="border-teal-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="border-teal-200"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Teléfono</Label>
+                <Input
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="border-teal-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Fecha de Nacimiento</Label>
+                <Input
+                  type="date"
+                  value={editForm.dateOfBirth}
+                  onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
+                  className="border-teal-200"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Contacto de Emergencia</Label>
+              <Input
+                value={editForm.emergencyContact}
+                onChange={(e) => setEditForm({ ...editForm, emergencyContact: e.target.value })}
+                className="border-teal-200"
+                placeholder="María Pérez - 3515559999"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notas</Label>
+              <Textarea
+                value={editForm.notes}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                className="border-teal-200"
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingId(null)} className="border-teal-300">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={saving}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              {saving ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : <Save className="mr-2 w-4 h-4" />}
+              Guardar Cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Confirmation AlertDialog ── */}
+      <AlertDialog
+        open={!!deletingId}
+        onOpenChange={(open) => { if (!open) setDeletingId(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-700">
+              ¿Eliminar este paciente?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Si el paciente tiene turnos o profesionales asociados, el sistema no permitirá la eliminación y se le informará.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-teal-300">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                if (deletingId) handleDelete(deletingId);
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
