@@ -1068,15 +1068,11 @@ export function LandingPage() {
       </section>
 
       {/* ===== STATS BAR ===== */}
+      {cmsStats.length > 0 && (
       <section className="bg-sage-300 py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {(cmsStats.length > 0 ? cmsStats : [
-              { value: "30+", label: "Años de experiencia" },
-              { value: "50+", label: "Profesionales" },
-              { value: "15+", label: "Especialidades" },
-              { value: "0", label: "Listas de espera" },
-            ]).map((stat, i) => (
+            {cmsStats.map((stat, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 15 }}
@@ -1091,6 +1087,7 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ===== TESTIMONIOS ===== */}
       <section id="testimonios" className="paper-texture py-20 sm:py-28">

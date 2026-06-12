@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { revalidatePath } from "next/cache";
 
 export async function GET() {
   try {
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
     }
     const data = await req.json();
     const item = await db.cmsStep.create({ data });
+    revalidatePath("/");
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
     console.error("Error creating step:", error);

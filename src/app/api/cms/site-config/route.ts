@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { revalidatePath } from "next/cache";
 
 export async function GET() {
   try {
@@ -32,6 +33,7 @@ export async function PUT(req: NextRequest) {
         });
         results.push(result);
       }
+      revalidatePath("/");
       return NextResponse.json(results);
     }
 
@@ -41,6 +43,7 @@ export async function PUT(req: NextRequest) {
       update: { value: data.value, group: data.group },
       create: { key: data.key, value: data.value, group: data.group },
     });
+    revalidatePath("/");
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error updating site config:", error);

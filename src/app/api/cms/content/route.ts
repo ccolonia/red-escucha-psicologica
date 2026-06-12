@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+// Force dynamic rendering — always serve fresh data from DB
+export const dynamic = "force-dynamic";
+
 // Public endpoint - returns all CMS content for the landing page
 export async function GET() {
   try {
