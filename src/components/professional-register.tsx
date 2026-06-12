@@ -389,8 +389,9 @@ export function ProfessionalRegister() {
           toast.error("Seleccioná al menos una modalidad de atención");
           return false;
         }
-        if (form.zones.length === 0) {
-          toast.error("Seleccioná al menos una zona de atención");
+        // Zonas solo obligatorias si atiende de forma presencial
+        if (form.presentialAttention && form.zones.length === 0) {
+          toast.error("Seleccioná al menos una zona de atención presencial");
           return false;
         }
         return true;
@@ -935,7 +936,13 @@ export function ProfessionalRegister() {
                         >
                           <Checkbox
                             checked={form.presentialAttention}
-                            onCheckedChange={(v) => updateForm("presentialAttention", v)}
+                            onCheckedChange={(v) => {
+                              updateForm("presentialAttention", v);
+                              // Si desmarca presencial, limpiar zonas seleccionadas
+                              if (!v) {
+                                setForm((prev) => ({ ...prev, presentialAttention: false, zones: [] }));
+                              }
+                            }}
                           />
                           <Home className="w-5 h-5 text-sage-500" />
                           <span className="text-sm font-medium text-forest-500" style={{ fontFamily: "Montserrat, sans-serif" }}>Presencial</span>
@@ -957,6 +964,7 @@ export function ProfessionalRegister() {
                       </div>
                     </div>
 
+                    {form.presentialAttention && (
                     <div className="space-y-2">
                       <Label className="text-forest-500 font-medium text-base" style={{ fontFamily: "Montserrat, sans-serif" }}>Zonas de atención * (Por favor, marque únicamente las zonas donde atiende de manera presencial)</Label>
                       {form.zones.length > 0 && (
@@ -1010,6 +1018,14 @@ export function ProfessionalRegister() {
                         })}
                       </div>
                     </div>
+                    )}
+                    {!form.presentialAttention && (
+                      <div className="bg-sage-300/10 border border-sage-300/30 rounded-lg p-4 text-center">
+                        <p className="text-sm text-forest-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                          No seleccionaste atención presencial, por lo tanto no es necesario indicar zonas de atención.
+                        </p>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Acerca de tu práctica (opcional)</Label>
