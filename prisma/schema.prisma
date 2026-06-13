@@ -42,6 +42,7 @@ model Professional {
   presentialAttention Boolean       @default(false)
   homeAttention       Boolean       @default(false)
   zones               String?       // JSON array string
+  officeAddress       String?       // Dirección del consultorio presencial
   cvData              String?       // Base64-encoded CV file content
   cvFileName          String?       // Original CV file name
   cvMimeType          String?       // CV file MIME type

@@ -89,6 +89,12 @@ const STATUS_COLORS: Record<
     border: "border-red-200",
     badge: "bg-red-100 text-red-600 border-red-200",
   },
+  cancelled_by_professional: {
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+    border: "border-orange-200",
+    badge: "bg-orange-100 text-orange-700 border-orange-200",
+  },
   absent: {
     bg: "bg-orange-50",
     text: "text-orange-700",
@@ -108,6 +114,7 @@ const STATUS_LABELS: Record<string, string> = {
   confirmed: "Confirmado",
   completed: "Atendido",
   cancelled: "Cancelado",
+  cancelled_by_professional: "Cancelado por profesional",
   absent: "Ausente",
   rescheduled: "Reprogramado",
 };

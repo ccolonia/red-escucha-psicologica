@@ -131,7 +131,8 @@ export async function GET(
     }
 
     // ===== GENERATE BASE SLOTS FROM WEEKLY SCHEDULE =====
-    let allSlots: Array<{ time: string; modality: string }> = [];
+    // Each slot now includes endTime for range display (e.g. "09:00 - 09:45")
+    let allSlots: Array<{ time: string; endTime: string; modality: string; duration: number }> = [];
 
     for (const schedule of schedules) {
       const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
@@ -160,7 +161,7 @@ export async function GET(
         });
 
         if (!isBlocked) {
-          allSlots.push({ time, modality: schedule.modality });
+          allSlots.push({ time, endTime: minutesToTime(slotEndMin), modality: schedule.modality, duration: schedule.slotDuration });
         }
       }
     }
@@ -181,7 +182,7 @@ export async function GET(
 
           // Don't add duplicates (keep the first one, which comes from the weekly schedule)
           if (!allSlots.find((s) => s.time === time)) {
-            allSlots.push({ time, modality: extra.modality || "ambas" });
+            allSlots.push({ time, endTime: minutesToTime(slotEndMin), modality: extra.modality || "ambas", duration });
           }
         }
       }

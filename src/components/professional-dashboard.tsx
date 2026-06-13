@@ -49,6 +49,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
   confirmed: { label: "Confirmado", variant: "default" },
   completed: { label: "Atendido", variant: "secondary" },
   cancelled: { label: "Cancelado", variant: "destructive" },
+  cancelled_by_professional: { label: "Cancelado por profesional", variant: "destructive" },
   absent: { label: "Ausente", variant: "outline" },
   rescheduled: { label: "Reprogramado", variant: "outline" },
 };
@@ -101,6 +102,8 @@ export function ProfessionalDashboard() {
             ? "Turno marcado como Ausente"
             : status === "rescheduled"
             ? "Turno marcado como Reprogramado"
+            : status === "cancelled_by_professional"
+            ? "Turno cancelado. Se notificará al administrador."
             : "Turno cancelado"
         );
       }
@@ -220,7 +223,7 @@ export function ProfessionalDashboard() {
                           variant="destructive"
                           className="h-8"
                           onClick={() =>
-                            handleStatusUpdate(apt.id, "cancelled")
+                            handleStatusUpdate(apt.id, "cancelled_by_professional")
                           }
                         >
                           <XCircle className="mr-1 w-3 h-3" />
@@ -315,7 +318,7 @@ export function ProfessionalDashboard() {
                           variant="destructive"
                           className="h-8"
                           onClick={() =>
-                            handleStatusUpdate(apt.id, "cancelled")
+                            handleStatusUpdate(apt.id, "cancelled_by_professional")
                           }
                         >
                           Cancelar
@@ -401,13 +404,13 @@ export function ProfessionalSchedule() {
       const res = await fetch(`/api/appointments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
+        body: JSON.stringify({ status: "cancelled_by_professional" }),
       });
       if (res.ok) {
         setAppointments((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, status: "cancelled" } : a))
+          prev.map((a) => (a.id === id ? { ...a, status: "cancelled_by_professional" } : a))
         );
-        toast.success("Turno cancelado");
+        toast.success("Turno cancelado. Se notificará al administrador para reasignar.");
       }
     } catch {
       toast.error("Error al cancelar");
@@ -441,7 +444,7 @@ export function ProfessionalSchedule() {
     }
   };
 
-  // Group by date
+  // Group by date — include cancelled_by_professional so admin can see them
   const grouped = appointments
     .filter((a) => a.status !== "cancelled")
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
@@ -450,6 +453,29 @@ export function ProfessionalSchedule() {
       acc[apt.date].push(apt);
       return acc;
     }, {});
+
+  // Helper: compute endTime from startTime + default 45min slot
+  const getTimeRange = (time: string): string => {
+    const [h, m] = time.split(":").map(Number);
+    const duration = 45; // Default slot duration
+    const endH = h + Math.floor((m + duration) / 60);
+    const endM = (m + duration) % 60;
+    const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+    return `${time} a ${endTime} hs`;
+  };
+
+  // Helper: format date nicely in Spanish
+  const formatDateEs = (dateStr: string): string => {
+    try {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+      const monthNames = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+      return `${dayNames[date.getDay()]} ${d} de ${monthNames[date.getMonth()]}`;
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <div>
@@ -503,8 +529,8 @@ export function ProfessionalSchedule() {
                     <CardTitle className="text-teal-900 text-base flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       {date === new Date().toISOString().split("T")[0]
-                        ? "Hoy"
-                        : date}
+                        ? `Hoy — ${formatDateEs(date)}`
+                        : formatDateEs(date)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
@@ -520,7 +546,7 @@ export function ProfessionalSchedule() {
                             </div>
                             <div>
                               <p className="text-sm text-teal-600">
-                                {apt.time} hs
+                                {getTimeRange(apt.time)}
                               </p>
                               <p className="text-sm font-semibold text-teal-900">
                                 {apt.patient.user.name}

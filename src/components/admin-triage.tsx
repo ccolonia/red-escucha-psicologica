@@ -100,7 +100,9 @@ interface ProfessionalScheduleItem {
 
 interface Slot {
   time: string;
+  endTime: string;
   modality: string;
+  duration: number;
 }
 
 // ---- Constants ----
@@ -927,18 +929,18 @@ export function AdminTriage() {
                       No hay horarios disponibles para esta fecha
                     </p>
                   ) : (
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {availableSlots.map((slot) => (
                         <button
                           key={slot.time}
                           onClick={() => setSelectedTime(slot.time)}
-                          className={`px-3 py-2 text-sm rounded-lg border transition-all ${
+                          className={`px-2 py-2 text-xs rounded-lg border transition-all font-mono ${
                             selectedTime === slot.time
                               ? "bg-teal-600 text-white border-teal-600"
                               : "border-teal-200 text-teal-700 hover:bg-teal-50"
                           }`}
                         >
-                          {slot.time}
+                          {slot.time}-{slot.endTime}
                         </button>
                       ))}
                     </div>
@@ -965,7 +967,7 @@ export function AdminTriage() {
                       <UserCheck className="mr-2 w-4 h-4" />
                       Asignar
                       {selectedTime
-                        ? ` — ${selectedDate.slice(5)} ${selectedTime}`
+                        ? ` — ${selectedDate.slice(5)} ${selectedTime}-${availableSlots.find(s => s.time === selectedTime)?.endTime || ""}`
                         : ""}
                     </>
                   )}

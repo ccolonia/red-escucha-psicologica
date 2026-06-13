@@ -4,13 +4,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 // Valid status transitions
+// "cancelled_by_professional" is an intermediate state: professional cancelled but
+// admin must decide whether to reassign or delete definitively
 const validTransitions: Record<string, string[]> = {
-  pending: ["confirmed", "cancelled", "rescheduled"],
-  confirmed: ["completed", "cancelled", "absent", "rescheduled"],
+  pending: ["confirmed", "cancelled", "cancelled_by_professional", "rescheduled"],
+  confirmed: ["completed", "cancelled", "cancelled_by_professional", "absent", "rescheduled"],
+  cancelled_by_professional: ["cancelled", "confirmed"], // admin can reassign or delete
   completed: [],
   cancelled: [],
   absent: [],
-  rescheduled: ["confirmed", "cancelled"],
+  rescheduled: ["confirmed", "cancelled", "cancelled_by_professional"],
 };
 
 export async function PATCH(

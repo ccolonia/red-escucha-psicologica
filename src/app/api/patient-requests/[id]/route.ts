@@ -149,6 +149,27 @@ export async function PATCH(
         where: { id },
       });
       if (patientRequest && updated.assignedTo) {
+        // Calculate timeEnd from schedule slotDuration
+        let timeEnd: string | null = null;
+        let officeAddress: string | null = null;
+        if (time) {
+          // Try to get the professional's schedule to compute endTime
+          const [hours, minutes] = time.split(":").map(Number);
+          const professional = await db.professional.findUnique({
+            where: { id: professionalId },
+            include: {
+              schedules: {
+                where: { dayOfWeek: new Date(date + "T12:00:00").getDay() || 7 },
+                select: { slotDuration: true },
+                take: 1,
+              },
+            },
+          });
+          const slotDuration = professional?.schedules?.[0]?.slotDuration || 45;
+          timeEnd = `${String(hours + Math.floor((minutes + slotDuration) / 60)).padStart(2, "0")}:${String((minutes + slotDuration) % 60).padStart(2, "0")}`;
+          officeAddress = professional?.officeAddress || null;
+        }
+
         sendTriageProfessionalNotification({
           professionalEmail: updated.assignedTo.user.email,
           professionalName: updated.assignedTo.user.name,
@@ -157,7 +178,9 @@ export async function PATCH(
           modality: patientRequest.modality,
           date: date || null,
           time: time || null,
+          timeEnd,
           reason: patientRequest.reason,
+          officeAddress,
         }).catch((err) =>
           console.error("Failed to send professional triage email:", err)
         );
@@ -169,6 +192,8 @@ export async function PATCH(
           modality: patientRequest.modality,
           date: date || null,
           time: time || null,
+          timeEnd,
+          officeAddress,
         }).catch((err) =>
           console.error("Failed to send patient triage email:", err)
         );

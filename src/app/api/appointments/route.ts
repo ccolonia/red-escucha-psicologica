@@ -97,6 +97,11 @@ export async function GET(request: NextRequest) {
       });
       if (professional) {
         where.professionalId = professional.id;
+        // Professionals see active appointments (exclude only final "cancelled")
+        // Include "cancelled_by_professional" so they see their own cancellations
+        if (!status) {
+          where.status = { notIn: ["cancelled"] };
+        }
       }
     }
     // Admin sees all

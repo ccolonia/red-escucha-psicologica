@@ -1018,15 +1018,17 @@ interface SendTriageProfessionalNotificationParams {
   modality: string;
   date: string | null;
   time: string | null;
+  timeEnd: string | null;
   reason: string;
+  officeAddress?: string | null;
 }
 
 const MODALITY_EMAIL_MAP: Record<string, string> = {
   online: "Online (videollamada)",
-  presencial: "Presencial (Av. Sanabria 1616)",
+  presencial: "Presencial",
+  "P": "Presencial",
+  "OL": "Online (videollamada)",
   híbrida: "Híbrida (lo que suceda primero)",
-  P: "Presencial (Av. Sanabria 1616)",
-  OL: "Online (videollamada)",
 };
 
 export async function sendTriageProfessionalNotification({
@@ -1037,14 +1039,28 @@ export async function sendTriageProfessionalNotification({
   modality,
   date,
   time,
+  timeEnd,
   reason,
+  officeAddress,
 }: SendTriageProfessionalNotificationParams) {
   try {
     const resend = getResend();
     const modalityLabel = MODALITY_EMAIL_MAP[modality] || modality;
-    const appointmentInfo = date && time
-      ? `<div class="field"><div class="label">Horario asignado</div><div class="value" style="font-weight:600;font-size:17px;">${date} a las ${time} hs</div></div>`
+    // Build time range display
+    const timeDisplay = date && time
+      ? timeEnd
+        ? `${date} de ${time} a ${timeEnd} hs`
+        : `${date} a las ${time} hs`
       : "";
+    const appointmentInfo = timeDisplay
+      ? `<div class="field"><div class="label">Horario asignado</div><div class="value" style="font-weight:600;font-size:17px;">${timeDisplay}</div></div>`
+      : "";
+    // Dynamic location: officeAddress for presencial, enlace for online
+    const locationInfo = (modality === "P" || modality === "presencial") && officeAddress
+      ? `<div class="field"><div class="label">Dirección del consultorio</div><div class="value">${officeAddress}</div></div>`
+      : (modality === "OL" || modality === "online")
+        ? `<div class="field"><div class="label">Modalidad</div><div class="value">Online (videollamada) — Enviá el enlace de videollamada al paciente</div></div>`
+        : "";
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -1096,13 +1112,14 @@ export async function sendTriageProfessionalNotification({
                     <div class="value">${modalityLabel}</div>
                   </div>
                   ${appointmentInfo}
+                  ${locationInfo}
                   <div class="field">
                     <div class="label">Motivo de consulta</div>
                     <div class="value">${reason}</div>
                   </div>
                 </div>
                 <p style="font-size:14px;color:#4a5a4a;margin-top:20px;">
-                  <strong>Importante:</strong> Si la modalidad es Online, enviale el enlace de videollamada. Si es Presencial, reconfirmale las indicaciones para acercarse a la clínica.
+                  <strong>Importante:</strong> Si la modalidad es Online, enviale el enlace de videollamada. Si es Presencial, reconfirmale las indicaciones para acercarse al consultorio.
                 </p>
               </div>
               <div class="footer">
@@ -1136,6 +1153,8 @@ interface SendTriagePatientNotificationParams {
   modality: string;
   date: string | null;
   time: string | null;
+  timeEnd: string | null;
+  officeAddress?: string | null;
 }
 
 export async function sendTriagePatientNotification({
@@ -1145,13 +1164,27 @@ export async function sendTriagePatientNotification({
   modality,
   date,
   time,
+  timeEnd,
+  officeAddress,
 }: SendTriagePatientNotificationParams) {
   try {
     const resend = getResend();
     const modalityLabel = MODALITY_EMAIL_MAP[modality] || modality;
-    const appointmentInfo = date && time
-      ? `<div class="field"><div class="label">Fecha y hora</div><div class="value" style="font-weight:600;">${date} a las ${time} hs</div></div>`
+    // Build time range display
+    const timeDisplay = date && time
+      ? timeEnd
+        ? `${date} de ${time} a ${timeEnd} hs`
+        : `${date} a las ${time} hs`
       : "";
+    const appointmentInfo = timeDisplay
+      ? `<div class="field"><div class="label">Fecha y hora</div><div class="value" style="font-weight:600;">${timeDisplay}</div></div>`
+      : "";
+    // Dynamic location
+    const locationInfo = (modality === "P" || modality === "presencial") && officeAddress
+      ? `<div class="field"><div class="label">Dirección</div><div class="value">${officeAddress}</div></div>`
+      : (modality === "OL" || modality === "online")
+        ? `<div class="field"><div class="label">Modalidad</div><div class="value">Online (videollamada) — El profesional te enviará el enlace</div></div>`
+        : "";
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -1202,9 +1235,10 @@ export async function sendTriagePatientNotification({
                     <div class="value">${modalityLabel}</div>
                   </div>
                   ${appointmentInfo}
+                  ${locationInfo}
                 </div>
                 <p style="font-size:15px;color:#4a5a4a;margin-top:20px;">
-                  A la brevedad, el/la profesional se pondrá en contacto contigo para coordinar el inicio de tu proceso. Si es Online, recibiras el enlace de videollamada. Si es Presencial, te confirmará las indicaciones para tu primera sesión.
+                  A la brevedad, el/la profesional se pondrá en contacto contigo para coordinar el inicio de tu proceso. Si es Online, recibirás el enlace de videollamada. Si es Presencial, te confirmará las indicaciones para tu primera sesión.
                 </p>
                 <p style="font-size:14px;color:#7a8a7a;margin-top:16px;">
                   Si tenés alguna consulta, podés escribirnos a <a href="mailto:contacto@redescuchapsicologica.com" style="color:#6a8a6a;">contacto@redescuchapsicologica.com</a>
