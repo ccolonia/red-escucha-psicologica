@@ -20,7 +20,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <SessionProvider>
+    <SessionProvider
+      // Poll session every 5 minutes to detect server-side invalidation.
+      // If the JWT has been invalidated (expired, tokenVersion change, user deactivated),
+      // the client will detect it and update the session status to "unauthenticated",
+      // triggering the automatic redirect to the login page.
+      refetchInterval={5 * 60}
+      refetchOnWindowFocus={true}
+    >
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           {children}
