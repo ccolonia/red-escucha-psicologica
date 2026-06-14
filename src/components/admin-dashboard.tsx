@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -30,6 +30,11 @@ import {
   RefreshCw,
   ShieldCheck,
   ShieldAlert,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  BadgeCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -522,19 +527,57 @@ export function AdminProfessionals() {
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const loadProfessionals = () => {
-    fetch("/api/professionals")
+  // ── Search, Pagination & Filter state ──
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [statusFilter, setStatusFilter] = useState(""); // "", "approved", "pending", "unverified"
+  const [approvedCount, setApprovedCount] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const PAGE_SIZE = 10;
+
+  const loadProfessionals = useCallback(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("search", searchQuery);
+    if (statusFilter) params.set("status", statusFilter);
+    params.set("page", currentPage.toString());
+    params.set("limit", PAGE_SIZE.toString());
+
+    fetch(`/api/professionals?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
-        setProfessionals(data);
+        // API now returns { professionals, pagination, approvedCount }
+        if (data.professionals) {
+          setProfessionals(data.professionals);
+          setTotalCount(data.pagination.totalCount);
+          setTotalPages(data.pagination.totalPages);
+          setApprovedCount(data.approvedCount ?? 0);
+        } else {
+          // Backward compatibility: if API returns plain array
+          setProfessionals(Array.isArray(data) ? data : []);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  };
+  }, [searchQuery, statusFilter, currentPage]);
 
   useEffect(() => {
     loadProfessionals();
-  }, []);
+  }, [loadProfessionals]);
+
+  // ── Debounced search handler (300ms) ──
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(value);
+      setCurrentPage(1); // Reset to page 1 on new search
+    }, 300);
+  };
 
   const pendingCount = professionals.filter((p) => !p.user.active).length;
   const unverifiedLicenseCount = professionals.filter((p) => !p.licenseVerified).length;
@@ -803,10 +846,28 @@ export function AdminProfessionals() {
     }
   };
 
+  // ── Pagination helpers ──
+  const getPageNumbers = () => {
+    const pages: (number | "...")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
+      {/* ── Header with title, badges and actions ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <h2 className="text-2xl font-bold text-teal-900">Profesionales</h2>
           {pendingCount > 0 && (
             <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
@@ -842,6 +903,109 @@ export function AdminProfessionals() {
             Agregar
           </Button>
         </div>
+      </div>
+
+      {/* ── Search bar + Approved filter ── */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
+        {/* Search input with debounce */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
+          <Input
+            placeholder="Buscar por nombre, email, matrícula o especialidad..."
+            value={searchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="pl-9 border-teal-200 focus:border-teal-400"
+          />
+          {searchInput && (
+            <button
+              onClick={() => {
+                setSearchInput("");
+                setSearchQuery("");
+                setCurrentPage(1);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 hover:text-teal-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Status filter buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant={statusFilter === "approved" ? "default" : "outline"}
+            size="sm"
+            className={
+              statusFilter === "approved"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+            }
+            onClick={() => {
+              setStatusFilter(statusFilter === "approved" ? "" : "approved");
+              setCurrentPage(1);
+            }}
+          >
+            <BadgeCheck className="mr-1.5 w-4 h-4" />
+            Aprobados ({approvedCount})
+          </Button>
+          <Button
+            variant={statusFilter === "pending" ? "default" : "outline"}
+            size="sm"
+            className={
+              statusFilter === "pending"
+                ? "bg-amber-600 hover:bg-amber-700 text-white"
+                : "border-amber-200 text-amber-700 hover:bg-amber-50"
+            }
+            onClick={() => {
+              setStatusFilter(statusFilter === "pending" ? "" : "pending");
+              setCurrentPage(1);
+            }}
+          >
+            <Clock className="mr-1.5 w-4 h-4" />
+            Pendientes
+          </Button>
+          <Button
+            variant={statusFilter === "unverified" ? "default" : "outline"}
+            size="sm"
+            className={
+              statusFilter === "unverified"
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "border-red-200 text-red-600 hover:bg-red-50"
+            }
+            onClick={() => {
+              setStatusFilter(statusFilter === "unverified" ? "" : "unverified");
+              setCurrentPage(1);
+            }}
+          >
+            <ShieldAlert className="mr-1.5 w-4 h-4" />
+            Sin verificar
+          </Button>
+          {statusFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-teal-500 hover:text-teal-700"
+              onClick={() => {
+                setStatusFilter("");
+                setCurrentPage(1);
+              }}
+            >
+              <Filter className="mr-1 w-3.5 h-3.5" />
+              Ver todos
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Result count indicator ── */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-teal-500">
+          {loading ? "Buscando..." : `${totalCount} profesional${totalCount !== 1 ? "es" : ""} encontrado${totalCount !== 1 ? "s" : ""}`}
+          {searchQuery && <span> para &quot;{searchQuery}&quot;</span>}
+          {statusFilter === "approved" && " (Aprobados)"}
+          {statusFilter === "pending" && " (Pendientes)"}
+          {statusFilter === "unverified" && " (Sin verificar)"}
+        </p>
       </div>
 
       {showAdd && (
@@ -982,400 +1146,455 @@ export function AdminProfessionals() {
             <div key={i} className="h-20 bg-teal-50 animate-pulse rounded-lg" />
           ))}
         </div>
+      ) : professionals.length === 0 ? (
+        <div className="text-center py-12">
+          <Stethoscope className="w-12 h-12 text-teal-300 mx-auto mb-3" />
+          <p className="text-teal-600 font-medium">No se encontraron profesionales</p>
+          <p className="text-teal-400 text-sm mt-1">
+            {searchQuery || statusFilter
+              ? "Probá con otros filtros de búsqueda"
+              : "Agregá el primer profesional haciendo clic en el botón Agregar"}
+          </p>
+        </div>
       ) : (
-        <div className="space-y-3">
-          {professionals.map((prof) => {
-            const isActive = prof.user.active;
-            const isExpanded = expandedId === prof.id;
-            const parsedTherapyTypes = prof.therapyTypes ? JSON.parse(prof.therapyTypes) : [];
-            const parsedTargetAudience = prof.targetAudience ? JSON.parse(prof.targetAudience) : [];
-            const parsedTherapyModality = prof.therapyModality ? JSON.parse(prof.therapyModality) : [];
-            const parsedZones = prof.zones ? JSON.parse(prof.zones) : [];
-            return (
-              <Card key={prof.id} className={`border-teal-100 ${!isActive ? "border-l-4 border-l-amber-400" : ""}`}>
-                <CardContent className="p-4">
-                  {editingId === prof.id ? (
-                    <div className="space-y-4">
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Nombre completo</Label>
-                          <Input
-                            value={editForm.name}
-                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                            className="border-teal-200"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Email</Label>
-                          <Input
-                            value={editForm.email}
-                            disabled
-                            className="border-teal-200 bg-teal-50/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Teléfono</Label>
-                          <Input
-                            value={editForm.phone}
-                            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                            className="border-teal-200"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Matrícula</Label>
-                          <Input
-                            value={editForm.license}
-                            onChange={(e) => setEditForm({ ...editForm, license: e.target.value.replace(/[^0-9MNMPmnmp.\-\s]/g, "").toUpperCase() })}
-                            className="border-teal-200"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Especialidad</Label>
-                          <Select
-                            value={editForm.specialty}
-                            onValueChange={(value) => setEditForm({ ...editForm, specialty: value })}
-                          >
-                            <SelectTrigger className="border-teal-200">
-                              <SelectValue placeholder="Seleccionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Psicología Clínica">Psicología Clínica</SelectItem>
-                              <SelectItem value="Terapia de Pareja y Familia">Terapia de Pareja y Familia</SelectItem>
-                              <SelectItem value="Psicología Infanto-Juvenil">Psicología Infanto-Juvenil</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          className="bg-teal-600 hover:bg-teal-700 text-white h-8"
-                          disabled={saving}
-                          onClick={() => handleSaveEdit(prof.id)}
-                        >
-                          <Save className="mr-1 w-3 h-3" />
-                          {saving ? "Guardando..." : "Guardar"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 border-teal-200"
-                          onClick={() => setEditingId(null)}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              isActive ? "bg-teal-100" : "bg-amber-100"
-                            }`}
-                          >
-                            <Stethoscope
-                              className={`w-5 h-5 ${
-                                isActive ? "text-teal-600" : "text-amber-500"
-                              }`}
+        <>
+          <div className="space-y-3">
+            {professionals.map((prof) => {
+              const isActive = prof.user.active;
+              const isExpanded = expandedId === prof.id;
+              const parsedTherapyTypes = prof.therapyTypes ? JSON.parse(prof.therapyTypes) : [];
+              const parsedTargetAudience = prof.targetAudience ? JSON.parse(prof.targetAudience) : [];
+              const parsedTherapyModality = prof.therapyModality ? JSON.parse(prof.therapyModality) : [];
+              const parsedZones = prof.zones ? JSON.parse(prof.zones) : [];
+              return (
+                <Card key={prof.id} className={`border-teal-100 ${!isActive ? "border-l-4 border-l-amber-400" : ""}`}>
+                  <CardContent className="p-4">
+                    {editingId === prof.id ? (
+                      <div className="space-y-4">
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Nombre completo</Label>
+                            <Input
+                              value={editForm.name}
+                              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                              className="border-teal-200"
                             />
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-teal-900">{prof.user.name}</p>
-                              {!isActive && (
-                                <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">
-                                  Pendiente de aprobación
-                                </Badge>
-                              )}
-                              {prof.licenseVerified ? (
-                                <Badge variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">
-                                  <ShieldCheck className="w-3 h-3 mr-0.5" />
-                                  Matrícula verificada
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs bg-red-50 border-red-200 text-red-600">
-                                  <ShieldAlert className="w-3 h-3 mr-0.5" />
-                                  Matrícula sin verificar
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-teal-600">
-                              {prof.specialty} • MP: {prof.license}
-                            </p>
-                            <p className="text-sm text-teal-500">{prof.user.email}</p>
+                          <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input
+                              value={editForm.email}
+                              disabled
+                              className="border-teal-200 bg-teal-50/50"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Teléfono</Label>
+                            <Input
+                              value={editForm.phone}
+                              onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                              className="border-teal-200"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Matrícula</Label>
+                            <Input
+                              value={editForm.license}
+                              onChange={(e) => setEditForm({ ...editForm, license: e.target.value.replace(/[^0-9MNMPmnmp.\-\s]/g, "").toUpperCase() })}
+                              className="border-teal-200"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Especialidad</Label>
+                            <Select
+                              value={editForm.specialty}
+                              onValueChange={(value) => setEditForm({ ...editForm, specialty: value })}
+                            >
+                              <SelectTrigger className="border-teal-200">
+                                <SelectValue placeholder="Seleccionar" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Psicología Clínica">Psicología Clínica</SelectItem>
+                                <SelectItem value="Terapia de Pareja y Familia">Terapia de Pareja y Familia</SelectItem>
+                                <SelectItem value="Psicología Infanto-Juvenil">Psicología Infanto-Juvenil</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {!isActive && (
-                            <Button
-                              size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs"
-                              onClick={() => handleToggleActive(prof.userId, false)}
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-teal-600 hover:bg-teal-700 text-white h-8"
+                            disabled={saving}
+                            onClick={() => handleSaveEdit(prof.id)}
+                          >
+                            <Save className="mr-1 w-3 h-3" />
+                            {saving ? "Guardando..." : "Guardar"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-teal-200"
+                            onClick={() => setEditingId(null)}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                isActive ? "bg-teal-100" : "bg-amber-100"
+                              }`}
                             >
-                              <CheckCircle2 className="mr-1 w-3.5 h-3.5" />
-                              Aprobar
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className={`h-8 text-xs ${
-                              prof.licenseVerified
-                                ? "border-emerald-200 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
-                                : "border-red-200 text-red-600 hover:text-red-800 hover:bg-red-50"
-                            }`}
-                            onClick={() => handleToggleLicenseVerified(prof.id, prof.licenseVerified)}
-                            title={prof.licenseVerified ? "Desmarcar verificación de matrícula" : "Verificar matrícula"}
-                          >
-                            {prof.licenseVerified ? (
-                              <><ShieldCheck className="mr-1 w-3.5 h-3.5" /> Verificada</>
-                            ) : (
-                              <><ShieldAlert className="mr-1 w-3.5 h-3.5" /> Verificar</>
+                              <Stethoscope
+                                className={`w-5 h-5 ${
+                                  isActive ? "text-teal-600" : "text-amber-500"
+                                }`}
+                              />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium text-teal-900">{prof.user.name}</p>
+                                {!isActive && (
+                                  <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">
+                                    Pendiente de aprobación
+                                  </Badge>
+                                )}
+                                {prof.licenseVerified ? (
+                                  <Badge variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">
+                                    <ShieldCheck className="w-3 h-3 mr-0.5" />
+                                    Matrícula verificada
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-red-50 border-red-200 text-red-600">
+                                    <ShieldAlert className="w-3 h-3 mr-0.5" />
+                                    Matrícula sin verificar
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-teal-600">
+                                {prof.specialty} • MP: {prof.license}
+                              </p>
+                              <p className="text-sm text-teal-500">{prof.user.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!isActive && (
+                              <Button
+                                size="sm"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs"
+                                onClick={() => handleToggleActive(prof.userId, false)}
+                              >
+                                <CheckCircle2 className="mr-1 w-3.5 h-3.5" />
+                                Aprobar
+                              </Button>
                             )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 border-teal-200 text-teal-600 hover:text-teal-800 hover:bg-teal-50"
-                            onClick={() => setExpandedId(isExpanded ? null : prof.id)}
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                          </Button>
-                          {isActive && (
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-8 border-teal-200"
-                              onClick={() => handleToggleAvailable(prof.id, prof.available)}
+                              className={`h-8 text-xs ${
+                                prof.licenseVerified
+                                  ? "border-emerald-200 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                                  : "border-red-200 text-red-600 hover:text-red-800 hover:bg-red-50"
+                              }`}
+                              onClick={() => handleToggleLicenseVerified(prof.id, prof.licenseVerified)}
+                              title={prof.licenseVerified ? "Desmarcar verificación de matrícula" : "Verificar matrícula"}
                             >
-                              {prof.available ? "Desactivar" : "Activar"}
+                              {prof.licenseVerified ? (
+                                <><ShieldCheck className="mr-1 w-3.5 h-3.5" /> Verificada</>
+                              ) : (
+                                <><ShieldAlert className="mr-1 w-3.5 h-3.5" /> Verificar</>
+                              )}
                             </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 border-teal-200 text-teal-600 hover:text-teal-800 hover:bg-teal-50"
-                            onClick={() => handleEdit(prof)}
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 border-red-200 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDelete(prof.id)}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 border-teal-200 text-teal-600 hover:text-teal-800 hover:bg-teal-50"
+                              onClick={() => setExpandedId(isExpanded ? null : prof.id)}
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                            </Button>
+                            {isActive && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 border-teal-200"
+                                onClick={() => handleToggleAvailable(prof.id, prof.available)}
+                              >
+                                {prof.available ? "Desactivar" : "Activar"}
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 border-teal-200 text-teal-600 hover:text-teal-800 hover:bg-teal-50"
+                              onClick={() => handleEdit(prof)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 border-red-200 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDelete(prof.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Expanded details */}
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="mt-4 pt-4 border-t border-teal-100 space-y-3"
-                        >
-                          <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                            {prof.profession && (
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="mt-4 pt-4 border-t border-teal-100 space-y-3"
+                          >
+                            <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                              {prof.profession && (
+                                <div>
+                                  <span className="text-teal-500">Profesión:</span>{" "}
+                                  <span className="text-teal-800">{prof.profession}</span>
+                                </div>
+                              )}
+                              {prof.cuil && (
+                                <div>
+                                  <span className="text-teal-500">CUIT/CUIL:</span>{" "}
+                                  <span className="text-teal-800">{prof.cuil}</span>
+                                </div>
+                              )}
+                              {prof.gender && (
+                                <div>
+                                  <span className="text-teal-500">Sexo:</span>{" "}
+                                  <span className="text-teal-800">{prof.gender}</span>
+                                </div>
+                              )}
+                              {prof.user.phone && (
+                                <div>
+                                  <span className="text-teal-500">Teléfono:</span>{" "}
+                                  <span className="text-teal-800">{prof.user.phone}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 text-sm">
+                              <span className="text-teal-500">Modalidad de atención:</span>
+                              {prof.onlineAttention && (
+                                <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">Online</Badge>
+                              )}
+                              {prof.presentialAttention && (
+                                <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">Presencial</Badge>
+                              )}
+                              {prof.homeAttention && (
+                                <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200 text-purple-700">Domicilio</Badge>
+                              )}
+                            </div>
+
+                            {parsedTherapyTypes.length > 0 && (
                               <div>
-                                <span className="text-teal-500">Profesión:</span>{" "}
-                                <span className="text-teal-800">{prof.profession}</span>
+                                <p className="text-teal-500 text-sm mb-1">Tipos de terapia:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {parsedTherapyTypes.map((t: string) => (
+                                    <Badge key={t} variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{t}</Badge>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                            {prof.cuil && (
+
+                            {parsedTargetAudience.length > 0 && (
                               <div>
-                                <span className="text-teal-500">CUIT/CUIL:</span>{" "}
-                                <span className="text-teal-800">{prof.cuil}</span>
+                                <p className="text-teal-500 text-sm mb-1">Dirigido a:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {parsedTargetAudience.map((t: string) => (
+                                    <Badge key={t} variant="outline" className="text-xs bg-sage-50 border-sage-200 text-sage-700">{t}</Badge>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                            {prof.gender && (
+
+                            {parsedTherapyModality.length > 0 && (
                               <div>
-                                <span className="text-teal-500">Sexo:</span>{" "}
-                                <span className="text-teal-800">{prof.gender}</span>
+                                <p className="text-teal-500 text-sm mb-1">Modalidad de terapia:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {parsedTherapyModality.map((m: string) => (
+                                    <Badge key={m} variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">{m}</Badge>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                            {prof.user.phone && (
+
+                            {parsedZones.length > 0 && (
                               <div>
-                                <span className="text-teal-500">Teléfono:</span>{" "}
-                                <span className="text-teal-800">{prof.user.phone}</span>
+                                <p className="text-teal-500 text-sm mb-1">Zonas de atención:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {parsedZones.map((z: string) => (
+                                    <Badge key={z} variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">{z}</Badge>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                          </div>
 
-                          <div className="flex flex-wrap gap-2 text-sm">
-                            <span className="text-teal-500">Modalidad de atención:</span>
-                            {prof.onlineAttention && (
-                              <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">Online</Badge>
+                            {prof.bio && (
+                              <div>
+                                <p className="text-teal-500 text-sm mb-1">Sobre su práctica:</p>
+                                <p className="text-teal-700 text-sm bg-teal-50 p-2 rounded">{prof.bio}</p>
+                              </div>
                             )}
-                            {prof.presentialAttention && (
-                              <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">Presencial</Badge>
+
+                            {prof.cvFileName && (
+                              <div>
+                                <p className="text-teal-500 text-sm mb-1">CV / Curriculum:</p>
+                                <a
+                                  href={`/api/professionals/cv?id=${prof.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                  <span className="font-medium">{prof.cvFileName}</span>
+                                  <span className="text-blue-400 text-xs">(Ver / Descargar)</span>
+                                </a>
+                              </div>
                             )}
-                            {prof.homeAttention && (
-                              <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200 text-purple-700">Domicilio</Badge>
-                            )}
-                          </div>
 
-                          {parsedTherapyTypes.length > 0 && (
+                            {/* Planilla de Atención */}
                             <div>
-                              <p className="text-teal-500 text-sm mb-1">Tipos de terapia:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {parsedTherapyTypes.map((t: string) => (
-                                  <Badge key={t} variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{t}</Badge>
-                                ))}
+                              <p className="text-teal-500 text-sm mb-2">Planilla de Atención:</p>
+                              <div className="flex flex-wrap gap-2">
+                                <a
+                                  href={`/api/attendance-sheets?professionalId=${prof.id}&csv=1&month=${new Date().getMonth() + 1}&year=${new Date().getFullYear()}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  <span className="font-medium">Descargar Planilla Mes Actual (CSV)</span>
+                                </a>
+                                <a
+                                  href={`/api/attendance-sheets?professionalId=${prof.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-lg text-sm text-teal-700 hover:bg-teal-100 transition-colors"
+                                >
+                                  <FileSpreadsheet className="w-4 h-4" />
+                                  <span className="font-medium">Ver todas las planillas</span>
+                                </a>
                               </div>
                             </div>
-                          )}
 
-                          {parsedTargetAudience.length > 0 && (
-                            <div>
-                              <p className="text-teal-500 text-sm mb-1">Dirigido a:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {parsedTargetAudience.map((t: string) => (
-                                  <Badge key={t} variant="outline" className="text-xs bg-sage-50 border-sage-200 text-sage-700">{t}</Badge>
-                                ))}
+                            {/* Observaciones Internas y Estado de Evaluación */}
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-teal-500 text-sm mb-1">Observaciones Internas:</p>
+                                <textarea
+                                  rows={2}
+                                  className="w-full border border-red-200 bg-red-50 rounded-lg p-2 text-sm text-red-800 placeholder-red-300 focus:ring-red-200 focus:border-red-300"
+                                  placeholder="Notas internas del administrador..."
+                                  value={prof.internalNotes || ""}
+                                  onChange={(e) => {
+                                    setProfessionals((prev) =>
+                                      prev.map((p) =>
+                                        p.id === prof.id ? { ...p, internalNotes: e.target.value } : p
+                                      )
+                                    );
+                                  }}
+                                  onBlur={(e) => {
+                                    fetch("/api/professionals", {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ id: prof.id, internalNotes: e.target.value || null }),
+                                    });
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <p className="text-teal-500 text-sm mb-1">Estado de Evaluación:</p>
+                                <Input
+                                  className="border-amber-200 bg-amber-50 text-amber-800 placeholder-amber-300"
+                                  placeholder="✓, CV, ?, observaciones..."
+                                  value={prof.evaluationStatus || ""}
+                                  onChange={(e) => {
+                                    setProfessionals((prev) =>
+                                      prev.map((p) =>
+                                        p.id === prof.id ? { ...p, evaluationStatus: e.target.value } : p
+                                      )
+                                    );
+                                  }}
+                                  onBlur={(e) => {
+                                    fetch("/api/professionals", {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ id: prof.id, evaluationStatus: e.target.value || null }),
+                                    });
+                                  }}
+                                />
                               </div>
                             </div>
-                          )}
 
-                          {parsedTherapyModality.length > 0 && (
-                            <div>
-                              <p className="text-teal-500 text-sm mb-1">Modalidad de terapia:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {parsedTherapyModality.map((m: string) => (
-                                  <Badge key={m} variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">{m}</Badge>
-                                ))}
-                              </div>
+                            <div className="flex items-center gap-3 text-xs text-teal-400 pt-1">
+                              <span>Cuenta: {isActive ? "Activada" : "Pendiente"}</span>
+                              <span>•</span>
+                              <span>Disponibilidad: {prof.available ? "Disponible" : "No disponible"}</span>
+                              <span>•</span>
+                              <span>Registrado: {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR")}</span>
                             </div>
-                          )}
+                          </motion.div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
 
-                          {parsedZones.length > 0 && (
-                            <div>
-                              <p className="text-teal-500 text-sm mb-1">Zonas de atención:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {parsedZones.map((z: string) => (
-                                  <Badge key={z} variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">{z}</Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {prof.bio && (
-                            <div>
-                              <p className="text-teal-500 text-sm mb-1">Sobre su práctica:</p>
-                              <p className="text-teal-700 text-sm bg-teal-50 p-2 rounded">{prof.bio}</p>
-                            </div>
-                          )}
-
-                          {prof.cvFileName && (
-                            <div>
-                              <p className="text-teal-500 text-sm mb-1">CV / Curriculum:</p>
-                              <a
-                                href={`/api/professionals/cv?id=${prof.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors"
-                              >
-                                <FileText className="w-4 h-4" />
-                                <span className="font-medium">{prof.cvFileName}</span>
-                                <span className="text-blue-400 text-xs">(Ver / Descargar)</span>
-                              </a>
-                            </div>
-                          )}
-
-                          {/* Planilla de Atención */}
-                          <div>
-                            <p className="text-teal-500 text-sm mb-2">Planilla de Atención:</p>
-                            <div className="flex flex-wrap gap-2">
-                              <a
-                                href={`/api/attendance-sheets?professionalId=${prof.id}&csv=1&month=${new Date().getMonth() + 1}&year=${new Date().getFullYear()}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 hover:bg-emerald-100 transition-colors"
-                              >
-                                <Download className="w-4 h-4" />
-                                <span className="font-medium">Descargar Planilla Mes Actual (CSV)</span>
-                              </a>
-                              <a
-                                href={`/api/attendance-sheets?professionalId=${prof.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-lg text-sm text-teal-700 hover:bg-teal-100 transition-colors"
-                              >
-                                <FileSpreadsheet className="w-4 h-4" />
-                                <span className="font-medium">Ver todas las planillas</span>
-                              </a>
-                            </div>
-                          </div>
-
-                          {/* Observaciones Internas y Estado de Evaluación */}
-                          <div className="grid sm:grid-cols-2 gap-4">
-                            <div>
-                              <p className="text-teal-500 text-sm mb-1">Observaciones Internas:</p>
-                              <textarea
-                                rows={2}
-                                className="w-full border border-red-200 bg-red-50 rounded-lg p-2 text-sm text-red-800 placeholder-red-300 focus:ring-red-200 focus:border-red-300"
-                                placeholder="Notas internas del administrador..."
-                                value={prof.internalNotes || ""}
-                                onChange={(e) => {
-                                  setProfessionals((prev) =>
-                                    prev.map((p) =>
-                                      p.id === prof.id ? { ...p, internalNotes: e.target.value } : p
-                                    )
-                                  );
-                                }}
-                                onBlur={(e) => {
-                                  fetch("/api/professionals", {
-                                    method: "PATCH",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ id: prof.id, internalNotes: e.target.value || null }),
-                                  });
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <p className="text-teal-500 text-sm mb-1">Estado de Evaluación:</p>
-                              <Input
-                                className="border-amber-200 bg-amber-50 text-amber-800 placeholder-amber-300"
-                                placeholder="✓, CV, ?, observaciones..."
-                                value={prof.evaluationStatus || ""}
-                                onChange={(e) => {
-                                  setProfessionals((prev) =>
-                                    prev.map((p) =>
-                                      p.id === prof.id ? { ...p, evaluationStatus: e.target.value } : p
-                                    )
-                                  );
-                                }}
-                                onBlur={(e) => {
-                                  fetch("/api/professionals", {
-                                    method: "PATCH",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ id: prof.id, evaluationStatus: e.target.value || null }),
-                                  });
-                                }}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 text-xs text-teal-400 pt-1">
-                            <span>Cuenta: {isActive ? "Activada" : "Pendiente"}</span>
-                            <span>•</span>
-                            <span>Disponibilidad: {prof.available ? "Disponible" : "No disponible"}</span>
-                            <span>•</span>
-                            <span>Registrado: {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR")}</span>
-                          </div>
-                        </motion.div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+          {/* ── Pagination bar ── */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1 mt-6 pb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 border-teal-200 text-teal-600 hover:bg-teal-50"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              {getPageNumbers().map((page, idx) =>
+                page === "..." ? (
+                  <span key={`dots-${idx}`} className="px-1 text-teal-400 text-sm">...</span>
+                ) : (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    className={`h-8 w-8 p-0 text-sm ${
+                      currentPage === page
+                        ? "bg-teal-600 hover:bg-teal-700 text-white"
+                        : "border-teal-200 text-teal-600 hover:bg-teal-50"
+                    }`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 border-teal-200 text-teal-600 hover:bg-teal-50"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

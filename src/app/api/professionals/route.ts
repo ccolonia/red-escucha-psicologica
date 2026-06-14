@@ -2,14 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const specialty = searchParams.get("specialty");
     const available = searchParams.get("available");
+    const search = searchParams.get("search")?.trim() || "";
+    const status = searchParams.get("status")?.trim() || "";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10", 10)));
 
-    const where: { available?: boolean; specialty?: string } = {};
+    // Build the where clause dynamically
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {};
+
     if (specialty) {
       where.specialty = specialty;
     }
@@ -19,42 +27,108 @@ export async function GET(request: NextRequest) {
       where.available = false;
     }
 
-    const professionals = await db.professional.findMany({
-      where,
-      // Exclude cvData (base64) from the list — use /api/professionals/cv?id= to download
-      select: {
-        id: true,
-        userId: true,
-        license: true,
-        licenseVerified: true,
-        specialty: true,
-        bio: true,
-        available: true,
-        title: true,
-        profession: true,
-        cuil: true,
-        gender: true,
-        therapyTypes: true,
-        targetAudience: true,
-        therapyModality: true,
-        onlineAttention: true,
-        presentialAttention: true,
-        homeAttention: true,
-        zones: true,
-        cvFileName: true,
-        cvMimeType: true,
-        internalNotes: true,
-        evaluationStatus: true,
-        createdAt: true,
-        updatedAt: true,
-        user: {
-          select: { id: true, name: true, email: true, phone: true, active: true, createdAt: true },
-        },
-      },
-      orderBy: { user: { name: "asc" } },
-    });
+    // Status filter: "approved" = user.active true + licenseVerified true
+    if (status === "approved") {
+      where.user = { active: true };
+      where.licenseVerified = true;
+    } else if (status === "pending") {
+      where.user = { active: false };
+    } else if (status === "unverified") {
+      where.licenseVerified = false;
+    }
 
-    return NextResponse.json(professionals);
+    // Fuzzy search across name, email, license
+    if (search) {
+      const searchConditions: Prisma.ProfessionalWhereInput[] = [
+        { user: { name: { contains: search, mode: "insensitive" } } },
+        { user: { email: { contains: search, mode: "insensitive" } } },
+        { license: { contains: search, mode: "insensitive" } },
+        { specialty: { contains: search, mode: "insensitive" } },
+      ];
+
+      if (status === "approved") {
+        // Merge search with the approved status filter
+        where.AND = [
+          { user: { active: true }, licenseVerified: true },
+          { OR: searchConditions },
+        ];
+        // Remove the top-level user/licenseVerified since AND handles it
+        delete where.user;
+        delete where.licenseVerified;
+      } else if (status === "pending") {
+        where.AND = [
+          { user: { active: false } },
+          { OR: searchConditions },
+        ];
+        delete where.user;
+      } else if (status === "unverified") {
+        where.AND = [
+          { licenseVerified: false },
+          { OR: searchConditions },
+        ];
+        delete where.licenseVerified;
+      } else {
+        where.OR = searchConditions;
+      }
+    }
+
+    // Run count + data in parallel for efficiency
+    const [totalCount, professionals, approvedCount] = await Promise.all([
+      db.professional.count({ where }),
+      db.professional.findMany({
+        where,
+        select: {
+          id: true,
+          userId: true,
+          license: true,
+          licenseVerified: true,
+          specialty: true,
+          bio: true,
+          available: true,
+          title: true,
+          profession: true,
+          cuil: true,
+          gender: true,
+          therapyTypes: true,
+          targetAudience: true,
+          therapyModality: true,
+          onlineAttention: true,
+          presentialAttention: true,
+          homeAttention: true,
+          zones: true,
+          cvFileName: true,
+          cvMimeType: true,
+          internalNotes: true,
+          evaluationStatus: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: { id: true, name: true, email: true, phone: true, active: true, createdAt: true },
+          },
+        },
+        orderBy: { user: { name: "asc" } },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      // Total approved count (always the global number, not filtered)
+      db.professional.count({
+        where: {
+          user: { active: true },
+          licenseVerified: true,
+        },
+      }),
+    ]);
+
+    return NextResponse.json({
+      professionals,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount,
+        limit,
+      },
+      approvedCount,
+    });
   } catch (error) {
     console.error("Get professionals error:", error);
     return NextResponse.json(
