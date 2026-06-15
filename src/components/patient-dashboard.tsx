@@ -79,13 +79,14 @@ function BookingFlow({ patientId }: { patientId: string }) {
   const [loading, setLoading] = useState(false);
   const [bookingDone, setBookingDone] = useState(false);
 
-  // Load professionals when specialty changes
+  // Load professionals when specialty changes (all=true returns flat array)
   useEffect(() => {
     if (specialty) {
-      fetch(`/api/professionals?specialty=${encodeURIComponent(specialty)}`)
+      fetch(`/api/professionals?all=true&specialty=${encodeURIComponent(specialty)}`)
         .then((res) => res.json())
         .then((data) => {
-          setProfessionals(data);
+          const profs = Array.isArray(data) ? data : [];
+          setProfessionals(profs);
           setSelectedProfessional("");
           setSelectedDate("");
           setSelectedTime("");

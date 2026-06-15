@@ -181,16 +181,19 @@ export function AdminTriage() {
   }, []);
 
   const loadProfessionals = useCallback(() => {
-    fetch("/api/professionals")
+    // ?all=true returns flat array of active+licenseVerified professionals only
+    fetch("/api/professionals?all=true")
       .then((res) => res.json())
       .then((data) => {
-        // Only show active, available professionals
-        const activeProfs = data.filter(
-          (p: Professional) => p.user.active && p.available
+        // all=true always returns a flat array, but guard just in case
+        const profs = Array.isArray(data) ? data : [];
+        // Further filter to only available professionals for Triage assignment
+        const availableProfs = profs.filter(
+          (p: Professional) => p.available
         );
         // Load schedules for each professional
         return Promise.all(
-          activeProfs.map(async (prof: Professional) => {
+          availableProfs.map(async (prof: Professional) => {
             try {
               const schedRes = await fetch(`/api/professionals/${prof.id}/schedule`);
               if (schedRes.ok) {

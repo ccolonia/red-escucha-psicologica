@@ -128,12 +128,15 @@ export function NewAppointmentDialog({
     }
   }, [open, prefillDate, prefillTime]);
 
-  // Load professionals for admin
+  // Load professionals for admin (all=true returns flat array of active+licenseVerified)
   useEffect(() => {
     if (open && isAdmin) {
-      fetch("/api/professionals?available=true")
+      fetch("/api/professionals?all=true&available=true")
         .then((res) => res.json())
-        .then((data) => setProfessionals(data))
+        .then((data) => {
+          const profs = Array.isArray(data) ? data : [];
+          setProfessionals(profs);
+        })
         .catch(() => {});
     }
   }, [open, isAdmin]);

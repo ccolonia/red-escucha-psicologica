@@ -84,12 +84,12 @@ export function AdminPlanilla() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
-  // Load professionals
+  // Load professionals (all=true returns flat array of active+licenseVerified)
   useEffect(() => {
-    fetch("/api/professionals")
+    fetch("/api/professionals?all=true")
       .then((res) => res.json())
       .then((data) => {
-        const profs = Array.isArray(data) ? data.filter((p: Professional) => p.user.active) : [];
+        const profs = Array.isArray(data) ? data : [];
         setProfessionals(profs);
         setLoading(false);
       })

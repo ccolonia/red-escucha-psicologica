@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const all = searchParams.get("all");
     const specialty = searchParams.get("specialty");
     const available = searchParams.get("available");
     const search = searchParams.get("search")?.trim() || "";
@@ -17,6 +18,78 @@ export async function GET(request: NextRequest) {
     // Build the where clause dynamically
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
+
+    // ─── "all" mode: return flat array for Triage, Planilla, NewAppointment, etc. ───
+    // Automatically filters to professionals fully enabled for assignment:
+    //   user.active = true AND licenseVerified = true
+    // Additional params (specialty, available) are still respected.
+    if (all === "true") {
+      where.user = { active: true };
+      where.licenseVerified = true;
+
+      if (specialty) {
+        where.specialty = specialty;
+      }
+      if (available === "true") {
+        where.available = true;
+      }
+
+      // Search is also supported in all mode
+      if (search) {
+        where.AND = [
+          { user: { active: true }, licenseVerified: true },
+          {
+            OR: [
+              { user: { name: { contains: search, mode: "insensitive" } } },
+              { user: { email: { contains: search, mode: "insensitive" } } },
+              { license: { contains: search, mode: "insensitive" } },
+              { specialty: { contains: search, mode: "insensitive" } },
+            ],
+          },
+        ];
+        delete where.user;
+        delete where.licenseVerified;
+      }
+
+      const professionals = await db.professional.findMany({
+        where,
+        select: {
+          id: true,
+          userId: true,
+          license: true,
+          licenseVerified: true,
+          specialty: true,
+          bio: true,
+          available: true,
+          title: true,
+          profession: true,
+          cuil: true,
+          gender: true,
+          therapyTypes: true,
+          targetAudience: true,
+          therapyModality: true,
+          onlineAttention: true,
+          presentialAttention: true,
+          homeAttention: true,
+          zones: true,
+          cvFileName: true,
+          cvMimeType: true,
+          internalNotes: true,
+          evaluationStatus: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: { id: true, name: true, email: true, phone: true, active: true, createdAt: true },
+          },
+        },
+        orderBy: { user: { name: "asc" } },
+      });
+
+      // Return flat array for backward compatibility with all consumers
+      return NextResponse.json(professionals);
+    }
+
+    // ─── Paginated mode (admin panel) ───
 
     if (specialty) {
       where.specialty = specialty;

@@ -122,12 +122,11 @@ export function ProfessionalScheduleConfig() {
   useEffect(() => {
     if (session?.user) {
       const userId = (session.user as { id: string }).id;
-      fetch("/api/professionals")
+      fetch("/api/professionals?all=true")
         .then((res) => res.json())
         .then((data) => {
-          const prof = Array.isArray(data)
-            ? data.find((p: { userId: string }) => p.userId === userId)
-            : null;
+          const profs = Array.isArray(data) ? data : [];
+          const prof = profs.find((p: { userId: string }) => p.userId === userId);
           if (prof) {
             setProfessionalId(prof.id);
             loadData(prof.id);
