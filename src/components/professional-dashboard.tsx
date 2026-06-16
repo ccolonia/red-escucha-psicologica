@@ -193,6 +193,38 @@ export function ProfessionalDashboard() {
                           <p className="font-medium text-teal-900">
                             {apt.patient.user.name}
                           </p>
+                          {/* Contacto rápido: WhatsApp + Email */}
+                          {(apt.patient.user.phone || apt.patient.user.email) && (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                              {apt.patient.user.phone && (
+                                <a
+                                  href={`https://wa.me/${apt.patient.user.phone.replace(/[^0-9]/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 hover:underline transition-colors"
+                                  title={`Enviar WhatsApp a ${apt.patient.user.name}`}
+                                >
+                                  <MessageCircle className="w-3 h-3 text-emerald-500" />
+                                  {apt.patient.user.phone}
+                                </a>
+                              )}
+                              {apt.patient.user.email && (
+                                <a
+                                  href={`mailto:${apt.patient.user.email}`}
+                                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-700 hover:underline transition-colors"
+                                  title={`Enviar email a ${apt.patient.user.name}`}
+                                >
+                                  <Mail className="w-3 h-3 text-teal-500" />
+                                  {apt.patient.user.email}
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {!apt.patient.user.phone && !apt.patient.user.email && (
+                            <p className="text-xs text-teal-400 italic mt-1">
+                              Sin datos de contacto
+                            </p>
+                          )}
                           <p className="text-sm text-teal-600">
                             {apt.time} hs
                           </p>
@@ -299,6 +331,38 @@ export function ProfessionalDashboard() {
                         <p className="font-medium text-teal-900">
                           {apt.patient.user.name}
                         </p>
+                        {/* Contacto rápido: WhatsApp + Email */}
+                        {(apt.patient.user.phone || apt.patient.user.email) && (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                            {apt.patient.user.phone && (
+                              <a
+                                href={`https://wa.me/${apt.patient.user.phone.replace(/[^0-9]/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 hover:underline transition-colors"
+                                title={`Enviar WhatsApp a ${apt.patient.user.name}`}
+                              >
+                                <MessageCircle className="w-3 h-3 text-emerald-500" />
+                                {apt.patient.user.phone}
+                              </a>
+                            )}
+                            {apt.patient.user.email && (
+                              <a
+                                href={`mailto:${apt.patient.user.email}`}
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-700 hover:underline transition-colors"
+                                title={`Enviar email a ${apt.patient.user.name}`}
+                              >
+                                <Mail className="w-3 h-3 text-teal-500" />
+                                {apt.patient.user.email}
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        {!apt.patient.user.phone && !apt.patient.user.email && (
+                          <p className="text-xs text-teal-400 italic mt-1">
+                            Sin datos de contacto
+                          </p>
+                        )}
                         <p className="text-sm text-teal-600">
                           {apt.date} • {apt.time} hs
                         </p>
