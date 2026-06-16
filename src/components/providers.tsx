@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { useState } from "react";
 import { Toaster } from "sonner";
+import { IdleTimeoutProvider } from "@/components/providers/idle-timeout-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -30,7 +31,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          {children}
+          {/* IdleTimeoutProvider: cierra sesión tras 30 min de inactividad.
+              Va aquí dentro porque usa useSession() para detectar auth status.
+              Solo activa listeners cuando el usuario está autenticado. */}
+          <IdleTimeoutProvider>
+            {children}
+          </IdleTimeoutProvider>
           <Toaster position="top-right" />
         </ThemeProvider>
       </QueryClientProvider>
