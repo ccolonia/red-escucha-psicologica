@@ -44,16 +44,38 @@ export async function PATCH(
         //    id is a cuid string — do NOT parseInt (schema: String @id @default(cuid()))
         const existingRequest = await tx.patientRequest.findUnique({
           where: { id },
+          include: { appointment: true },
         });
 
         if (!existingRequest) {
           throw new Error(`PatientRequest no encontrada con id: ${id}`);
         }
 
+        // Regla: NO permitir reasignar si la PatientRequest ya está
+        // asignada Y tiene un appointment activo (pending, confirmed,
+        // rescheduled). SÍ permitir reasignar si:
+        //   - No está asignada (status !== "assigned")
+        //   - Está asignada pero el appointment fue cancelado (status en
+        //     ["cancelled", "cancelled_by_professional"]) — caso típico:
+        //     el profesional canceló y el admin quiere reasignar a otra
+        //     fecha o a otro profesional.
+        //   - Está asignada pero no tiene appointment asociado (caso muy
+        //     raro, defensivo).
         if (existingRequest.status === "assigned") {
-          throw new Error(
-            `PatientRequest ya fue asignada (status=assigned). id: ${id}`
-          );
+          const appt = existingRequest.appointment;
+          const hasActiveAppointment =
+            appt &&
+            !["cancelled", "cancelled_by_professional"].includes(appt.status);
+
+          if (hasActiveAppointment) {
+            throw new Error(
+              `Esta solicitud ya tiene un turno activo (${appt.status}) ` +
+              `para el ${appt.date} a las ${appt.time} hs. ` +
+              `Si necesitás reasignar, primero cancelá el turno actual desde el panel del profesional o del admin.`
+            );
+          }
+          // Si llegamos acá: está asignada pero el appointment fue
+          // cancelado → permitimos reasignar (reasignación).
         }
 
         // 1. Find or create patient
@@ -278,7 +300,8 @@ export async function PATCH(
     if (message.includes("PatientRequest no encontrada")) {
       return NextResponse.json({ error: message }, { status: 404 });
     }
-    if (message.includes("ya fue asignada")) {
+    // Conflictos de asignación (solicitud ya asignada con turno activo, etc.)
+    if (message.includes("ya tiene un turno activo") || message.includes("ya fue asignada")) {
       return NextResponse.json({ error: message }, { status: 409 });
     }
 

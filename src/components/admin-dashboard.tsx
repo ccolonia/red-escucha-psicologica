@@ -160,6 +160,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
   confirmed: { label: "Confirmado", variant: "default" },
   completed: { label: "Atendido", variant: "secondary" },
   cancelled: { label: "Cancelado", variant: "destructive" },
+  cancelled_by_professional: { label: "Cancelado por el Profesional", variant: "destructive" },
   absent: { label: "Ausente", variant: "outline" },
   rescheduled: { label: "Reprogramado", variant: "outline" },
 };
@@ -408,6 +409,7 @@ export function AdminAppointments() {
               <SelectItem value="confirmed">Confirmados</SelectItem>
               <SelectItem value="completed">Atendidos</SelectItem>
               <SelectItem value="cancelled">Cancelados</SelectItem>
+              <SelectItem value="cancelled_by_professional">Cancelados por Profesional</SelectItem>
               <SelectItem value="absent">Ausentes</SelectItem>
               <SelectItem value="rescheduled">Reprogramados</SelectItem>
             </SelectContent>
