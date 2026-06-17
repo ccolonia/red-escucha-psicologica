@@ -23,6 +23,8 @@ import {
   Monitor,
   MapPin,
   Users,
+  Zap,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -159,6 +161,11 @@ export function AdminTriage() {
   const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  // Buscando primer slot disponible (botón "Primer turno disponible")
+  const [findingNextSlot, setFindingNextSlot] = useState(false);
+  // Modo "asignar sin turno" — el profesional va a coordinar el turno
+  // directamente con el paciente. Deshabilita la validación de fecha/hora.
+  const [noSlotMode, setNoSlotMode] = useState(false);
 
   // Stats
   const pendingCount = requests.filter((r) => r.status === "pending").length;
@@ -242,6 +249,43 @@ export function AdminTriage() {
       setSelectedTime("");
     }
   }, [selectedProfessionalId, selectedDate]);
+
+  // Busca el primer slot disponible en los próximos 14 días para el
+  // profesional seleccionado. Si lo encuentra, setea la fecha y hora
+  // automáticamente. Útil cuando el admin quiere asignar rápido sin
+  // tener que revisar día por día.
+  const findNextAvailableSlot = async () => {
+    if (!selectedProfessionalId) return;
+    setFindingNextSlot(true);
+    try {
+      const res = await fetch(
+        `/api/professionals/${selectedProfessionalId}/next-available-slot`
+      );
+      const data = await res.json();
+      if (data.date) {
+        // Setear la fecha primero — el useEffect de arriba va a cargar
+        // los slots de ese día. Después de que carguen, seteamos la hora.
+        setSelectedDate(data.date);
+        // Pequeño timeout para que el useEffect corra primero
+        setTimeout(() => {
+          setSelectedTime(data.time);
+          setNoSlotMode(false);
+        }, 200);
+        toast.success(
+          `Primer turno disponible: ${data.date} ${data.time}-${data.endTime} hs`
+        );
+      } else {
+        toast.info(
+          "El profesional no tiene turnos disponibles en los próximos 14 días. " +
+          "Probá asignar sin turno inicial (el profesional coordinará con el paciente)."
+        );
+      }
+    } catch {
+      toast.error("Error al buscar próximo turno disponible");
+    } finally {
+      setFindingNextSlot(false);
+    }
+  };
 
   // Filter professionals by specialty matching the request's reason
   const getMatchingProfessionals = (request: PatientRequest) => {
@@ -404,6 +448,7 @@ export function AdminTriage() {
     setSelectedProfessionalId(professionalId || "");
     setSelectedDate("");
     setSelectedTime("");
+    setNoSlotMode(false);
     setAssignDialogOpen(true);
   };
 
@@ -965,8 +1010,75 @@ export function AdminTriage() {
                 </p>
               </div>
 
+              {/* Quick action: Primer turno disponible */}
+              {selectedProfessionalId && !noSlotMode && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-teal-300 text-teal-700 hover:bg-teal-50"
+                    disabled={findingNextSlot}
+                    onClick={findNextAvailableSlot}
+                  >
+                    {findingNextSlot ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-teal-300 border-t-teal-600 rounded-full animate-spin mr-1" />
+                        Buscando...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="mr-1 w-3.5 h-3.5" />
+                        Primer turno disponible
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-teal-600 hover:bg-teal-50"
+                    onClick={() => {
+                      setNoSlotMode(true);
+                      setSelectedDate("");
+                      setSelectedTime("");
+                      setAvailableSlots([]);
+                    }}
+                  >
+                    <Info className="mr-1 w-3.5 h-3.5" />
+                    Asignar sin turno
+                  </Button>
+                </div>
+              )}
+
+              {/* Aviso cuando noSlotMode está activo */}
+              {noSlotMode && (
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm text-amber-900 font-medium mb-1">
+                        Asignación sin turno inicial
+                      </p>
+                      <p className="text-xs text-amber-800">
+                        El paciente queda asociado al profesional, pero sin fecha ni hora.
+                        El profesional deberá coordinar el turno directamente con el paciente
+                        (por WhatsApp o email).
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setNoSlotMode(false)}
+                        className="text-xs text-amber-700 underline hover:text-amber-900 mt-2"
+                      >
+                        Cancelar y elegir fecha
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Date Selection */}
-              {selectedProfessionalId && (
+              {selectedProfessionalId && !noSlotMode && (
                 <div className="space-y-2">
                   <Label className="text-teal-700">Fecha</Label>
                   <Select
@@ -991,7 +1103,7 @@ export function AdminTriage() {
               )}
 
               {/* Time Selection */}
-              {selectedDate && (
+              {selectedDate && !noSlotMode && (
                 <div className="space-y-2">
                   <Label className="text-teal-700">Horario disponible</Label>
                   {loadingSlots ? (
@@ -1028,7 +1140,9 @@ export function AdminTriage() {
                 <Button
                   className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
                   disabled={
-                    assigning || !selectedProfessionalId
+                    assigning ||
+                    !selectedProfessionalId ||
+                    (!noSlotMode && (!selectedDate || !selectedTime))
                   }
                   onClick={handleAssign}
                 >
@@ -1036,6 +1150,11 @@ export function AdminTriage() {
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
                       Asignando...
+                    </>
+                  ) : noSlotMode ? (
+                    <>
+                      <UserCheck className="mr-2 w-4 h-4" />
+                      Asignar sin turno
                     </>
                   ) : (
                     <>
