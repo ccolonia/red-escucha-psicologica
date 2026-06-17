@@ -140,9 +140,27 @@ export function ProfessionalDashboard() {
               : "Turno cancelado"
           );
         }
+      } else {
+        // Manejo de error: el backend devolvió 4xx o 5xx
+        let errorMsg = `Error ${res.status} al actualizar el turno`;
+        try {
+          const data = await res.json();
+          if (data.error) errorMsg = data.error;
+        } catch {
+          // response sin body JSON
+        }
+        console.error("handleStatusUpdate error:", {
+          status: res.status,
+          statusText: res.statusText,
+          message: errorMsg,
+          appointmentId: id,
+          requestedStatus: status,
+        });
+        toast.error(errorMsg);
       }
-    } catch {
-      toast.error("Error al actualizar turno");
+    } catch (err) {
+      console.error("handleStatusUpdate network error:", err);
+      toast.error("Error de conexión al actualizar turno");
     }
   };
 
@@ -523,13 +541,38 @@ export function ProfessionalSchedule() {
         body: JSON.stringify({ status: "cancelled_by_professional" }),
       });
       if (res.ok) {
+        const data = await res.json();
         setAppointments((prev) =>
           prev.map((a) => (a.id === id ? { ...a, status: "cancelled_by_professional" } : a))
         );
-        toast.success("Turno cancelado. Se notificará al administrador para reasignar.");
+        // Toast con feedback de email (igual que handleStatusUpdate)
+        if (data.emailSent?.patient) {
+          toast.success("Turno cancelado. Se envió email al paciente.");
+        } else {
+          toast.warning(
+            "Turno cancelado. No se pudo enviar email al paciente — " +
+            "recomendamos contactarlo por WhatsApp manualmente."
+          );
+        }
+      } else {
+        let errorMsg = `Error ${res.status} al cancelar el turno`;
+        try {
+          const data = await res.json();
+          if (data.error) errorMsg = data.error;
+        } catch {
+          // response sin body JSON
+        }
+        console.error("handleCancel error:", {
+          status: res.status,
+          statusText: res.statusText,
+          message: errorMsg,
+          appointmentId: id,
+        });
+        toast.error(errorMsg);
       }
-    } catch {
-      toast.error("Error al cancelar");
+    } catch (err) {
+      console.error("handleCancel network error:", err);
+      toast.error("Error de conexión al cancelar turno");
     }
   };
 
@@ -859,7 +902,7 @@ export function ProfessionalSchedule() {
                                         "y el equipo de Red Escucha se encargará de reasignarlo con otro profesional."
                                       )
                                     ) {
-                                      handleStatusUpdate(apt.id, "cancelled_by_professional");
+                                      handleCancel(apt.id);
                                     }
                                   }}
                                 >
