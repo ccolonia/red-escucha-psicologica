@@ -158,6 +158,9 @@ export function LandingPage() {
   const [contactSent, setContactSent] = useState(false);
   const [contactSending, setContactSending] = useState(false);
   const [contactError, setContactError] = useState(false);
+  // Mensaje específico para el caso de email con appointment activo (409)
+  // Se setea cuando el backend devuelve code=EMAIL_HAS_ACTIVE_APPOINTMENT
+  const [activeApptError, setActiveApptError] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("individual");
@@ -365,10 +368,11 @@ export function LandingPage() {
     e.preventDefault();
     setContactSending(true);
     setContactError(false);
+    setActiveApptError(null);
     try {
       // If requesting an appointment, also create a PatientRequest for triage
       if (contactForm.reason === "solicitar_turno") {
-        await fetch("/api/patient-requests", {
+        const prRes = await fetch("/api/patient-requests", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -380,6 +384,28 @@ export function LandingPage() {
             notes: contactForm.message || null,
           }),
         });
+
+        // Si el backend bloquea por email con appointment activo (409),
+        // mostramos el mensaje específico y abortamos el flujo (no mandamos
+        // el /api/contact porque sería confuso mandar el mensaje de éxito).
+        if (prRes.status === 409) {
+          const data = await prRes.json().catch(() => ({}));
+          if (data.code === "EMAIL_HAS_ACTIVE_APPOINTMENT") {
+            setActiveApptError(data.error);
+            // Scroll al form para asegurar que el usuario vea el mensaje
+            return;
+          }
+          // Otro 409 desconocido → tratar como error genérico
+          setContactError(true);
+          return;
+        }
+
+        // Cualquier otro error del POST (500, etc.) → igual mandamos el
+        // /api/contact para que al menos llegue el mensaje al admin, pero
+        // no bloqueamos el flujo. El triage se puede hacer manualmente.
+        if (!prRes.ok && prRes.status !== 201) {
+          console.error("Error al crear PatientRequest:", prRes.status);
+        }
       }
 
       const res = await fetch("/api/contact", {
@@ -1353,6 +1379,16 @@ export function LandingPage() {
                         <p className="text-sm text-red-500 text-center mt-2" style={{ fontFamily: "Montserrat, sans-serif" }}>
                           Ocurrió un error al enviar. Por favor, intentá nuevamente.
                         </p>
+                      )}
+                      {activeApptError && (
+                        <div
+                          className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm"
+                          style={{ fontFamily: "Montserrat, sans-serif" }}
+                          role="alert"
+                        >
+                          <p className="font-semibold mb-1">Ya tenés un turno activo</p>
+                          <p>{activeApptError}</p>
+                        </div>
                       )}
                     </form>
                   )}

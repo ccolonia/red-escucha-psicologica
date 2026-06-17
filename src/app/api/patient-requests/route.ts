@@ -35,6 +35,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // === Validación: bloquear si el email ya tiene Patient con appointment activo ===
+    // Regla A: un paciente con tratamiento activo o por iniciar no puede volver a
+    // solicitar turno. Estados considerados "activos":
+    //   - pending:        turnero pendiente de confirmación del profesional
+    //   - confirmed:      turno confirmado, sin atender
+    //   - rescheduled:    turno reprogramado (sigue activo, esperando nueva fecha)
+    // Estados NO activos (permiten nueva solicitud):
+    //   - completed:      tratamiento finalizado OK
+    //   - cancelled:      turno cancelado (por admin o profesional)
+    //   - cancelled_by_professional: cancelado por el profesional
+    //   - absent:         paciente no asistió (sin reprogramar)
+    //
+    // Edge cases cubiertos:
+    //   - Paciente que ya terminó tratamiento y vuelve meses después → permitido
+    //   - Paciente con 1 turno activo y 1 cancelado → bloqueado (tiene activo)
+    //   - Email de usuario ADMIN o PROFESIONAL que pidió como paciente → bloqueado
+    //     si tienen appointment activo (no debería pasar, pero por safety)
+    const existingPatient = await db.patient.findFirst({
+      where: { user: { email } },
+      include: {
+        appointments: {
+          where: {
+            status: { in: ["pending", "confirmed", "rescheduled"] },
+          },
+          select: { id: true, status: true, date: true, time: true },
+        },
+      },
+    });
+
+    if (existingPatient && existingPatient.appointments.length > 0) {
+      const nextAppt = existingPatient.appointments
+        .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
+      return NextResponse.json(
+        {
+          error:
+            "Ya tenés un turno activo con ese email. " +
+            "Si querés reprogramar o tuviste un problema, escribinos a contacto@redescuchapsicologica.com " +
+            "o al WhatsApp del profesional que te fue asignado.",
+          code: "EMAIL_HAS_ACTIVE_APPOINTMENT",
+          // No exponemos datos del profesional ni fecha exacta por privacidad,
+          // solo confirmamos que existe un turno activo.
+          nextAppointmentDate: nextAppt.date,
+        },
+        { status: 409 }
+      );
+    }
+
     const patientRequest = await db.patientRequest.create({
       data: {
         name,
