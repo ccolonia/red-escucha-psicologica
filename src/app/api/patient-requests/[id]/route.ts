@@ -52,20 +52,38 @@ export async function PATCH(
         }
 
         // Regla: NO permitir reasignar si la PatientRequest ya está
-        // asignada Y tiene un appointment activo (pending, confirmed,
-        // rescheduled). SÍ permitir reasignar si:
+        // asignada Y tiene un appointment realmente activo (por iniciar
+        // o en curso). SÍ permitir reasignar si:
         //   - No está asignada (status !== "assigned")
-        //   - Está asignada pero el appointment fue cancelado (status en
-        //     ["cancelled", "cancelled_by_professional"]) — caso típico:
-        //     el profesional canceló y el admin quiere reasignar a otra
-        //     fecha o a otro profesional.
+        //   - Está asignada pero el appointment está en estado terminal
+        //     o cancelado: completed, cancelled, cancelled_by_professional,
+        //     absent, rescheduled (rescheduled requiere aclaración abajo)
         //   - Está asignada pero no tiene appointment asociado (caso muy
         //     raro, defensivo).
+        //
+        // Estados considerados ACTIVOS (bloquean reasignación):
+        //   - pending:    pendiente de confirmación del profesional
+        //   - confirmed:  turno confirmado, sin atender
+        //
+        // Estados considerados TERMINALES o CANCELADOS (permiten reasignación):
+        //   - completed:                 turno atendido, tratamiento hecho
+        //   - absent:                    paciente no asistió
+        //   - cancelled:                 cancelado (por admin o sistema)
+        //   - cancelled_by_professional: cancelado por el profesional
+        //   - rescheduled:               el profesional marcó que hay que
+        //     reprogramar — semánticamente "requiere acción del admin",
+        //     permitir reasignar tiene sentido.
+        //
+        // Bug previo: esta lista incluía 'rescheduled' como activo, lo que
+        // bloqueaba reasignar turnos que el profesional ya había marcado
+        // como 'reprogramar'. También include 'completed' y 'absent' por
+        // error en una versión intermedia. Ahora solo bloquea con
+        // pending/confirmed.
         if (existingRequest.status === "assigned") {
           const appt = existingRequest.appointment;
           const hasActiveAppointment =
             appt &&
-            !["cancelled", "cancelled_by_professional"].includes(appt.status);
+            ["pending", "confirmed"].includes(appt.status);
 
           if (hasActiveAppointment) {
             throw new Error(
@@ -74,8 +92,8 @@ export async function PATCH(
               `Si necesitás reasignar, primero cancelá el turno actual desde el panel del profesional o del admin.`
             );
           }
-          // Si llegamos acá: está asignada pero el appointment fue
-          // cancelado → permitimos reasignar (reasignación).
+          // Si llegamos acá: está asignada pero el appointment está en
+          // estado terminal o cancelado → permitimos reasignar.
         }
 
         // 1. Find or create patient
