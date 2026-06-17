@@ -103,31 +103,43 @@ export function ProfessionalDashboard() {
   const handleStatusUpdate = async (
     id: string,
     status: string,
-    notes?: string
+    notes?: string,
+    cancellationReason?: string
   ) => {
     try {
       const res = await fetch(`/api/appointments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, notes }),
+        body: JSON.stringify({ status, notes, cancellationReason }),
       });
       if (res.ok) {
+        const data = await res.json();
         setAppointments((prev) =>
           prev.map((a) => (a.id === id ? { ...a, status, notes: notes || a.notes } : a))
         );
-        toast.success(
-          status === "confirmed"
-            ? "Turno confirmado"
-            : status === "completed"
-            ? "Turno marcado como Atendido"
-            : status === "absent"
-            ? "Turno marcado como Ausente"
-            : status === "rescheduled"
-            ? "Turno marcado como Reprogramado"
-            : status === "cancelled_by_professional"
-            ? "Turno cancelado. Se notificará al administrador."
-            : "Turno cancelado"
-        );
+        // Toast específico para cancelled_by_professional con feedback de email
+        if (status === "cancelled_by_professional") {
+          if (data.emailSent?.patient) {
+            toast.success("Turno cancelado. Se envió email al paciente.");
+          } else {
+            toast.warning(
+              "Turno cancelado. No se pudo enviar email al paciente — " +
+              "recomendamos contactarlo por WhatsApp manualmente."
+            );
+          }
+        } else {
+          toast.success(
+            status === "confirmed"
+              ? "Turno confirmado"
+              : status === "completed"
+              ? "Turno marcado como Atendido"
+              : status === "absent"
+              ? "Turno marcado como Ausente"
+              : status === "rescheduled"
+              ? "Turno marcado como Reprogramado"
+              : "Turno cancelado"
+          );
+        }
       }
     } catch {
       toast.error("Error al actualizar turno");

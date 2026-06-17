@@ -1277,3 +1277,112 @@ export async function sendTriagePatientNotification({
     return { data: null, error: err };
   }
 }
+
+// ---- Cancellation by Professional ----
+// Se dispara cuando un profesional cancela un turno confirmado o pendiente.
+// El appointment queda en estado 'cancelled_by_professional' (intermedio)
+// hasta que el admin decida reasignar a otro profesional o cancelarlo
+// definitivamente. El email le avisa al paciente que el profesional tuvo
+// que cancelar y que el equipo de Red Escucha se va a comunicar para
+// reasignarlo.
+
+interface SendCancellationByProfessionalEmailParams {
+  patientEmail: string;
+  patientName: string;
+  professionalName: string;
+  date: string | null;
+  time: string | null;
+  timeEnd?: string | null;
+  reason?: string | null; // motivo opcional que el profesional puede escribir
+  modality: string;
+}
+
+export async function sendCancellationByProfessionalEmail({
+  patientEmail,
+  patientName,
+  professionalName,
+  date,
+  time,
+  timeEnd,
+  reason,
+  modality,
+}: SendCancellationByProfessionalEmailParams) {
+  try {
+    const resend = getResend();
+    const modalityLabel = MODALITY_EMAIL_MAP[modality] || modality;
+    const timeDisplay = date && time
+      ? timeEnd
+        ? `${date} de ${time} a ${timeEnd} hs`
+        : `${date} a las ${time} hs`
+      : "";
+    const appointmentInfo = timeDisplay
+      ? `<div class="field"><div class="label">Turno cancelado</div><div class="value" style="font-weight:600;">${timeDisplay}</div></div>`
+      : "";
+    const reasonInfo = reason
+      ? `<div class="field"><div class="label">Motivo</div><div class="value">${reason}</div></div>`
+      : "";
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [patientEmail],
+      subject: "Tu turno fue cancelado por el profesional - Red Escucha Psicológica",
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f0e8;color:#2d3b2d;">
+          <div style="max-width:600px;margin:0 auto;padding:20px;">
+            <div class="card" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+              <div class="header" style="background:linear-gradient(135deg,#8a3d3d 0%,#6d2828 100%);padding:30px;text-align:center;">
+                <h1 style="color:#f5e0e0;margin:0;font-size:22px;font-weight:700;">Turno cancelado</h1>
+                <p class="subtitle" style="color:#e8c0c0;margin-top:6px;font-size:13px;">Te avisamos sobre una cancelación</p>
+              </div>
+              <div style="padding:30px;">
+                <p style="font-size:16px;font-weight:600;color:#2d3b2d;margin-bottom:16px;">Hola, ${patientName}:</p>
+                <p style="font-size:15px;color:#4a5a4a;margin-bottom:20px;">
+                  Lamentamos informarte que <strong>${professionalName}</strong> tuvo que cancelar tu turno programado.
+                  Entendemos que esto puede ser una molestia y pedimos disculpas por los inconvenientes.
+                </p>
+                <div class="highlight" style="background:#faf7f2;border-radius:12px;padding:20px;margin:20px 0;">
+                  ${appointmentInfo}
+                  ${reasonInfo}
+                  <div class="field">
+                    <div class="label" style="font-size:12px;color:#8a7a6a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Modalidad</div>
+                    <div class="value" style="font-size:15px;color:#2d3b2d;">${modalityLabel}</div>
+                  </div>
+                </div>
+                <p style="font-size:15px;color:#4a5a4a;margin-top:20px;">
+                  <strong>¿Qué pasa ahora?</strong> Nuestro equipo de Red Escucha Psicológica se va a comunicar con vos
+                  a la brevedad para reasignarte con otro profesional disponible que se ajuste a tus necesidades.
+                  Si preferís contactarnos vos, podés escribir a
+                  <a href="mailto:contacto@redescuchapsicologica.com" style="color:#6a8a6a;">contacto@redescuchapsicologica.com</a>
+                  o respondiendo este email.
+                </p>
+                <p style="font-size:14px;color:#4a5a4a;margin-top:16px;">
+                  Gracias por tu comprensión y confianza.
+                </p>
+              </div>
+              <div class="footer" style="background:#f5f0e8;padding:20px 30px;text-align:center;font-size:12px;color:#8a7a6a;">
+                Red Escucha Psicológica<br>
+                <a href="mailto:contacto@redescuchapsicologica.com" style="color:#8a7a6a;">contacto@redescuchapsicologica.com</a>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending cancellation by professional email:", error);
+      return { data: null, error };
+    }
+    return { data, error: null };
+  } catch (err) {
+    console.error("Error sending cancellation by professional email:", err);
+    return { data: null, error: err };
+  }
+}
