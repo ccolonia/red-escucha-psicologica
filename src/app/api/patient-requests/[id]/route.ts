@@ -75,6 +75,7 @@ export async function PATCH(
           if (existingUser) {
             patient = await tx.patient.findUnique({
               where: { userId: existingUser.id },
+              include: { user: true },
             });
           }
         }
@@ -102,6 +103,7 @@ export async function PATCH(
               userId: newUser.id,
               notes: `Creado desde solicitud de triage`,
             },
+            include: { user: true },
           });
         }
 
