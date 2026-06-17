@@ -39,7 +39,65 @@ export async function GET(req: NextRequest) {
     orderBy: [{ year: "desc" }, { month: "desc" }],
   });
 
-  // CSV export
+  // Best-effort match: para cada sesión, intentar resolver el contacto
+  // (email + phone) del paciente a partir del nombre. Como AttendanceSession
+  // guarda patientName como string libre (sin FK a Patient), hacemos match
+  // por nombre exacto (case-insensitive) contra pacientes que tengan al
+  // menos un appointment con el profesional de la planilla.
+  //
+  // Reglas:
+  //   - 0 matches  → patientEmail=null, patientPhone=null
+  //   - 1 match    → patientEmail/phone del User del Patient
+  //   - 2+ matches (mismo nombre para el mismo profesional) → ambiguous → null
+  //   - El CSV export NO se toca (mantener formato original)
+  const allProfessionalIds = [...new Set(sheets.map(s => s.professionalId))];
+  // Map<professionalId, Map<normalizedName, {email, phone} | null>>
+  // null dentro del inner map = ambiguo
+  const contactMap = new Map<string, Map<string, { email: string; phone: string | null } | null>>();
+
+  if (allProfessionalIds.length > 0) {
+    const patients = await db.patient.findMany({
+      where: {
+        appointments: { some: { professionalId: { in: allProfessionalIds } } },
+      },
+      include: {
+        user: { select: { name: true, email: true, phone: true } },
+        appointments: {
+          where: { professionalId: { in: allProfessionalIds } },
+          select: { professionalId: true },
+        },
+      },
+    });
+
+    for (const p of patients) {
+      const normalizedName = p.user.name.trim().toLowerCase();
+      const profIds = new Set(p.appointments.map(a => a.professionalId));
+      for (const profId of profIds) {
+        if (!contactMap.has(profId)) contactMap.set(profId, new Map());
+        const inner = contactMap.get(profId)!;
+        if (inner.has(normalizedName)) {
+          // Ya hay otro paciente con el mismo nombre para este profesional → ambiguo
+          inner.set(normalizedName, null);
+        } else {
+          inner.set(normalizedName, { email: p.user.email, phone: p.user.phone });
+        }
+      }
+    }
+  }
+
+  // Función helper para enriquecer una sesión con contacto del paciente
+  const enrichSession = (s: any, professionalId: string) => {
+    const inner = contactMap.get(professionalId);
+    const normalizedName = (s.patientName || "").trim().toLowerCase();
+    const match = inner?.get(normalizedName);
+    return {
+      ...s,
+      patientEmail: match?.email ?? null,
+      patientPhone: match?.phone ?? null,
+    };
+  };
+
+  // CSV export (no se enriquece con contacto — mantener formato original)
   if (csv === "1" && targetProfessionalId && month && year) {
     const sheet = sheets[0];
     if (!sheet) return NextResponse.json({ error: "Planilla no encontrada" }, { status: 404 });
@@ -87,7 +145,13 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  return NextResponse.json(sheets);
+  // JSON response: enriquecer cada sesión con patientEmail y patientPhone
+  const enrichedSheets = sheets.map(sheet => ({
+    ...sheet,
+    sessions: sheet.sessions.map(s => enrichSession(s, sheet.professionalId)),
+  }));
+
+  return NextResponse.json(enrichedSheets);
 }
 
 // POST /api/attendance-sheets — create or update a sheet with sessions

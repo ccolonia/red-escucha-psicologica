@@ -14,6 +14,8 @@ import {
   DollarSign,
   Stethoscope,
   Users,
+  MessageCircle,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +38,10 @@ interface SessionRow {
   id: string;
   date: string;
   patientName: string;
+  // Best-effort match contra Patient.user por nombre (puede ser null si no
+  // hay match exacto o si el nombre es ambiguo)
+  patientEmail: string | null;
+  patientPhone: string | null;
   mode: string;
   treatmentStartDate: string | null;
   frequency: string | null;
@@ -406,7 +412,36 @@ export function AdminPlanilla() {
                             } ${s.suspendedTreatment ? "bg-amber-50/30" : ""}`}
                           >
                             <td className="px-2 py-1.5 text-sm text-teal-800">{formatDisplayDate(s.date)}</td>
-                            <td className="px-2 py-1.5 text-sm font-medium text-teal-900">{s.patientName}</td>
+                            <td className="px-2 py-1.5 text-sm text-teal-900">
+                              <div className="font-medium">{s.patientName}</div>
+                              {/* Contacto rápido: WhatsApp + Email (best-effort match por nombre) */}
+                              {(s.patientPhone || s.patientEmail) && (
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                                  {s.patientPhone && (
+                                    <a
+                                      href={`https://wa.me/${s.patientPhone.replace(/[^0-9]/g, "")}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 hover:underline transition-colors"
+                                      title={`Enviar WhatsApp a ${s.patientName}`}
+                                    >
+                                      <MessageCircle className="w-3 h-3 text-emerald-500" />
+                                      {s.patientPhone}
+                                    </a>
+                                  )}
+                                  {s.patientEmail && (
+                                    <a
+                                      href={`mailto:${s.patientEmail}`}
+                                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-700 hover:underline transition-colors"
+                                      title={`Enviar email a ${s.patientName}`}
+                                    >
+                                      <Mail className="w-3 h-3 text-teal-500" />
+                                      {s.patientEmail}
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                            </td>
                             <td className="px-2 py-1.5 text-center">
                               <Badge variant="outline" className="text-xs">
                                 {s.mode === "P" ? "Presencial" : "Online"}
@@ -459,6 +494,33 @@ export function AdminPlanilla() {
                         </Badge>
                         <span className="text-teal-700 shrink-0">{formatDisplayDate(s.date)}</span>
                         <span className="text-teal-900 font-medium shrink-0">{s.patientName}</span>
+                        {/* Contacto rápido: WhatsApp + Email (best-effort match por nombre) */}
+                        {(s.patientPhone || s.patientEmail) && (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 shrink-0">
+                            {s.patientPhone && (
+                              <a
+                                href={`https://wa.me/${s.patientPhone.replace(/[^0-9]/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 hover:underline transition-colors"
+                                title={`Enviar WhatsApp a ${s.patientName}`}
+                              >
+                                <MessageCircle className="w-3 h-3 text-emerald-500" />
+                                {s.patientPhone}
+                              </a>
+                            )}
+                            {s.patientEmail && (
+                              <a
+                                href={`mailto:${s.patientEmail}`}
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-700 hover:underline transition-colors"
+                                title={`Enviar email a ${s.patientName}`}
+                              >
+                                <Mail className="w-3 h-3 text-teal-500" />
+                                {s.patientEmail}
+                              </a>
+                            )}
+                          </div>
+                        )}
                         <span className="text-teal-500">{s.absentReason || "Sin motivo"}</span>
                       </div>
                     ))}
