@@ -11,6 +11,7 @@ import {
   Stethoscope,
   Mail,
   Phone,
+  MessageCircle,
   MessageSquare,
   ChevronDown,
   ChevronUp,
@@ -587,18 +588,38 @@ export function AdminTriage() {
                               {MODALITY_LABELS[req.modality] || req.modality}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-4 mt-1 text-sm text-teal-600">
-                            <span className="flex items-center gap-1">
-                              <Mail className="w-3.5 h-3.5" />
-                              {req.email}
-                            </span>
-                            {req.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="w-3.5 h-3.5" />
-                                {req.phone}
-                              </span>
-                            )}
-                          </div>
+                          {/* Contacto rápido: WhatsApp + Email */}
+                          {(req.phone || req.email) && (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                              {req.phone && (
+                                <a
+                                  href={`https://wa.me/${req.phone.replace(/[^0-9]/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 hover:underline transition-colors"
+                                  title={`Enviar WhatsApp a ${req.name}`}
+                                >
+                                  <MessageCircle className="w-3 h-3 text-emerald-500" />
+                                  {req.phone}
+                                </a>
+                              )}
+                              {req.email && (
+                                <a
+                                  href={`mailto:${req.email}`}
+                                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-700 hover:underline transition-colors"
+                                  title={`Enviar email a ${req.name}`}
+                                >
+                                  <Mail className="w-3 h-3 text-teal-500" />
+                                  {req.email}
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {!req.phone && !req.email && (
+                            <p className="text-xs text-teal-400 italic mt-1">
+                              Sin datos de contacto
+                            </p>
+                          )}
                           <div className="flex items-center gap-2 mt-1 text-sm">
                             <span className="text-teal-500">
                               {REASON_LABELS[req.reason] || req.reason}
@@ -847,7 +868,38 @@ export function AdminTriage() {
                 <p className="font-medium text-teal-900">
                   {selectedRequest.name}
                 </p>
-                <p className="text-sm text-teal-600">{selectedRequest.email}</p>
+                {/* Contacto rápido: WhatsApp + Email */}
+                {(selectedRequest.phone || selectedRequest.email) && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                    {selectedRequest.phone && (
+                      <a
+                        href={`https://wa.me/${selectedRequest.phone.replace(/[^0-9]/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 hover:underline transition-colors"
+                        title={`Enviar WhatsApp a ${selectedRequest.name}`}
+                      >
+                        <MessageCircle className="w-3 h-3 text-emerald-500" />
+                        {selectedRequest.phone}
+                      </a>
+                    )}
+                    {selectedRequest.email && (
+                      <a
+                        href={`mailto:${selectedRequest.email}`}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-700 hover:underline transition-colors"
+                        title={`Enviar email a ${selectedRequest.name}`}
+                      >
+                        <Mail className="w-3 h-3 text-teal-500" />
+                        {selectedRequest.email}
+                      </a>
+                    )}
+                  </div>
+                )}
+                {!selectedRequest.phone && !selectedRequest.email && (
+                  <p className="text-xs text-teal-400 italic mt-1">
+                    Sin datos de contacto
+                  </p>
+                )}
                 <div className="flex gap-2 mt-1">
                   <Badge variant="outline" className="text-xs">
                     {MODALITY_LABELS[selectedRequest.modality] ||
