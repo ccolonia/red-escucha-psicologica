@@ -144,10 +144,14 @@ export async function PATCH(
         return result;
       });
 
-      // Send notification emails (non-blocking — don't fail the assignment if email fails)
+      // Send notification emails (capture results to report back to admin UI)
+      // Ya no es fire-and-forget: esperamos ambos envíos y devolvemos el estado
+      // en `emailSent` para que el frontend pueda mostrar un toast informativo
+      // si algún email falló (la asignación igualmente se completó OK).
       const patientRequest = await db.patientRequest.findUnique({
         where: { id },
       });
+      const emailSent = { professional: false, patient: false };
       if (patientRequest && updated.assignedTo) {
         // Calculate timeEnd from schedule slotDuration
         let timeEnd: string | null = null;
@@ -155,7 +159,7 @@ export async function PATCH(
         if (time) {
           // Try to get the professional's schedule to compute endTime
           const [hours, minutes] = time.split(":").map(Number);
-          const professional = await db.professional.findUnique({
+          const professionalWithSchedule = await db.professional.findUnique({
             where: { id: professionalId },
             include: {
               schedules: {
@@ -165,41 +169,53 @@ export async function PATCH(
               },
             },
           });
-          const slotDuration = professional?.schedules?.[0]?.slotDuration || 45;
+          const slotDuration = professionalWithSchedule?.schedules?.[0]?.slotDuration || 45;
           timeEnd = `${String(hours + Math.floor((minutes + slotDuration) / 60)).padStart(2, "0")}:${String((minutes + slotDuration) % 60).padStart(2, "0")}`;
-          officeAddress = professional?.officeAddress || null;
+          officeAddress = professionalWithSchedule?.officeAddress || null;
         }
 
-        sendTriageProfessionalNotification({
-          professionalEmail: updated.assignedTo.user.email,
-          professionalName: updated.assignedTo.user.name,
-          patientName: patientRequest.name,
-          patientPhone: patientRequest.phone,
-          modality: patientRequest.modality,
-          date: date || null,
-          time: time || null,
-          timeEnd,
-          reason: patientRequest.reason,
-          officeAddress,
-        }).catch((err) =>
-          console.error("Failed to send professional triage email:", err)
-        );
+        try {
+          const profResult = await sendTriageProfessionalNotification({
+            professionalEmail: updated.assignedTo.user.email,
+            professionalName: updated.assignedTo.user.name,
+            patientName: patientRequest.name,
+            patientPhone: patientRequest.phone,
+            modality: patientRequest.modality,
+            date: date || null,
+            time: time || null,
+            timeEnd,
+            reason: patientRequest.reason,
+            officeAddress,
+          });
+          emailSent.professional = !profResult.error;
+          if (profResult.error) {
+            console.error("Failed to send professional triage email:", profResult.error);
+          }
+        } catch (err) {
+          console.error("Failed to send professional triage email:", err);
+        }
 
-        sendTriagePatientNotification({
-          patientEmail: patientRequest.email,
-          patientName: patientRequest.name,
-          professionalName: updated.assignedTo.user.name,
-          modality: patientRequest.modality,
-          date: date || null,
-          time: time || null,
-          timeEnd,
-          officeAddress,
-        }).catch((err) =>
-          console.error("Failed to send patient triage email:", err)
-        );
+        try {
+          const patientResult = await sendTriagePatientNotification({
+            patientEmail: patientRequest.email,
+            patientName: patientRequest.name,
+            professionalName: updated.assignedTo.user.name,
+            modality: patientRequest.modality,
+            date: date || null,
+            time: time || null,
+            timeEnd,
+            officeAddress,
+          });
+          emailSent.patient = !patientResult.error;
+          if (patientResult.error) {
+            console.error("Failed to send patient triage email:", patientResult.error);
+          }
+        } catch (err) {
+          console.error("Failed to send patient triage email:", err);
+        }
       }
 
-      return NextResponse.json(updated);
+      return NextResponse.json({ ...updated, emailSent });
     }
 
     // Simple status change

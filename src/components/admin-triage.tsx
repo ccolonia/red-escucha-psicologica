@@ -328,9 +328,29 @@ export function AdminTriage() {
         throw new Error(data.error || "Error al asignar");
       }
 
+      const data = await res.json();
       toast.success(
         `Solicitud asignada a ${professional?.user.name || "profesional"}`
       );
+
+      // Aviso al admin si algún email de notificación falló (no es error,
+      // la asignación se completó OK). Las causas más comunes son:
+      //   - EMAIL_FROM no configurada en Vercel → Resend cae al sandbox y
+      //     descarta los emails a pacientes/profesionales
+      //   - RESEND_API_KEY inválida o expirada
+      //   - Dominio no verificado en Resend
+      if (data.emailSent) {
+        const failed: string[] = [];
+        if (!data.emailSent.professional) failed.push("al profesional");
+        if (!data.emailSent.patient) failed.push("al paciente");
+        if (failed.length > 0) {
+          toast.warning(
+            `Asignación OK, pero no se pudo enviar email ${failed.join(" ni ")}. ` +
+            "Revisá EMAIL_FROM y RESEND_API_KEY en Vercel."
+          );
+        }
+      }
+
       setAssignDialogOpen(false);
       setSelectedRequest(null);
       setSelectedProfessionalId("");

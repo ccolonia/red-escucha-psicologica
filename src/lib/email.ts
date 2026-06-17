@@ -3,10 +3,21 @@ import { db } from "@/lib/db";
 import crypto from "crypto";
 
 // Lazy initialization to avoid build-time errors when API key is not set
-function getResend() {
+export function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     throw new Error("RESEND_API_KEY no está configurada. Agregala en las variables de entorno de Vercel.");
+  }
+  // Hardening: en producción, EMAIL_FROM debe estar seteada explícitamente.
+  // Sin ella, Resend cae al sandbox (onboarding@resend.dev) que SÓLO entrega
+  // al owner de la cuenta — los emails a pacientes/profesionales se descartan
+  // silenciosamente. Lanzamos error acá para que el fallo sea ruidoso en logs.
+  // En development mantenemos el fallback para conveniencia local.
+  if (process.env.NODE_ENV === "production" && !process.env.EMAIL_FROM) {
+    throw new Error(
+      "EMAIL_FROM no está configurada en producción. Agregala en las variables de entorno de Vercel. " +
+      "Formato sugerido: 'Red Escucha Psicológica <noreply@redescuchapsicologica.com>'"
+    );
   }
   return new Resend(apiKey);
 }
@@ -22,6 +33,7 @@ const APP_URL = process.env.EMAIL_APP_URL
 // For production: set EMAIL_FROM="Red Escucha Psicológica <noreply@redescuchapsicologica.com>"
 // For development: falls back to Resend's sandbox sender
 const FROM_EMAIL = process.env.EMAIL_FROM || "Red Escucha Psicológica <onboarding@resend.dev>";
+export { FROM_EMAIL };
 
 interface SendApprovalEmailParams {
   userEmail: string;
