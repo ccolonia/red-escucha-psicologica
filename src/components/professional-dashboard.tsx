@@ -40,6 +40,9 @@ interface Appointment {
   id: string;
   date: string;
   time: string;
+  // timeEnd calculado por el backend según slotDuration del schedule del
+  // profesional para ese día de la semana. Default 45 min si no hay schedule.
+  timeEnd?: string;
   status: string;
   reason: string | null;
   notes: string | null;
@@ -56,6 +59,22 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
   absent: { label: "Ausente", variant: "outline" },
   rescheduled: { label: "Reprogramado", variant: "outline" },
 };
+
+// Helper de módulo: formatear rango horario "HH:MM a HH:MM hs" usando el
+// timeEnd que calcula el backend según slotDuration del schedule del
+// profesional para ese día. Si no viene timeEnd (fallback), 45 min default.
+function formatTimeRange(time: string, timeEnd?: string): string {
+  if (timeEnd) {
+    return `${time} a ${timeEnd} hs`;
+  }
+  const [h, m] = time.split(":").map(Number);
+  const duration = 45;
+  const totalMinutes = h * 60 + m + duration;
+  const endH = Math.floor(totalMinutes / 60);
+  const endM = totalMinutes % 60;
+  const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+  return `${time} a ${endTime} hs`;
+}
 
 export function ProfessionalDashboard() {
   const { data: session } = useSession();
@@ -226,7 +245,7 @@ export function ProfessionalDashboard() {
                             </p>
                           )}
                           <p className="text-sm text-teal-600">
-                            {apt.time} hs
+                            {formatTimeRange(apt.time, apt.timeEnd)}
                           </p>
                           {apt.reason && (
                             <p className="text-sm text-teal-500 mt-1">
@@ -364,7 +383,7 @@ export function ProfessionalDashboard() {
                           </p>
                         )}
                         <p className="text-sm text-teal-600">
-                          {apt.date} • {apt.time} hs
+                          {apt.date} • {formatTimeRange(apt.time, apt.timeEnd)}
                         </p>
                         {apt.reason && (
                           <p className="text-sm text-teal-500">{apt.reason}</p>
@@ -520,14 +539,9 @@ export function ProfessionalSchedule() {
       return acc;
     }, {});
 
-  // Helper: compute endTime from startTime + default 45min slot
-  const getTimeRange = (time: string): string => {
-    const [h, m] = time.split(":").map(Number);
-    const duration = 45; // Default slot duration
-    const endH = h + Math.floor((m + duration) / 60);
-    const endM = (m + duration) % 60;
-    const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
-    return `${time} a ${endTime} hs`;
+  // Helper: formatear rango horario — delega a formatTimeRange de módulo
+  const getTimeRange = (time: string, timeEnd?: string): string => {
+    return formatTimeRange(time, timeEnd);
   };
 
   // Helper: format date nicely in Spanish
@@ -612,7 +626,7 @@ export function ProfessionalSchedule() {
                             </div>
                             <div>
                               <p className="text-sm text-teal-600">
-                                {getTimeRange(apt.time)}
+                                {getTimeRange(apt.time, apt.timeEnd)}
                               </p>
                               <p className="text-sm font-semibold text-teal-900">
                                 {apt.patient.user.name}

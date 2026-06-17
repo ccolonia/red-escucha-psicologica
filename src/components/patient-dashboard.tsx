@@ -46,6 +46,9 @@ interface Appointment {
   id: string;
   date: string;
   time: string;
+  // timeEnd calculado por el backend según slotDuration del schedule del
+  // profesional para ese día de la semana. Default 45 min si no hay schedule.
+  timeEnd?: string;
   status: string;
   reason: string | null;
   professional: { user: { name: string }; specialty: string };
@@ -644,7 +647,7 @@ export function PatientDashboard() {
                         {apt.professional.user.name}
                       </p>
                       <p className="text-sm text-teal-600">
-                        {apt.date} • {apt.time} hs
+                        {apt.date} • {apt.timeEnd ? `${apt.time} a ${apt.timeEnd} hs` : `${apt.time} hs`}
                       </p>
                     </div>
                   </div>
@@ -717,7 +720,7 @@ export function PatientDashboard() {
                         {apt.professional.user.name}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {apt.date} • {apt.time} hs
+                        {apt.date} • {apt.timeEnd ? `${apt.time} a ${apt.timeEnd} hs` : `${apt.time} hs`}
                         {apt.reason ? ` — ${apt.reason}` : ""}
                       </p>
                     </div>
@@ -1041,7 +1044,7 @@ export function PatientAppointments() {
                       {apt.professional.specialty}
                     </p>
                     <p className="text-sm text-teal-500">
-                      {apt.date} • {apt.time} hs
+                      {apt.date} • {apt.timeEnd ? `${apt.time} a ${apt.timeEnd} hs` : `${apt.time} hs`}
                     </p>
                     {apt.reason && (
                       <p className="text-sm text-teal-400 mt-1">

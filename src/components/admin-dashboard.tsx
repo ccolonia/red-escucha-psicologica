@@ -107,6 +107,9 @@ interface Appointment {
   id: string;
   date: string;
   time: string;
+  // timeEnd calculado por el backend según slotDuration del schedule del
+  // profesional para ese día de la semana. Default 45 min si no hay schedule.
+  timeEnd?: string;
   status: string;
   reason: string | null;
   createdAt: string;
@@ -440,7 +443,7 @@ export function AdminAppointments() {
                       {apt.professional.specialty}
                     </p>
                     <p className="text-sm text-teal-500">
-                      {apt.date} • {apt.time} hs
+                      {apt.date} • {apt.timeEnd ? `${apt.time} a ${apt.timeEnd} hs` : `${apt.time} hs`}
                     </p>
                     {apt.createdAt && (
                       <p className="text-xs text-teal-400 mt-0.5">
