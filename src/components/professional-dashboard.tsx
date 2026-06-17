@@ -329,6 +329,25 @@ export function ProfessionalDashboard() {
                           <Calendar className="mr-1 w-3 h-3" />
                           Reprogramado
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                "¿Confirmar cancelación del turno?\n\n" +
+                                "Se enviará un email al paciente avisándole de la cancelación, " +
+                                "y el equipo de Red Escucha se encargará de reasignarlo con otro profesional."
+                              )
+                            ) {
+                              handleStatusUpdate(apt.id, "cancelled_by_professional");
+                            }
+                          }}
+                        >
+                          <XCircle className="mr-1 w-3 h-3" />
+                          Cancelar
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -827,6 +846,25 @@ export function ProfessionalSchedule() {
                                 >
                                   <Calendar className="mr-1 w-3 h-3" />
                                   Reprogramado
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        "¿Confirmar cancelación del turno?\n\n" +
+                                        "Se enviará un email al paciente avisándole de la cancelación, " +
+                                        "y el equipo de Red Escucha se encargará de reasignarlo con otro profesional."
+                                      )
+                                    ) {
+                                      handleStatusUpdate(apt.id, "cancelled_by_professional");
+                                    }
+                                  }}
+                                >
+                                  <XCircle className="mr-1 w-3 h-3" />
+                                  Cancelar
                                 </Button>
                               </div>
                             )}
