@@ -107,6 +107,27 @@ export async function PATCH(
           });
         }
 
+        // 2b. Si el Patient ya existía pero el nombre del formulario de
+        // solicitud es distinto al del User, actualizamos el User.name
+        // para que profesional y admin vean el nombre más reciente.
+        // Caso típico: paciente "Test turno" vuelve a solicitar turno
+        // poniéndose el nombre "Paciente test" → sin esto, todas las
+        // tarjetas de turnos del profesional seguirían mostrando "Test
+        // turno" porque appointment.patient.user.name no se actualiza.
+        const newName = body.patientName || existingRequest.name;
+        if (patient && newName && patient.user.name !== newName) {
+          await tx.user.update({
+            where: { id: patient.userId },
+            data: { name: newName },
+          });
+          // Refresh para que el return del transaction y los emails
+          // usen el nombre actualizado
+          patient = await tx.patient.findUnique({
+            where: { id: patient.id },
+            include: { user: true },
+          });
+        }
+
         // 3. Create appointment if date and time provided
         let appointmentId: string | null = null;
         if (date && time && patient) {
