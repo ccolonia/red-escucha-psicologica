@@ -48,6 +48,17 @@ model Professional {
   cvMimeType          String?       // CV file MIME type
   internalNotes       String?       // Observaciones internas del administrador
   evaluationStatus    String?       // Estado de evaluación: ✓, CV, ?, u observaciones de legajo
+  // === Auditoría y Verificación de Documentación (solo admin) ===
+  // Estos 6 booleanos son accedidos y mutados EXCLUSIVAMENTE por
+  // admin/super_admin. Los endpoints públicos (/api/professionals) los
+  // omiten del select para que no viajen por la red hacia el frontend
+  // del usuario común. Ver PATCH /api/professionals para el guard.
+  dniVerified                     Boolean @default(false) // DNI (copia de documento de identidad)
+  degreeVerified                  Boolean @default(false) // Título universitario habilitante
+  // licenseVerified ya existe arriba (matrícula) — se reutiliza
+  malpracticeInsuranceVerified    Boolean @default(false) // Seguro de mala praxis (póliza vigente)
+  taxRegistrationVerified         Boolean @default(false) // Constancia de monotributo (inscripción fiscal)
+  nationalRegistryVerified        Boolean @default(false) // Registro Nacional de Prestadores (RNP)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)

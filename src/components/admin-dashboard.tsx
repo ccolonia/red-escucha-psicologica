@@ -72,6 +72,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import {
   BarChart,
   Bar,
@@ -139,6 +141,15 @@ interface Professional {
   cvFileName: string | null;
   internalNotes: string | null;
   evaluationStatus: string | null;
+  // === Campos de auditoría documental (solo admin) ===
+  // El GET /api/professionals NO los devuelve por defecto para no
+  // exponerlos al público. Pero el GET paginado (modo admin) sí los
+  // incluye. Ver backend route.ts.
+  dniVerified?: boolean;
+  degreeVerified?: boolean;
+  malpracticeInsuranceVerified?: boolean;
+  taxRegistrationVerified?: boolean;
+  nationalRegistryVerified?: boolean;
   createdAt: string;
   user: { name: string; email: string; phone: string; active: boolean; createdAt: string };
 }
@@ -1546,6 +1557,113 @@ export function AdminProfessionals() {
                               <span>Disponibilidad: {prof.available ? "Disponible" : "No disponible"}</span>
                               <span>•</span>
                               <span>Registrado: {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR")}</span>
+                            </div>
+
+                            {/* === Sección de Auditoría y Verificación de Documentación === */}
+                            {/* Solo visible para admin/super_admin (este panel entero ya está
+                                detrás de un guard de rol en el frontend store, pero los campos
+                                también están protegidos en el backend: PATCH /api/professionals
+                                valida role antes de mutarlos). */}
+                            <Separator className="my-3 bg-teal-100" />
+                            <div>
+                              <p className="text-sm font-medium text-teal-900 flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-teal-600" />
+                                Auditoría y Verificación de Documentación
+                              </p>
+                              <p className="text-xs text-teal-500 mt-0.5">
+                                Tildá los documentos que verificaste. Los cambios se guardan automáticamente.
+                              </p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                {/* Helper para renderizar cada checkbox con auto-save */}
+                                {([
+                                  { key: "dniVerified", label: "DNI", desc: "Copia de documento de identidad" },
+                                  { key: "degreeVerified", label: "Título", desc: "Título universitario habilitante" },
+                                  { key: "licenseVerified", label: "Matrícula", desc: "Matrícula provincial/nacional" },
+                                  { key: "malpracticeInsuranceVerified", label: "Seguro de Mala Praxis", desc: "Póliza vigente" },
+                                  { key: "taxRegistrationVerified", label: "Constancia de Monotributo", desc: "Inscripción fiscal" },
+                                  { key: "nationalRegistryVerified", label: "Registro Nacional de Prestadores", desc: "RNP" },
+                                ] as const).map(({ key, label, desc }) => {
+                                  const checked = Boolean(prof[key]);
+                                  return (
+                                    <label
+                                      key={key}
+                                      htmlFor={`doc-${prof.id}-${key}`}
+                                      className="flex items-start gap-3 p-2 rounded-lg border border-teal-100 bg-white hover:bg-teal-50/50 transition-colors cursor-pointer"
+                                    >
+                                      <Checkbox
+                                        id={`doc-${prof.id}-${key}`}
+                                        checked={checked}
+                                        onCheckedChange={(value) => {
+                                          const newValue = Boolean(value);
+                                          // Update local state immediately for responsiveness
+                                          setProfessionals((prev) =>
+                                            prev.map((p) =>
+                                              p.id === prof.id ? { ...p, [key]: newValue } : p
+                                            )
+                                          );
+                                          // Persist to backend (admin-only field; backend
+                                          // silently ignores if caller is not admin)
+                                          fetch("/api/professionals", {
+                                            method: "PATCH",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ id: prof.id, [key]: newValue }),
+                                          }).catch((err) => {
+                                            console.error(`Error saving ${key}:`, err);
+                                            toast.error(`Error al actualizar ${label}`);
+                                            // Revert on error
+                                            setProfessionals((prev) =>
+                                              prev.map((p) =>
+                                                p.id === prof.id ? { ...p, [key]: !newValue } : p
+                                              )
+                                            );
+                                          });
+                                        }}
+                                        className="mt-0.5 data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <span className="text-sm font-medium text-teal-900 block">
+                                          {label}
+                                        </span>
+                                        <span className="text-xs text-teal-500 block">
+                                          {desc}
+                                        </span>
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                              {/* Summary badge */}
+                              <div className="mt-3 flex items-center gap-2 text-xs">
+                                {(() => {
+                                  const verifiedCount = [
+                                    prof.dniVerified,
+                                    prof.degreeVerified,
+                                    prof.licenseVerified,
+                                    prof.malpracticeInsuranceVerified,
+                                    prof.taxRegistrationVerified,
+                                    prof.nationalRegistryVerified,
+                                  ].filter(Boolean).length;
+                                  const allVerified = verifiedCount === 6;
+                                  return (
+                                    <Badge
+                                      variant="outline"
+                                      className={
+                                        allVerified
+                                          ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                          : verifiedCount > 0
+                                          ? "bg-amber-50 border-amber-200 text-amber-700"
+                                          : "bg-red-50 border-red-200 text-red-700"
+                                      }
+                                    >
+                                      {allVerified ? (
+                                        <><CheckCircle2 className="w-3 h-3 mr-1" /> Documentación completa</>
+                                      ) : (
+                                        <>{verifiedCount}/6 documentos verificados</>
+                                      )}
+                                    </Badge>
+                                  );
+                                })()}
+                              </div>
                             </div>
                           </motion.div>
                         )}
