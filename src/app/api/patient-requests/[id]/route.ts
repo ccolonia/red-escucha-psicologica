@@ -179,7 +179,7 @@ export async function PATCH(
               time,
               modality: appointmentModality || "P",
               status: "confirmed",
-              reason: `Solicitud de paciente: ${body.patientReason || existingRequest.reason || "consulta_general"}`,
+              reason: `Solicitud de paciente: ${body.patientReason || existingRequest.reason || "otros"}`,
             },
           });
           appointmentId = appointment.id;

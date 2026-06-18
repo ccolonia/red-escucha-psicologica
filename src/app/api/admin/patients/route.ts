@@ -87,13 +87,29 @@ export async function POST(req: NextRequest) {
       let patientRequest: any = null;
       if (shouldEnableTriage) {
         const validModalities = ["online", "presencial", "híbrida"];
+        // === Motivos de consulta reestructurados ===
+        // Antes: ansiedad, vinculos, depresion, duelo, autoestima, estres
+        // (que era 'Estrés / Laboral'), infanto_juvenil, adicciones,
+        // consulta_general.
+        // Ahora: se eliminaron infanto_juvenil (la edad reemplaza la
+        // segmentación), consulta_general y estres viejo; se agregaron
+        // estres (solo 'Estrés'), laboral, orientacion_padres,
+        // evaluaciones, discapacidad, otros. Se mantiene adicciones y
+        // los demás tradicionales.
+        // Los motivos depreciados (infanto_juvenil, consulta_general)
+        // se aceptan como válidos para no romper integraciones que
+        // todavía los manden — el admin los verá con sufijo '(obs.)'
+        // en el panel Triage.
         const validReasons = [
-          "ansiedad", "vinculos", "depresion", "duelo", "autoestima",
-          "estres", "infanto_juvenil", "adiciones", "consulta_general",
+          "ansiedad", "depresion", "vinculos", "duelo", "autoestima",
+          "adicciones", "estres", "laboral", "orientacion_padres",
+          "evaluaciones", "discapacidad", "otros",
+          // Depreciados pero aceptados (compat hacia atrás)
+          "infanto_juvenil", "consulta_general",
         ];
 
         const triageModality = validModalities.includes(modality) ? modality : "presencial";
-        const triageReason = validReasons.includes(reason) ? reason : "consulta_general";
+        const triageReason = validReasons.includes(reason) ? reason : "otros";
 
         patientRequest = await tx.patientRequest.create({
           data: {

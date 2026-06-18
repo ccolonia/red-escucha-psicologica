@@ -390,13 +390,14 @@ export function LandingPage() {
             email: contactForm.email,
             phone: contactForm.phone || null,
             modality: contactForm.modality || "presencial",
-            reason: contactForm.consultReason || "consulta_general",
             notes: contactForm.message || null,
             // === Edad y Protocolo de Minoridad ===
             // El backend valida que patientAge sea entero 1-120 y que
             // guardianName no esté vacío si patientAge < 18.
+            // Fallback 'otros' (antes 'consulta_general', depreciado).
             patientAge: contactForm.patientAge ? parseInt(contactForm.patientAge, 10) : null,
             guardianName: contactForm.guardianName || null,
+            reason: contactForm.consultReason || "otros",
           }),
         });
 
@@ -1362,9 +1363,12 @@ export function LandingPage() {
                                 <SelectItem value="vinculos">Vínculos / Pareja</SelectItem>
                                 <SelectItem value="duelo">Duelo / Pérdida</SelectItem>
                                 <SelectItem value="autoestima">Autoestima</SelectItem>
-                                <SelectItem value="estres">Estrés / Laboral</SelectItem>
-                                <SelectItem value="infanto_juvenil">Infanto-Juvenil</SelectItem>
-                                <SelectItem value="consulta_general">Consulta General</SelectItem>
+                                <SelectItem value="adicciones">Adicciones</SelectItem>
+                                <SelectItem value="estres">Estrés</SelectItem>
+                                <SelectItem value="laboral">Laboral</SelectItem>
+                                <SelectItem value="orientacion_padres">Orientación a Padres</SelectItem>
+                                <SelectItem value="evaluaciones">Evaluaciones</SelectItem>
+                                <SelectItem value="discapacidad">Discapacidad</SelectItem>
                                 <SelectItem value="otros">Otros</SelectItem>
                               </SelectContent>
                             </Select>

@@ -123,7 +123,11 @@ export async function POST(request: NextRequest) {
         email,
         phone: phone || null,
         modality: modality || "presencial",
-        reason: reason || "consulta_general",
+        // Fallback 'otros' (antes era 'consulta_general', pero ese motivo
+        // fue depreciado en la reestructuración de motivos de consulta).
+        // Si el caller no manda reason, default a 'otros' que es una
+        // opción válida del Select del form público.
+        reason: reason || "otros",
         notes: notes || null,
         patientAge: patientAgeInt,
         guardianName: guardianNameTrimmed,

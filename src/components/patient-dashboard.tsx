@@ -755,14 +755,17 @@ export function PatientBook() {
 
   const REASON_OPTIONS = [
     { value: "ansiedad", label: "Ansiedad" },
-    { value: "vinculos", label: "Vínculos / Pareja" },
     { value: "depresion", label: "Depresión" },
+    { value: "vinculos", label: "Vínculos / Pareja" },
     { value: "duelo", label: "Duelo / Pérdida" },
     { value: "autoestima", label: "Autoestima" },
-    { value: "estres", label: "Estrés / Laboral" },
-    { value: "infanto_juvenil", label: "Infanto-Juvenil" },
     { value: "adicciones", label: "Adicciones" },
-    { value: "consulta_general", label: "Consulta General" },
+    { value: "estres", label: "Estrés" },
+    { value: "laboral", label: "Laboral" },
+    { value: "orientacion_padres", label: "Orientación a Padres" },
+    { value: "evaluaciones", label: "Evaluaciones" },
+    { value: "discapacidad", label: "Discapacidad" },
+    { value: "otros", label: "Otros" },
   ];
 
   // Load existing patient requests

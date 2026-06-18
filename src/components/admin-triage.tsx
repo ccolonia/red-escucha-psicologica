@@ -123,10 +123,24 @@ const REASON_LABELS: Record<string, string> = {
   depresion: "Depresión",
   duelo: "Duelo / Pérdida",
   autoestima: "Autoestima",
-  estres: "Estrés / Laboral",
-  infanto_juvenil: "Infanto-Juvenil",
   adicciones: "Adicciones",
-  consulta_general: "Consulta General",
+  // === Motivos reestructurados (commit de hoy) ===
+  // 'estres' antes era 'Estrés / Laboral' (unificado). Ahora es solo
+  // 'Estrés' (clínica de la ansiedad, estrés vital, burnout). El motivo
+  // 'Laboral' se separó a su propia entrada.
+  estres: "Estrés",
+  laboral: "Laboral",
+  orientacion_padres: "Orientación a Padres",
+  evaluaciones: "Evaluaciones",
+  discapacidad: "Discapacidad",
+  otros: "Otros",
+  // === Motivos depreciados (commit de hoy) ===
+  // Los dejamos mapeados por si quedan PatientRequests viejos en la DB
+  // con estos valores — al menos el admin los ve con un label legible
+  // en vez del string crudo. Son marcados con (obs.) para indicar que
+  // ya no son opciones válidas del form público.
+  infanto_juvenil: "Infanto-Juvenil (obs.)",
+  consulta_general: "Consulta General (obs.)",
 };
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -299,15 +313,36 @@ export function AdminTriage() {
     if (!request.reason) return professionals;
 
     const reasonSpecialtyMap: Record<string, string[]> = {
-      infanto_juvenil: ["Psicología Infanto-Juvenil"],
+      // === Motivos tradicionales ===
       vinculos: ["Terapia de Pareja y Familia", "Psicología Clínica"],
       ansiedad: ["Psicología Clínica"],
       depresion: ["Psicología Clínica"],
       duelo: ["Psicología Clínica"],
       autoestima: ["Psicología Clínica"],
-      estres: ["Psicología Clínica"],
       adicciones: ["Psicología Clínica"],
-      consulta_general: [],
+      // === Motivos nuevos (reestructuración) ===
+      // estrés: clínica de la ansiedad, estrés vital, burnout → clínica
+      estres: ["Psicología Clínica"],
+      // laboral: orientación vocacional, problemáticas del entorno de
+      // trabajo, desarrollo profesional, inserción → clínica (en
+      // Argentina suele caer en Psicología Clínica; si en el futuro
+      // agregan specialty "Psicología Laboral" se suma acá)
+      laboral: ["Psicología Clínica"],
+      // orientación a padres: consultas de crianza y dinámicas
+      // familiares → Terapia de Pareja y Familia + Clínica
+      orientacion_padres: ["Terapia de Pareja y Familia", "Psicología Clínica"],
+      // evaluaciones: psicodiagnósticos, aptos psicológicos,
+      // evaluaciones neurocognitivas → Clínica (cualquier profesional
+      // clínico puede hacerlas)
+      evaluaciones: ["Psicología Clínica"],
+      // discapacidad: abordajes específicos y acompañamiento
+      // integrador → Clínica
+      discapacidad: ["Psicología Clínica"],
+      // === Motivos sin derivación específica ===
+      // 'otros' y los depreciados no filtran profesionales
+      otros: [],
+      infanto_juvenil: ["Psicología Infanto-Juvenil"], // obs.
+      consulta_general: [], // obs.
     };
 
     const matchingSpecialties = reasonSpecialtyMap[request.reason];

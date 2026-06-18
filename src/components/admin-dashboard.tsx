@@ -1756,7 +1756,9 @@ export function AdminPatients() {
     notes: "",
     enableTriage: true,
     modality: "presencial",
-    reason: "consulta_general",
+    // Default 'otros' (antes 'consulta_general', depreciado en la
+    // reestructuración de motivos de consulta).
+    reason: "otros",
   });
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1796,7 +1798,7 @@ export function AdminPatients() {
       if (res.ok) {
         toast.success(data.message || "Paciente creado exitosamente");
         setShowAdd(false);
-        setAddForm({ name: "", email: "", phone: "", password: "", dateOfBirth: "", emergencyContact: "", notes: "", enableTriage: true, modality: "presencial", reason: "consulta_general" });
+        setAddForm({ name: "", email: "", phone: "", password: "", dateOfBirth: "", emergencyContact: "", notes: "", enableTriage: true, modality: "presencial", reason: "otros" });
         loadPatients();
       } else {
         toast.error(data.error || "Error al crear paciente");
@@ -2102,15 +2104,18 @@ export function AdminPatients() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="consulta_general">Consulta General</SelectItem>
                         <SelectItem value="ansiedad">Ansiedad</SelectItem>
-                        <SelectItem value="vinculos">Vínculos</SelectItem>
                         <SelectItem value="depresion">Depresión</SelectItem>
+                        <SelectItem value="vinculos">Vínculos</SelectItem>
                         <SelectItem value="duelo">Duelo</SelectItem>
                         <SelectItem value="autoestima">Autoestima</SelectItem>
+                        <SelectItem value="adicciones">Adicciones</SelectItem>
                         <SelectItem value="estres">Estrés</SelectItem>
-                        <SelectItem value="infanto_juvenil">Infanto-Juvenil</SelectItem>
-                        <SelectItem value="adiciones">Adicciones</SelectItem>
+                        <SelectItem value="laboral">Laboral</SelectItem>
+                        <SelectItem value="orientacion_padres">Orientación a Padres</SelectItem>
+                        <SelectItem value="evaluaciones">Evaluaciones</SelectItem>
+                        <SelectItem value="discapacidad">Discapacidad</SelectItem>
+                        <SelectItem value="otros">Otros</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
