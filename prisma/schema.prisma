@@ -136,6 +136,15 @@ model PatientRequest {
   modality       String    @default("presencial") // "online", "presencial", "híbrida"
   reason         String    @default("consulta_general") // "Ansiedad", "Vínculos", "Depresión", etc.
   notes          String?   // Notas adicionales del paciente
+  // === Edad y Protocolo de Minoridad ===
+  // patientAge se exige cuando la solicitud viene del form público con
+  // reason principal = "solicitar_turno". La validación se hace en el
+  // backend (POST /api/patient-requests). Es opcional en el schema para
+  // no romper PatientRequests creados por otros flujos.
+  patientAge     Int?
+  // guardianName es obligatorio si patientAge < 18 (validación backend).
+  // Para pacientes adultos queda null.
+  guardianName   String?
   status         String    @default("pending") // "pending", "assigned", "contacted", "rejected"
   assignedToId   String?   // Professional ID when assigned (multiple requests can point to same professional)
   appointmentId  String?   @unique // Appointment ID after assignment creates one

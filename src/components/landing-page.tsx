@@ -154,6 +154,11 @@ export function LandingPage() {
     reason: "",
     modality: "",
     consultReason: "",
+    // === Edad y Protocolo de Minoridad ===
+    // patientAge y guardianName se mandan al backend solo cuando el
+    // usuario eligió "Solicitar Turno" en el combo principal.
+    patientAge: "",
+    guardianName: "",
   });
   const [contactSent, setContactSent] = useState(false);
   const [contactSending, setContactSending] = useState(false);
@@ -387,6 +392,11 @@ export function LandingPage() {
             modality: contactForm.modality || "presencial",
             reason: contactForm.consultReason || "consulta_general",
             notes: contactForm.message || null,
+            // === Edad y Protocolo de Minoridad ===
+            // El backend valida que patientAge sea entero 1-120 y que
+            // guardianName no esté vacío si patientAge < 18.
+            patientAge: contactForm.patientAge ? parseInt(contactForm.patientAge, 10) : null,
+            guardianName: contactForm.guardianName || null,
           }),
         });
 
@@ -426,7 +436,7 @@ export function LandingPage() {
       });
       if (res.ok) {
         setContactSent(true);
-        setContactForm({ name: "", email: "", phone: "", message: "", reason: "", modality: "", consultReason: "" });
+        setContactForm({ name: "", email: "", phone: "", message: "", reason: "", modality: "", consultReason: "", patientAge: "", guardianName: "" });
         // Google Ads conversion: Formulario de Contacto (1)
         // Cuenta: AW-18195001096 (migrada de AW-1017920443 en commit 5bf1cdb)
         // Label: hCYcCPbIorscEIjehuRD
@@ -1359,6 +1369,81 @@ export function LandingPage() {
                               </SelectContent>
                             </Select>
                           </div>
+                        </div>
+                      )}
+                      {/* === Edad del Paciente + Protocolo de Minoridad === */}
+                      {/* Solo visible cuando el motivo principal es "solicitar_turno". */}
+                      {contactForm.reason === "solicitar_turno" && (
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <Label htmlFor="patient-age" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                Edad del Paciente <span className="text-red-500">*</span>
+                              </Label>
+                              {/* Badge dinámico de Etapa Vital — cambia según la edad ingresada */}
+                              {(() => {
+                                const ageNum = parseInt(contactForm.patientAge, 10);
+                                if (!Number.isFinite(ageNum) || ageNum < 1 || ageNum > 120) return null;
+                                let label = "";
+                                let colorClass = "";
+                                if (ageNum <= 11) { label = "Niñez"; colorClass = "bg-teal-50 text-teal-700 border-teal-200"; }
+                                else if (ageNum <= 17) { label = "Adolescencia"; colorClass = "bg-amber-50 text-amber-700 border-amber-200"; }
+                                else if (ageNum <= 26) { label = "Joven Adulto"; colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200"; }
+                                else if (ageNum <= 59) { label = "Adulto"; colorClass = "bg-blue-50 text-blue-700 border-blue-200"; }
+                                else { label = "Adulto Mayor"; colorClass = "bg-purple-50 text-purple-700 border-purple-200"; }
+                                return (
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${colorClass}`} style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                    {label}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                            <Input
+                              id="patient-age"
+                              type="number"
+                              min={1}
+                              max={120}
+                              value={contactForm.patientAge}
+                              onChange={(e) => {
+                                setContactForm({ ...contactForm, patientAge: e.target.value });
+                              }}
+                              placeholder="Ingresá la edad (1 a 120)"
+                              className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
+                            />
+                          </div>
+
+                          {/* === Protocolo de Minoridad === */}
+                          {/* Si la edad es < 18, aparece suavemente el campo del tutor. */}
+                          {(() => {
+                            const ageNum = parseInt(contactForm.patientAge, 10);
+                            const isMinor = Number.isFinite(ageNum) && ageNum > 0 && ageNum < 18;
+                            return (
+                              <div
+                                className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                                  isMinor ? "max-h-60 opacity-100 mt-2" : "max-h-0 opacity-0"
+                                }`}
+                              >
+                                <div className="space-y-2 p-3 rounded-lg bg-amber-50/60 border border-amber-200">
+                                  <Label htmlFor="guardian-name" className="text-amber-800 font-medium block" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                    Nombre Completo del Adulto Responsable o Tutor <span className="text-red-500">*</span>
+                                  </Label>
+                                  <Input
+                                    id="guardian-name"
+                                    type="text"
+                                    value={contactForm.guardianName}
+                                    onChange={(e) => {
+                                      setContactForm({ ...contactForm, guardianName: e.target.value });
+                                    }}
+                                    placeholder="Nombre y apellido del tutor legal"
+                                    className="border-amber-300 bg-white focus:border-amber-400 focus:ring-amber-300/20"
+                                  />
+                                  <p className="text-xs text-amber-700" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                    Para pacientes menores de 18 años, se requiere el registro del adulto responsable.
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                       <div className="space-y-2">

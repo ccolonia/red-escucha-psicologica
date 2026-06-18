@@ -7,7 +7,7 @@ import { authOptions } from "@/lib/auth";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    let { name, email, phone, modality, reason, notes } = body;
+    let { name, email, phone, modality, reason, notes, patientAge, guardianName } = body;
 
     // If authenticated patient, auto-fill from session
     const session = await getServerSession(authOptions);
@@ -34,6 +34,41 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // === Validación: Edad y Protocolo de Minoridad ===
+    // El form público manda patientAge SIEMPRE que el usuario eligió
+    // "Solicitar Turno" en el combo principal (el frontend ya filtra).
+    // El backend valida por las dudas:
+    //   - Si patientAge viene, debe ser entero entre 1 y 120
+    //   - Si patientAge < 18, guardianName es obligatorio (no vacío)
+    //
+    // Si el request viene sin patientAge (otro caller, ej: admin creando
+    // manualmente), no validamos — solo persistimos null.
+    let patientAgeInt: number | null = null;
+    if (patientAge !== undefined && patientAge !== null && patientAge !== "") {
+      const parsed = typeof patientAge === "number" ? patientAge : parseInt(String(patientAge), 10);
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 120) {
+        return NextResponse.json(
+          { error: "La edad del paciente debe ser un número entero entre 1 y 120", code: "INVALID_AGE" },
+          { status: 400 }
+        );
+      }
+      patientAgeInt = parsed;
+
+      // Protocolo de minoridad: si < 18, exigir tutor
+      if (parsed < 18) {
+        if (!guardianName || String(guardianName).trim().length < 3) {
+          return NextResponse.json(
+            {
+              error: "Para pacientes menores de 18 años es obligatorio indicar el nombre completo del adulto responsable o tutor",
+              code: "GUARDIAN_REQUIRED",
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+    const guardianNameTrimmed = guardianName ? String(guardianName).trim() : null;
 
     // === Validación: bloquear si el email ya tiene Patient con appointment activo ===
     // Regla A: un paciente con tratamiento activo o por iniciar no puede volver a
@@ -90,6 +125,8 @@ export async function POST(request: NextRequest) {
         modality: modality || "presencial",
         reason: reason || "consulta_general",
         notes: notes || null,
+        patientAge: patientAgeInt,
+        guardianName: guardianNameTrimmed,
         status: "pending",
       },
     });

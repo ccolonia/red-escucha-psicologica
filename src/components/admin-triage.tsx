@@ -25,6 +25,7 @@ import {
   Users,
   Zap,
   Info,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,6 +63,12 @@ interface PatientRequest {
   modality: string;
   reason: string;
   notes: string | null;
+  // === Edad y Protocolo de Minoridad ===
+  // patientAge y guardianName vienen del form público cuando el usuario
+  // eligió "Solicitar Turno". El backend valida que patientAge sea
+  // entero 1-120 y guardianName no vacío si < 18.
+  patientAge: number | null;
+  guardianName: string | null;
   status: string;
   assignedToId: string | null;
   appointmentId: string | null;
@@ -699,6 +706,38 @@ export function AdminTriage() {
                               })}
                             </span>
                           </div>
+                          {/* === Edad del paciente + Protocolo de Minoridad === */}
+                          {/* Visible para admin/super_admin en la tarjeta de triage
+                              para que pueda asignar al profesional adecuado (ej:
+                              infanto-juvenil para menores). */}
+                          {req.patientAge != null && (
+                            <div className="mt-1 flex items-center gap-2 text-xs flex-wrap">
+                              <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">
+                                Edad: {req.patientAge}
+                              </Badge>
+                              {(() => {
+                                const age = req.patientAge!;
+                                let label = "";
+                                let colorClass = "";
+                                if (age <= 11) { label = "Niñez"; colorClass = "bg-teal-50 text-teal-700 border-teal-200"; }
+                                else if (age <= 17) { label = "Adolescencia"; colorClass = "bg-amber-50 text-amber-700 border-amber-200"; }
+                                else if (age <= 26) { label = "Joven Adulto"; colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200"; }
+                                else if (age <= 59) { label = "Adulto"; colorClass = "bg-blue-50 text-blue-700 border-blue-200"; }
+                                else { label = "Adulto Mayor"; colorClass = "bg-purple-50 text-purple-700 border-purple-200"; }
+                                return (
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${colorClass}`}>
+                                    {label}
+                                  </span>
+                                );
+                              })()}
+                              {req.patientAge < 18 && req.guardianName && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-50 text-amber-800 border-amber-300">
+                                  <ShieldAlert className="w-3 h-3" />
+                                  Tutor: {req.guardianName}
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {req.assignedTo && (
                             <div className="mt-2 flex items-center gap-2 text-sm bg-teal-50 px-3 py-1.5 rounded-lg w-fit">
                               <Stethoscope className="w-4 h-4 text-teal-500" />
