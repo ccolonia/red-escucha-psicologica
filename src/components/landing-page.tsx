@@ -1372,32 +1372,17 @@ export function LandingPage() {
                         </div>
                       )}
                       {/* === Edad del Paciente + Protocolo de Minoridad === */}
-                      {/* Solo visible cuando el motivo principal es "solicitar_turno". */}
+                      {/* Solo visible cuando el motivo principal es "solicitar_turno".
+                          IMPORTANTE: por discreción del paciente, NO mostramos al
+                          usuario público ninguna etiqueta de etapa vital (Niñez,
+                          Adolescencia, etc.). Esa inteligencia de categorización
+                          es exclusiva del panel Triage admin (ver admin-triage.tsx). */}
                       {contactForm.reason === "solicitar_turno" && (
                         <div className="space-y-3">
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <Label htmlFor="patient-age" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                                Edad del Paciente <span className="text-red-500">*</span>
-                              </Label>
-                              {/* Badge dinámico de Etapa Vital — cambia según la edad ingresada */}
-                              {(() => {
-                                const ageNum = parseInt(contactForm.patientAge, 10);
-                                if (!Number.isFinite(ageNum) || ageNum < 1 || ageNum > 120) return null;
-                                let label = "";
-                                let colorClass = "";
-                                if (ageNum <= 11) { label = "Niñez"; colorClass = "bg-teal-50 text-teal-700 border-teal-200"; }
-                                else if (ageNum <= 17) { label = "Adolescencia"; colorClass = "bg-amber-50 text-amber-700 border-amber-200"; }
-                                else if (ageNum <= 26) { label = "Joven Adulto"; colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200"; }
-                                else if (ageNum <= 59) { label = "Adulto"; colorClass = "bg-blue-50 text-blue-700 border-blue-200"; }
-                                else { label = "Adulto Mayor"; colorClass = "bg-purple-50 text-purple-700 border-purple-200"; }
-                                return (
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${colorClass}`} style={{ fontFamily: "Montserrat, sans-serif" }}>
-                                    {label}
-                                  </span>
-                                );
-                              })()}
-                            </div>
+                            <Label htmlFor="patient-age" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                              Edad del Paciente <span className="text-red-500">*</span>
+                            </Label>
                             <Input
                               id="patient-age"
                               type="number"
@@ -1413,7 +1398,10 @@ export function LandingPage() {
                           </div>
 
                           {/* === Protocolo de Minoridad === */}
-                          {/* Si la edad es < 18, aparece suavemente el campo del tutor. */}
+                          {/* Si la edad es < 18, aparece suavemente el campo del tutor.
+                              No se muestra ninguna etiqueta de etapa vital — solo el
+                              campo de tutor cuando corresponde, para mantener
+                              discreción en el form público. */}
                           {(() => {
                             const ageNum = parseInt(contactForm.patientAge, 10);
                             const isMinor = Number.isFinite(ageNum) && ageNum > 0 && ageNum < 18;
