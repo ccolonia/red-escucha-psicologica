@@ -1294,7 +1294,7 @@ export function LandingPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="contact-reason" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Motivo</Label>
+                          <Label htmlFor="contact-reason" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Solicitar</Label>
                           <Select
                             value={contactForm.reason}
                             onValueChange={(value) =>
@@ -1302,14 +1302,11 @@ export function LandingPage() {
                             }
                           >
                             <SelectTrigger className="border-beige-300 bg-beige-100 focus:ring-sage-300/20">
-                              <SelectValue placeholder="Seleccioná un motivo" />
+                              <SelectValue placeholder="Seleccioná una opción" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="solicitar_turno">
                                 Solicitar Turno
-                              </SelectItem>
-                              <SelectItem value="consulta_general">
-                                Consulta General
                               </SelectItem>
                               <SelectItem value="informacion">
                                 Información
