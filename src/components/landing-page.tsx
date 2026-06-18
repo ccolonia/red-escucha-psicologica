@@ -427,17 +427,18 @@ export function LandingPage() {
       if (res.ok) {
         setContactSent(true);
         setContactForm({ name: "", email: "", phone: "", message: "", reason: "", modality: "", consultReason: "" });
-        // Google Ads conversion: Formulario Contacto
-        // TODO: GOOGLE ADS — reactivar cuando tengas el nuevo label de
-        // conversión para la cuenta AW-18195001096 (la anterior era
-        // AW-1017920443/C-7BCKj23ekBELv3sOUD). Crear la conversión en
-        // Google Ads → Herramientas → Conversiones → Nueva conversión
-        // → 'Formulario de contacto' → copiar el send_to y reemplazar.
-        // if (typeof window !== "undefined" && typeof (window as unknown as Record<string, unknown>).gtag === "function") {
-        //   (window as unknown as Record<string, unknown>).gtag("event", "conversion", {
-        //     send_to: "AW-18195001096/XXXXXXXXXXXXXXXX",
-        //   });
-        // }
+        // Google Ads conversion: Formulario de Contacto (1)
+        // Cuenta: AW-18195001096 (migrada de AW-1017920443 en commit 5bf1cdb)
+        // Label: hCYcCPbIorscEIjehuRD
+        // Dispara cuando el usuario envía el form de contacto exitosamente
+        // (tanto para consultas generales como para solicitudes de turno).
+        if (typeof window !== "undefined" && typeof (window as unknown as Record<string, unknown>).gtag === "function") {
+          (window as unknown as Record<string, unknown>).gtag("event", "conversion", {
+            send_to: "AW-18195001096/hCYcCPbIorscEIjehuRD",
+            value: 1.0,
+            currency: "ARS",
+          });
+        }
         setTimeout(() => setContactSent(false), 4000);
       } else {
         setContactError(true);
