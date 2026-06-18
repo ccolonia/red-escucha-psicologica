@@ -35,6 +35,9 @@ interface Appointment {
   id: string;
   date: string;
   time: string;
+  // timeEnd calculado por el backend según slotDuration del schedule del
+  // profesional para ese día. Default 45 min si no viene.
+  timeEnd?: string;
   status: string;
   reason: string | null;
   modality: string | null;
@@ -327,9 +330,30 @@ export function ProfessionalWeeklyAgenda({
   );
 
   // Get appointment for a specific cell
+  //
+  // IMPORTANTE: el grid de la agenda visual genera slots fijos de 30 min
+  // (07:00, 07:30, 08:00, ..., 22:00). Pero los turnos pueden empezar en
+  // minutos no múltiplos de 30 (ej: 18:45 con slotDuration=15 o 45 min).
+  // Para que esos turnos aparezcan en la agenda, hacemos "snap down":
+  // el appointment se muestra en el slot más cercano ANTERIOR a su hora
+  // real de inicio. Ej: turno a las 18:45 → se muestra en el slot 18:30,
+  // pero el card muestra "18:45 a 19:30 hs" como hora real.
+  //
+  // El card se renderiza UNA sola vez (en el slot snap-down), no se
+  // duplica en slots posteriores del mismo rango. Esto evita que un
+  // turno de 45 min ocupe 2 visualmente, pero si el slotDuration es
+  // mayor a 30 min puede haber espacio visual "vacío" entre el card y
+  // el siguiente turno — es un trade-off aceptable por ahora.
   const getAppointmentForCell = useCallback(
     (dateStr: string, time: string): Appointment | undefined => {
-      return appointments.find((a) => a.date === dateStr && a.time === time);
+      // Buscar appointments cuyo snap-down coincide con este slot
+      return appointments.find((a) => {
+        if (a.date !== dateStr) return false;
+        // Encontrar el slot más cercano anterior al start real
+        const slotsBefore = TIME_SLOTS.filter((s) => s <= a.time);
+        const snappedSlot = slotsBefore[slotsBefore.length - 1];
+        return snappedSlot === time;
+      });
     },
     [appointments]
   );
@@ -421,6 +445,12 @@ export function ProfessionalWeeklyAgenda({
     const colors = STATUS_COLORS[apt.status] || STATUS_COLORS.pending;
     const modalityInfo = apt.modality ? MODALITY_BADGE[apt.modality] : null;
     const ModIcon = modalityInfo?.icon;
+    // Rango horario real del appointment (no el slot snap-down del grid).
+    // Si el turno empieza a las 18:45 y dura 45 min, mostramos "18:45-19:30"
+    // aunque el card esté renderizado en el slot 18:30 del grid.
+    const timeDisplay = apt.timeEnd
+      ? `${apt.time}–${apt.timeEnd}`
+      : apt.time;
 
     return (
       <motion.div
@@ -432,6 +462,9 @@ export function ProfessionalWeeklyAgenda({
         <div className="flex items-center justify-between gap-1">
           <span className="font-medium truncate">{apt.patient.user.name}</span>
           {ModIcon && <ModIcon className="w-3 h-3 flex-shrink-0 opacity-60" />}
+        </div>
+        <div className="text-[10px] opacity-70 mt-0.5 font-mono">
+          {timeDisplay}
         </div>
         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
           <span
