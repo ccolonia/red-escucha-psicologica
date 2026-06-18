@@ -40,16 +40,21 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap"
           rel="stylesheet"
         />
-        {/* Google Tag (gtag.js) - AW-1017920443 */}
+        {/* Google Tag (gtag.js) - AW-18195001096
+            Reemplazo de la cuenta anterior AW-1017920443 (commit de hoy).
+            Recordatorio: cuando agreguemos eventos de conversión en
+            landing-page.tsx, hay que usar el nuevo ID y generar nuevos
+            labels de conversión desde Google Ads → Herramientas →
+            Conversiones. */}
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=AW-1017920443"
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18195001096"
           strategy="afterInteractive"
         />
         <Script id="google-gtag-config" strategy="afterInteractive">
           {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'AW-1017920443');`}
+gtag('config', 'AW-18195001096');`}
         </Script>
       </head>
       <body
