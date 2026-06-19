@@ -74,8 +74,9 @@ const THERAPY_TYPES = [
   "Terapia junguiana",
   "Psicodrama",
   "Psicoterapia Integral",
-  "Terapia de Pareja y Familia",
-  "Psicología Infanto-Juvenil",
+  // === Tipos de terapia eliminados (duplicados con especialidades) ===
+  // - "Terapia de Pareja y Familia" (eliminado — es una especialidad)
+  // - "Psicología Infanto-Juvenil" (eliminado — es una especialidad)
   "Deportología",
   "Psicocorporal Reichiana",
   "Terapia transpersonal",
@@ -92,6 +93,27 @@ const TARGET_AUDIENCES = [
   "Parejas",
   "Familias",
   "Orientación a padres",
+];
+
+// === Modalidades de Terapia ===
+// Array extraído a constante (antes estaba inline en el render) para
+// mejor mantenibilidad. Se guarda como JSON string en el campo
+// therapyModality del modelo Professional.
+//
+// Nuevas opciones agregadas (commit de hoy):
+// - Pericias: orientado al ámbito de la psicología jurídica, forense y pericial
+// - Discapacidad: espacios de atención y abordaje adaptado
+// - Orientación Vocacional: procesos de guía académica y profesional
+const THERAPY_MODALITIES = [
+  "Individual",
+  "Vincular",
+  "Evaluaciones",
+  "Terapia Grupal",
+  "Orientación a Padres",
+  "Asesoría a Empresas",
+  "Pericias",
+  "Discapacidad",
+  "Orientación Vocacional",
 ];
 
 const ZONES_HIERARCHY: { region: string; areas: string[] }[] = [
@@ -953,7 +975,7 @@ export function ProfessionalRegister() {
                     <div className="space-y-2">
                       <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Modalidad de Terapia</Label>
                       <div className="flex gap-2 overflow-x-auto border border-beige-300 rounded-lg p-3 bg-beige-50 scrollbar-thin">
-                        {["Individual", "Vincular", "Evaluaciones", "Terapia Grupal", "Orientación a Padres", "Asesoría a Empresas"].map((m) => (
+                        {THERAPY_MODALITIES.map((m) => (
                           <label
                             key={m}
                             className="flex items-center gap-2 text-sm cursor-pointer hover:bg-sage-300/10 rounded px-2 py-1 transition-colors whitespace-nowrap border border-beige-200 shrink-0"
