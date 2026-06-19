@@ -68,6 +68,10 @@ export async function GET(request: NextRequest) {
           therapyTypes: true,
           targetAudience: true,
           therapyModality: true,
+          // === Detalle de "Otras terapias" ===
+          // Se incluye en el select para que el panel admin lo pueda mostrar
+          // en la tarjeta expandible del profesional.
+          otherTherapyDetails: true,
           onlineAttention: true,
           presentialAttention: true,
           homeAttention: true,
@@ -165,6 +169,10 @@ export async function GET(request: NextRequest) {
           therapyTypes: true,
           targetAudience: true,
           therapyModality: true,
+          // === Detalle de "Otras terapias" ===
+          // Se incluye en el select para que el panel admin lo pueda mostrar
+          // en la tarjeta expandible del profesional.
+          otherTherapyDetails: true,
           onlineAttention: true,
           presentialAttention: true,
           homeAttention: true,

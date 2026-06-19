@@ -38,6 +38,14 @@ model Professional {
   therapyTypes        String?       // JSON array string
   targetAudience      String?       // JSON array string
   therapyModality     String?       // JSON array string
+  // === Detalle de "Otras terapias" ===
+  // Cuando el profesional selecciona "Otras terapias" en therapyTypes,
+  // este campo guarda el texto libre con el enfoque específico que
+  // detalló. Es independiente del array para mantener la pureza de los
+  // tags y aislar el texto libre (no se puede meter en el array porque
+  // después el frontend del admin no sabría cuál es el detalle vs un
+  // item más del array).
+  otherTherapyDetails String?       // Texto libre si therapyTypes incluye "Otras terapias"
   onlineAttention     Boolean       @default(false)
   presentialAttention Boolean       @default(false)
   homeAttention       Boolean       @default(false)

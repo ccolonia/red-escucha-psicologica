@@ -12,6 +12,10 @@ export async function POST(request: NextRequest) {
       name, email, phone, password, role, license, specialty, bio,
       title, cuil, gender, therapyTypes, targetAudience, therapyModality,
       onlineAttention, presentialAttention, homeAttention, zones,
+      // === Detalle de "Otras terapias" ===
+      // Texto libre que el profesional carga cuando selecciona
+      // "Otras terapias" en therapyTypes. Validado abajo.
+      otherTherapyDetails,
     } = body;
 
     if (!name || !email || !password) {
@@ -70,6 +74,25 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // === Validación: Otras terapias requiere detalle ===
+      // Si el profesional seleccionó "Otras terapias" en el array
+      // therapyTypes, el campo otherTherapyDetails es obligatorio (no
+      // vacío ni whitespace). Sino, se rechaza con 400.
+      const hasOtherTherapies = Array.isArray(therapyTypes) &&
+        therapyTypes.includes("Otras terapias");
+      const trimmedOtherDetails = typeof otherTherapyDetails === "string"
+        ? otherTherapyDetails.trim()
+        : "";
+      if (hasOtherTherapies && trimmedOtherDetails.length < 3) {
+        return NextResponse.json(
+          {
+            error: "Seleccionaste 'Otras terapias' pero no especificaste el enfoque. Por favor, detallá la terapia en el campo 'Especificar otra terapia' (mínimo 3 caracteres).",
+            code: "OTHER_THERAPY_DETAILS_REQUIRED",
+          },
+          { status: 400 }
+        );
+      }
+
       // Public registration: professional starts as inactive until admin approves
       const session = await getServerSession(authOptions);
       const userRole = (session?.user as { role: string })?.role;
@@ -112,6 +135,10 @@ export async function POST(request: NextRequest) {
           therapyTypes: therapyTypes ? JSON.stringify(therapyTypes) : null,
           targetAudience: targetAudience ? JSON.stringify(targetAudience) : null,
           therapyModality: therapyModality ? JSON.stringify(therapyModality) : null,
+          // === Persistir detalle de "Otras terapias" ===
+          // Solo se guarda si el profesional seleccionó "Otras terapias"
+          // y escribió un detalle. En caso contrario queda null.
+          otherTherapyDetails: hasOtherTherapies ? trimmedOtherDetails : null,
           onlineAttention: onlineAttention ?? false,
           presentialAttention: presentialAttention ?? false,
           homeAttention: homeAttention ?? false,

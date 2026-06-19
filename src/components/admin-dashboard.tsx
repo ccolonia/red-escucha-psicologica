@@ -133,6 +133,10 @@ interface Professional {
   therapyTypes: string | null;
   targetAudience: string | null;
   therapyModality: string | null;
+  // === Detalle de "Otras terapias" (nuevo campo) ===
+  // Texto libre que el profesional cargó al registrar si seleccionó
+  // "Otras terapias" en therapyTypes. Null si no aplica.
+  otherTherapyDetails: string | null;
   onlineAttention: boolean;
   presentialAttention: boolean;
   homeAttention: boolean;
@@ -1418,6 +1422,19 @@ export function AdminProfessionals() {
                                     <Badge key={t} variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{t}</Badge>
                                   ))}
                                 </div>
+                              </div>
+                            )}
+
+                            {/* === Detalle de "Otras terapias" === */}
+                            {/* Si el profesional seleccionó "Otras terapias" y
+                                cargó un detalle, se muestra acá para que el
+                                coordinador lo lea durante el triage. */}
+                            {prof.otherTherapyDetails && (
+                              <div>
+                                <p className="text-teal-500 text-sm mb-1">Detalle de otras terapias:</p>
+                                <p className="text-teal-700 text-sm bg-amber-50 border border-amber-200 p-2 rounded">
+                                  {prof.otherTherapyDetails}
+                                </p>
                               </div>
                             )}
 

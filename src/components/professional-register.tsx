@@ -55,13 +55,15 @@ const THERAPY_TYPES = [
   "Logoterapia",
   "Terapia gestáltica",
   "Neuropsicología",
-  "Sexología",
+  // === Reestructuración de tipos de terapia ===
+  // - Eliminado: "Sexología" (discontinuado)
+  // - Modificado: "Trauma y EMDR" → "EMDR" (más específico)
   "Mindfulness",
   "Psicología laboral / organizacional",
   "Psicología positiva",
   "Psicología forense",
   "Adicciones",
-  "Trauma y EMDR",
+  "EMDR",
   "Trastornos alimentarios",
   "Psiconutrición",
   "Psicooncología",
@@ -151,15 +153,18 @@ const ZONES_HIERARCHY: { region: string; areas: string[] }[] = [
 ];
 
 const SPECIALTIES = [
+  // === Especialidades tradicionales que se mantienen ===
   "Psicología Clínica",
-  "Terapia de Pareja y Familia",
-  "Psicología Infanto-Juvenil",
-  "Psiquiatría",
-  "Psicopedagogía",
-  "Musicoterapia",
+  // === Especialidades eliminadas (5) ===
+  // - Terapia de Pareja y Familia (eliminada)
+  // - Psicología Infanto-Juvenil (eliminada)
+  // - Psiquiatría (eliminada)
+  // - Psicopedagogía (eliminada)
+  // - Musicoterapia (eliminada)
   "Neuropsicología",
   "Psicología Laboral / Organizacional",
-  "Psicología Educativa",
+  // === Modificado: "Psicología Educativa" → "Psicología Educacional" ===
+  "Psicología Educacional",
   "Psicología Deportiva",
   "Psicología Forense",
   "Psicología Social / Comunitaria",
@@ -167,10 +172,23 @@ const SPECIALTIES = [
   "Sexología / Terapia Sexual",
   "Adicciones",
   "Duelo y Pérdida",
-  "Trauma y EMDR",
   "Trastornos Alimentarios",
   "Psicología Geriátrica",
   "Psicología Transcultural",
+  // === Nuevas especialidades clínicas (13) ===
+  "Psicología Perinatal",
+  "Psicooncología",
+  "Psiconutrición",
+  "Violencia y Abuso Sexual",
+  "Trastorno Obsesivo-Compulsivo (TOC)",
+  "Psicosis y Esquizofrenia",
+  "Hebefrenia",
+  "Trastorno Límite de la Personalidad (TLP)",
+  "Ansiedad y Ataques de Pánico",
+  "Síndrome de Burnout",
+  "Acoso Laboral",
+  "Bullying",
+  "Autolesiones e Ideación Suicida",
 ];
 
 const TITLES = ["Lic.", "Dr.", "Dra.", "Ninguno"];
@@ -205,6 +223,10 @@ export function ProfessionalRegister() {
     license: "",
     specialty: "",
     therapyTypes: [] as string[],
+    // === Detalle de "Otras terapias" ===
+    // Texto libre que se muestra solo cuando therapyTypes incluye
+    // "Otras terapias". El backend valida que no esté vacío en ese caso.
+    otherTherapyDetails: "",
     targetAudience: [] as string[],
     therapyModality: [] as string[],
     // Step 4: Zonas y modalidad de atención
@@ -370,6 +392,17 @@ export function ProfessionalRegister() {
           toast.error("Seleccioná al menos un tipo de terapia");
           return false;
         }
+        // === Validación client-side: Otras terapias requiere detalle ===
+        // Si el profesional seleccionó "Otras terapias" pero no escribió
+        // el detalle (o escribió menos de 3 caracteres), mostramos error
+        // acá sin ir al backend.
+        if (
+          form.therapyTypes.includes("Otras terapias") &&
+          form.otherTherapyDetails.trim().length < 3
+        ) {
+          toast.error("Seleccionaste 'Otras terapias' pero no especificaste el enfoque. Completá el campo 'Especificar otra terapia' (mínimo 3 caracteres).");
+          return false;
+        }
         if (form.targetAudience.length === 0) {
           toast.error("Seleccioná al menos un público objetivo");
           return false;
@@ -448,6 +481,12 @@ export function ProfessionalRegister() {
         cuil: form.cuil || null,
         gender: form.gender || null,
         therapyTypes: form.therapyTypes,
+        // === Detalle de "Otras terapias" ===
+        // Solo se manda si el profesional seleccionó "Otras terapias".
+        // El backend valida que no esté vacío en ese caso (400).
+        otherTherapyDetails: form.therapyTypes.includes("Otras terapias")
+          ? form.otherTherapyDetails.trim()
+          : null,
         targetAudience: form.targetAudience,
         therapyModality: form.therapyModality,
         onlineAttention: form.onlineAttention,
@@ -787,8 +826,10 @@ export function ProfessionalRegister() {
                             <SelectItem value="Neuropsicólogo">Neuropsicólogo/a</SelectItem>
                             <SelectItem value="Terapista Ocupacional">Terapista Ocupacional</SelectItem>
                             <SelectItem value="Trabajador Social">Trabajador/a Social</SelectItem>
-                            <SelectItem value="Coach Profesional">Coach Profesional</SelectItem>
-                            <SelectItem value="Estimulador/ora Temprana">Estimulador/ora Temprana</SelectItem>
+                            {/* === Profesión: cambios === */}
+                            {/* - Eliminado: "Coach Profesional" (discontinuado) */}
+                            {/* - Modificado: "Estimulador/ora Temprana" → "Estimulador/a Temprana" (más inclusivo) */}
+                            <SelectItem value="Estimulador/a Temprana">Estimulador/a Temprana</SelectItem>
                             <SelectItem value="Neuropsicomotrista">Neuropsicomotrista</SelectItem>
                             <SelectItem value="Neuropsicolingüista">Neuropsicolingüista</SelectItem>
                             <SelectItem value="Nutricionista">Nutricionista</SelectItem>
@@ -869,6 +910,28 @@ export function ProfessionalRegister() {
                           </label>
                         ))}
                       </div>
+                      {/* === Input condicional para "Otras terapias" === */}
+                      {/* Aparece con animación fade-in cuando el profesional
+                          selecciona "Otras terapias" en el checkbox de arriba.
+                          El backend valida que no esté vacío (mínimo 3 chars). */}
+                      {form.therapyTypes.includes("Otras terapias") && (
+                        <div className="animate-in fade-in duration-200 space-y-1.5 mt-2 p-3 rounded-lg bg-amber-50/60 border border-amber-200">
+                          <Label htmlFor="other-therapy-details" className="text-amber-800 font-medium block" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                            Especificar otra terapia <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="other-therapy-details"
+                            type="text"
+                            value={form.otherTherapyDetails}
+                            onChange={(e) => updateForm("otherTherapyDetails", e.target.value)}
+                            placeholder="Detallá el enfoque terapéutico (ej: Terapia de Aceptación y Compromiso, Terapia Narrativa, etc.)"
+                            className="border-amber-300 bg-white focus:border-amber-400 focus:ring-amber-300/20"
+                          />
+                          <p className="text-xs text-amber-700" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                            Este campo es obligatorio si seleccionaste "Otras terapias". Mínimo 3 caracteres.
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Dirigido a * (seleccioná al menos uno)</Label>
