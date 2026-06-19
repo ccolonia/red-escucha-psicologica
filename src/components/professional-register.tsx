@@ -444,9 +444,12 @@ export function ProfessionalRegister() {
           toast.error("Seleccioná al menos una modalidad de atención");
           return false;
         }
-        // Zonas solo obligatorias si atiende de forma presencial
-        if (form.presentialAttention && form.zones.length === 0) {
-          toast.error("Seleccioná al menos una zona de atención presencial");
+        // Zonas obligatorias si atiende de forma presencial O a domicilio.
+        // Antes solo era presencial, pero un terapeuta que solo tilda
+        // "A Domicilio" también necesita indicar qué zonas cubre
+        // geográficamente para el Triage.
+        if ((form.presentialAttention || form.homeAttention) && form.zones.length === 0) {
+          toast.error("Seleccioná al menos una zona de atención (presencial o a domicilio)");
           return false;
         }
         return true;
@@ -1044,14 +1047,14 @@ export function ProfessionalRegister() {
                             onCheckedChange={(v) => updateForm("homeAttention", v)}
                           />
                           <Heart className="w-5 h-5 text-sage-500" />
-                          <span className="text-sm font-medium text-forest-500" style={{ fontFamily: "Montserrat, sans-serif" }}>Domicilio</span>
+                          <span className="text-sm font-medium text-forest-500" style={{ fontFamily: "Montserrat, sans-serif" }}>A Domicilio</span>
                         </label>
                       </div>
                     </div>
 
-                    {form.presentialAttention && (
+                    {(form.presentialAttention || form.homeAttention) && (
                     <div className="space-y-2">
-                      <Label className="text-forest-500 font-medium text-base" style={{ fontFamily: "Montserrat, sans-serif" }}>Zonas de atención * (Por favor, marque únicamente las zonas donde atiende de manera presencial)</Label>
+                      <Label className="text-forest-500 font-medium text-base" style={{ fontFamily: "Montserrat, sans-serif" }}>Zonas de atención * (Por favor, marque únicamente las zonas donde atiende de manera presencial o a domicilio)</Label>
                       {form.zones.length > 0 && (
                         <p className="text-xs text-sage-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
                           {form.zones.length} zona{form.zones.length !== 1 ? "s" : ""} seleccionada{form.zones.length !== 1 ? "s" : ""}
@@ -1104,10 +1107,10 @@ export function ProfessionalRegister() {
                       </div>
                     </div>
                     )}
-                    {!form.presentialAttention && (
+                    {!form.presentialAttention && !form.homeAttention && (
                       <div className="bg-sage-300/10 border border-sage-300/30 rounded-lg p-4 text-center">
                         <p className="text-sm text-forest-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                          No seleccionaste atención presencial, por lo tanto no es necesario indicar zonas de atención.
+                          No seleccionaste atención presencial ni a domicilio, por lo tanto no es necesario indicar zonas de atención.
                         </p>
                       </div>
                     )}
