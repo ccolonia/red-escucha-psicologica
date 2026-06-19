@@ -1012,12 +1012,18 @@ export function LandingPage() {
           </motion.div>
 
           {/* Tabs */}
-          <div className="flex justify-start sm:justify-center gap-2 mb-10 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
+          {/* Contenedor padre: flex-wrap para que bajen de renglón si no
+              entran (en vez de overflow-x-auto que recortaba "Individual"
+              en notebooks 1024-1366px). justify-center siempre (antes era
+              justify-start sm:justify-center, que rompía el centrado del
+              primer botón cuando overflow-x-auto activaba). gap-3 para
+              mejor respiración entre botones. */}
+          <div className="flex flex-wrap justify-center gap-3 mb-10">
             {cmsSpecialtyTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap shrink-0 ${
+                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap ${
                   activeTab === tab.id
                     ? "bg-forest-500 text-beige-50 shadow-md"
                     : "bg-beige-200 text-forest-600 hover:bg-beige-300"
