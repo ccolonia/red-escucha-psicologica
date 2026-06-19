@@ -25,6 +25,9 @@ import {
   FileText,
   Upload,
   X,
+  Clock,
+  ShieldCheck,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +45,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -223,6 +234,11 @@ export function ProfessionalRegister() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // === Modal de Términos y Condiciones ===
+  // Controla la apertura del Dialog que muestra la Propuesta de Trabajo
+  // Profesional de REP. Se abre al hacer click en "Términos y Condiciones"
+  // (botón tipo link en el checkbox final del step 4).
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvFileName, setCvFileName] = useState<string>("");
@@ -1135,15 +1151,261 @@ export function ProfessionalRegister() {
                         />
                         <span className="text-sm text-forest-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                           Acepto cumplir con todos los{" "}
-                          <span className="font-medium text-forest-500">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setIsTermsModalOpen(true);
+                            }}
+                            className="font-medium text-emerald-700 underline hover:text-emerald-800 transition-colors inline"
+                          >
                             Términos y Condiciones
-                          </span>{" "}
+                          </button>{" "}
                           de Red Escucha Psicológica, incluyendo las normas de confidencialidad y ética profesional.
                         </span>
                       </label>
                     </div>
                   </div>
                 )}
+
+                {/* === Modal de Términos y Condiciones (Propuesta de Trabajo Profesional REP) === */}
+                {/* Dialog premium que se abre al hacer click en "Términos y Condiciones".
+                    Estructura dividida en 6 secciones escaneables con iconos, tarjetas
+                    con sombras suaves y paleta emerald/teal/amber. Responsive: en mobile
+                    ocupa casi toda la pantalla con scroll interno; en desktop max-w-4xl. */}
+                <Dialog open={isTermsModalOpen} onOpenChange={setIsTermsModalOpen}>
+                  <DialogContent className="max-w-4xl w-[95vw] sm:w-full max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
+                    {/* Header institucional verde corporativo */}
+                    <DialogHeader className="bg-gradient-to-br from-emerald-700 to-teal-800 text-white p-6 sm:p-8 shrink-0">
+                      <DialogTitle className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
+                        <Leaf className="w-7 h-7" />
+                        Propuesta de Trabajo Profesional — REP
+                      </DialogTitle>
+                      <DialogDescription className="text-emerald-100 mt-2 text-base sm:text-lg">
+                        Asociación estratégica para profesionales de la salud mental. Un espacio profesional, humano y accesible.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    {/* Body scrollable */}
+                    <div className="overflow-y-auto p-6 sm:p-8 space-y-8 bg-gradient-to-b from-white to-slate-50/50">
+
+                      {/* === Sección 1: Grilla de Presentación (3 columnas con iconos) === */}
+                      <div className="grid sm:grid-cols-3 gap-4">
+                        <Card className="border-emerald-100 shadow-sm">
+                          <CardContent className="p-5 text-center">
+                            <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+                              <Clock className="w-6 h-6 text-emerald-600" />
+                            </div>
+                            <h3 className="font-semibold text-slate-800 mb-1">Trayectoria Clínica</h3>
+                            <p className="text-sm text-slate-600">Más de 30 años acompañando pacientes asegurando calidad asistencial.</p>
+                          </CardContent>
+                        </Card>
+                        <Card className="border-emerald-100 shadow-sm">
+                          <CardContent className="p-5 text-center">
+                            <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+                              <MapPin className="w-6 h-6 text-emerald-600" />
+                            </div>
+                            <h3 className="font-semibold text-slate-800 mb-1">Expansión Territorial</h3>
+                            <p className="text-sm text-slate-600">Amplia red de atención clínica en CABA y GBA, con proyección nacional.</p>
+                          </CardContent>
+                        </Card>
+                        <Card className="border-emerald-100 shadow-sm">
+                          <CardContent className="p-5 text-center">
+                            <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+                              <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                            </div>
+                            <h3 className="font-semibold text-slate-800 mb-1">Práctica Ética</h3>
+                            <p className="text-sm text-slate-600">Facilitamos el encuentro entre consultantes y profesionales comprometidos.</p>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* === Sección 2: Modelo Operativo (2 columnas comparativas) === */}
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                          <span className="w-1 h-6 bg-emerald-600 rounded-full"></span>
+                          Modelo Operativo
+                        </h2>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <Card className="bg-slate-50 border-slate-200 shadow-sm">
+                            <CardContent className="p-5">
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="text-2xl">📦</span>
+                                <h3 className="font-semibold text-slate-800">Tu Práctica <span className="text-slate-500 text-sm font-normal">(Autonomía)</span></h3>
+                              </div>
+                              <ul className="space-y-2 text-sm text-slate-700">
+                                <li className="flex items-start gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                                  <span>Conservación total de la autonomía clínica.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                                  <span>Modalidad presencial o virtual según disponibilidad.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                                  <span>Enfoque exclusivo en el proceso terapéutico.</span>
+                                </li>
+                              </ul>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-emerald-50/30 border-emerald-200 shadow-sm">
+                            <CardContent className="p-5">
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="text-2xl">🤝</span>
+                                <h3 className="font-semibold text-slate-800">Nuestro Respaldo <span className="text-slate-500 text-sm font-normal">(Sinergia)</span></h3>
+                              </div>
+                              <ul className="space-y-2 text-sm text-slate-700">
+                                <li className="flex items-start gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                                  <span>Publicidad y posicionamiento digital.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                                  <span>Admisión y derivación continua de pacientes.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                                  <span>Gestión operativa institucional.</span>
+                                </li>
+                              </ul>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </div>
+
+                      {/* === Sección 3: Pilares de Ética y Resguardo Clínico === */}
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                          <span className="w-1 h-6 bg-emerald-600 rounded-full"></span>
+                          Pilares de Ética y Resguardo Clínico
+                        </h2>
+                        <Card className="bg-amber-50/50 border-amber-200 shadow-sm">
+                          <CardContent className="p-5 space-y-3">
+                            <div className="flex items-start gap-3">
+                              <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                              <p className="text-sm text-slate-700">
+                                <strong className="text-slate-900">Responsabilidad individual del terapeuta</strong> en la confección, guarda y actualización de historias clínicas, consentimientos informados y epicrisis.
+                              </p>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                              <p className="text-sm text-slate-700">
+                                <strong className="text-slate-900">Uso obligatorio del sistema interno REP</strong> para reportar disponibilidad horaria, seguimiento de derivaciones y actualización de documentación legal.
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* === Sección 4: Espacio de Supervisión Clínica === */}
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                          <span className="w-1 h-6 bg-emerald-600 rounded-full"></span>
+                          Espacio de Supervisión Clínica
+                        </h2>
+                        <Card className="border-emerald-100 shadow-sm">
+                          <CardContent className="p-5">
+                            <p className="text-sm text-slate-700 mb-3">
+                              Contás con un <strong>espacio de supervisión grupal online semanal</strong> (1 hora de duración) a cargo de profesionales de vasta experiencia.
+                            </p>
+                            <Badge className="bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100">
+                              Espacio arancelado — Valor actual: $12.000 por supervisión
+                            </Badge>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* === Sección 5: Curva de Consolidación e Honorarios === */}
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                          <span className="w-1 h-6 bg-emerald-600 rounded-full"></span>
+                          Curva de Consolidación e Honorarios
+                        </h2>
+                        {/* Timeline de comisiones decrecientes */}
+                        <div className="grid sm:grid-cols-3 gap-3 mb-4">
+                          <Card className="bg-emerald-50 border-emerald-300 shadow-sm">
+                            <CardContent className="p-4 text-center">
+                              <div className="w-3 h-3 rounded-full bg-emerald-500 mx-auto mb-2"></div>
+                              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Año 1</p>
+                              <p className="text-2xl font-bold text-emerald-700">30%</p>
+                              <p className="text-xs text-slate-600">Comisión Institucional REP</p>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-amber-50 border-amber-300 shadow-sm">
+                            <CardContent className="p-4 text-center">
+                              <div className="w-3 h-3 rounded-full bg-amber-500 mx-auto mb-2"></div>
+                              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Año 2</p>
+                              <p className="text-2xl font-bold text-amber-700">20%</p>
+                              <p className="text-xs text-slate-600">Comisión Institucional REP</p>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-orange-50 border-orange-300 shadow-sm">
+                            <CardContent className="p-4 text-center">
+                              <div className="w-3 h-3 rounded-full bg-orange-500 mx-auto mb-2"></div>
+                              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Año 3 en adelante</p>
+                              <p className="text-2xl font-bold text-orange-700">10%</p>
+                              <p className="text-xs text-slate-600">Comisión Institucional REP</p>
+                            </CardContent>
+                          </Card>
+                        </div>
+                        {/* Cuadro de honorarios base mínimos */}
+                        <Card className="bg-slate-50 border-slate-200 shadow-sm">
+                          <CardContent className="p-4">
+                            <p className="text-xs text-slate-500 uppercase tracking-wide mb-2 font-medium">Honorarios Base Mínimos (Actualización Trimestral)</p>
+                            <div className="grid sm:grid-cols-2 gap-3">
+                              <div className="flex justify-between items-center bg-white rounded-lg px-3 py-2 border border-slate-200">
+                                <span className="text-sm text-slate-700">Terapia Individual</span>
+                                <span className="font-bold text-emerald-700">$35.000</span>
+                              </div>
+                              <div className="flex justify-between items-center bg-white rounded-lg px-3 py-2 border border-slate-200">
+                                <span className="text-sm text-slate-700">Terapia Vincular</span>
+                                <span className="font-bold text-emerald-700">$45.000</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* === Sección 6: Roadmap de Ingreso e Identidad === */}
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                          <span className="w-1 h-6 bg-emerald-600 rounded-full"></span>
+                          Roadmap de Ingreso e Identidad
+                        </h2>
+                        <div className="space-y-3">
+                          {[
+                            { num: 1, title: "Contacto Inicial", desc: "Envío de CV e indicación de zonas de atención." },
+                            { num: 2, title: "Evaluación", desc: "Revisión de antecedentes y presentación de credenciales (DNI, Título, Matrícula, Seguro de Mala Praxis, Monotributo). Excluyente CUD: Registro Nacional de Prestadores y habilitación de consultorio." },
+                            { num: 3, title: "Entrevista", desc: "Encuentro para conocernos y alinear objetivos de trabajo." },
+                            { num: 4, title: "Activación REP", desc: "Alta en el sistema y comienzo de recepción de derivaciones." },
+                          ].map((step, idx) => (
+                            <div key={step.num} className="flex gap-4">
+                              <div className="flex flex-col items-center">
+                                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center shrink-0">
+                                  {step.num}
+                                </div>
+                                {idx < 3 && <div className="w-0.5 h-full bg-emerald-200 flex-1 mt-1 min-h-[20px]"></div>}
+                              </div>
+                              <div className="pb-4">
+                                <h3 className="font-semibold text-slate-800">{step.title}</h3>
+                                <p className="text-sm text-slate-600 mt-1">{step.desc}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer fijo */}
+                    <div className="border-t border-slate-200 p-4 bg-white shrink-0 flex justify-end">
+                      <Button onClick={() => setIsTermsModalOpen(false)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Entendido
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
                 {/* Navigation */}
                 <div className="flex justify-between pt-4 border-t border-beige-200">
