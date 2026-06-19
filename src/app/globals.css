@@ -231,6 +231,18 @@
   background: oklch(0.65 0.05 120);
 }
 
+/* === Scrollbar oculta para carruseles horizontales en mobile === */
+/* Usado en el strip deslizable de tabs de Especialidades del landing.
+   En mobile (Chrome/Safari) la scrollbar gris nativa se ve fea debajo
+   de los botones. Esta utilidad la oculta manteniendo el scroll táctil. */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE y Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
 /* === Calm Wellness Design System === */
 
 /* Soft paper texture background */

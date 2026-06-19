@@ -1012,18 +1012,22 @@ export function LandingPage() {
           </motion.div>
 
           {/* Tabs */}
-          {/* Contenedor padre: flex-wrap para que bajen de renglón si no
-              entran (en vez de overflow-x-auto que recortaba "Individual"
-              en notebooks 1024-1366px). justify-center siempre (antes era
-              justify-start sm:justify-center, que rompía el centrado del
-              primer botón cuando overflow-x-auto activaba). gap-3 para
-              mejor respiración entre botones. */}
-          <div className="flex flex-wrap justify-center gap-3 mb-10">
+          {/* === Strip deslizable en mobile + flex centrado en desktop === */}
+          {/* En mobile (default): flex-nowrap + overflow-x-auto = carrusel
+              horizontal fluido que se desliza con el dedo. Los botones no
+              se amontonan en múltiples renglones (que ensuciaban la UI en
+              celulares con 9 especialidades).
+              En pantallas medianas+ (md:): flex-wrap + justify-center =
+              distribución tradicional centrada en una o más líneas.
+              scrollbar-none oculta la scrollbar nativa fea de Chrome/Safari.
+              snap-x snap-mandatory + snap-align-start en botones = scroll
+              magnético suave al deslizar. */}
+          <div className="flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible md:justify-center gap-2 px-4 md:px-0 pb-3 md:pb-0 scrollbar-none snap-x snap-mandatory mb-10">
             {cmsSpecialtyTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap ${
+                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap snap-start ${
                   activeTab === tab.id
                     ? "bg-forest-500 text-beige-50 shadow-md"
                     : "bg-beige-200 text-forest-600 hover:bg-beige-300"
