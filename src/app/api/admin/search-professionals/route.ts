@@ -6,47 +6,45 @@ import { db } from "@/lib/db";
 
 // GET /api/admin/search-professionals
 //
-// Motor de asignación inteligente para la mesa de control admin.
-// Cruza los filtros clínicos del paciente (profession, specialty,
-// therapyTypes, targetAudience) con la disponibilidad real de los
-// profesionales (ProfessionalSchedule + ScheduleOverride + appointments
-// ya tomados) y devuelve los slots libres compatibles con la modalidad
-// solicitada.
+// Motor de asignación inteligente para la Agenda Centralizada del admin.
+// Devuelve profesionales que matchean los filtros clínicos, con sus slots
+// (libres y ocupados) computados para TODA la semana calendario (Lun-Dom).
 //
-// Query params (todos opcionales, pero se recomienda pasar al menos
-// dayOfWeek + date para tener resultados útiles):
-//   profession     — string exacto o parcial (ej: "Psicólogo")
-//   specialty      — string exacto (ej: "Psicología Clínica")
-//   therapyTypes   — comma-separated (ej: "Psicoanálisis,EMDR")
-//   targetAudience — comma-separated (ej: "Adultos,Adolescentes")
-//   dayOfWeek      — int 0-6 (0=Dom, 1=Lun, ..., 6=Sab)
-//   date           — ISO date "2026-06-23" (para validar disponibilidad real)
-//   modality       — "presencial" | "online" | "híbrida" | "ambas"
-//                    (si no se pasa, no se filtra por modalidad)
+// Query params (todos opcionales):
+//   weekStart       — ISO date del LUNES de la semana a consultar (ej: "2026-06-23")
+//                     Si no se pasa, se calcula el lunes de la semana actual.
+//   profession      — string parcial (ej: "Psicólogo")
+//   specialty       — string parcial (ej: "Psicología Clínica")
+//   therapyTypes    — comma-separated (ej: "Psicoanálisis,EMDR")
+//   targetAudience  — comma-separated (ej: "Adultos,Adolescentes")
+//   therapyModalities — comma-separated (ej: "Individual,Vincular")
+//   modality        — "presencial" | "online" | "híbrida" | "ambas"
 //
 // Respuesta:
-//   200 + { criteria, summary, professionals[] }
-//   401/403 — no autenticado / no admin
-//   500 — error
+//   200 + {
+//     criteria,
+//     summary,
+//     weekDates: string[7],  // ISO dates Lun-Dom
+//     professionals: [
+//       { id, name, ..., weeklySlots: { 1: {date, availableSlots, bookedSlots}, ..., 0: {...} },
+//         totalFreeSlots, totalBookedSlots, hasAvailability }
+//     ]
+//   }
 //
-// Lógica de cruce:
-//   1. Filtrar professionals por campos descriptivos (where clause)
-//   2. Traer cada professional con sus schedules del dayOfWeek,
-//      overrides de la fecha, y appointments ya tomados esa fecha
-//   3. Para cada professional, computar slots disponibles reutilizan-
-//      do la misma lógica del endpoint /slots (slotDuration, overrides
-//      block/extra, booked times, past times si es hoy)
-//   4. Filtrar slots por modalidad compatible con la solicitada:
-//        presencial → solo slots con modality "P" o "ambas"
-//        online     → solo slots con modality "OL" o "ambas"
-//        híbrida    → solo slots con modality "P", "OL", "H" o "ambas"
-//        ambas      → todos los slots
-//   5. Devolver JSON estructurado para alimentar la UI del admin
+// Lógica:
+//   1. Calcular rango de la semana (Lun-Dom) a partir de weekStart
+//   2. Filtrar professionals por campos clínicos (where clause)
+//   3. Aplicar Barrera 1: filtrado por modalidad a nivel perfil
+//   4. Traer professionals con TODOS los schedules (sin filtro dayOfWeek),
+//      overrides de las 7 fechas, y appointments de las 7 fechas
+//   5. Para cada profesional, computar slots disponibles para cada día
+//      de la semana (reutiliza computeAvailableSlots)
+//   6. Barrera 2: filtrar slots por modalidad compatible
+//   7. Devolver estructura con weeklySlots mapeado por dayOfWeek (0-6)
 
 const ARG_TZ = "America/Argentina/Buenos_Aires";
 
-// === Helpers de tiempo (duplicados del endpoint /slots — refactor
-// futuro: mover a lib/slots.ts para no duplicar) ===
+// === Helpers de tiempo ===
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -69,8 +67,6 @@ function generateSlots(startTime: string, endTime: string, duration: number): st
 }
 
 // === Helper: compatibilidad de modalidad ===
-// Dado el modality del schedule ("P", "OL", "H", "ambas") y el modality
-// solicitado por el paciente, devuelve true si son compatibles.
 function isModalityCompatible(scheduleModality: string, requestedModality: string): boolean {
   if (!requestedModality || requestedModality === "ambas") return true;
   const sm = scheduleModality.toUpperCase();
@@ -81,24 +77,24 @@ function isModalityCompatible(scheduleModality: string, requestedModality: strin
 }
 
 // === Helper: computar slots disponibles para un professional en una fecha ===
-// Reutiliza la misma lógica del endpoint /slots pero inline (sin HTTP call).
 function computeAvailableSlots(
-  schedules: { startTime: string; endTime: string; slotDuration: number; modality: string }[],
+  schedules: { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number }[],
   overrides: { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null }[],
   bookedTimes: Set<string>,
   dateStr: string,
-  todayStr: string
+  todayStr: string,
+  targetDayOfWeek: number
 ): { time: string; endTime: string; modality: string; duration: number }[] {
+  // Filtrar schedules del día específico
+  const daySchedules = schedules.filter((s) => s.dayOfWeek === targetDayOfWeek);
   const blockOverrides = overrides.filter((o) => o.type === "block");
   const extraOverrides = overrides.filter((o) => o.type === "extra");
 
-  // Full-day block → sin slots
   const fullDayBlock = blockOverrides.some((o) => !o.startTime && !o.endTime);
   if (fullDayBlock) return [];
 
-  // Generar slots base desde schedules
   const allSlots: { time: string; endTime: string; modality: string; duration: number }[] = [];
-  for (const schedule of schedules) {
+  for (const schedule of daySchedules) {
     const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
     for (const time of slots) {
       const slotStartMin = timeToMinutes(time);
@@ -118,7 +114,6 @@ function computeAvailableSlots(
     }
   }
 
-  // Agregar extra overrides
   for (const extra of extraOverrides) {
     if (extra.startTime && extra.endTime) {
       const duration = extra.slotDuration || 45;
@@ -135,21 +130,41 @@ function computeAvailableSlots(
     }
   }
 
-  // Filtrar booked + past times si es hoy
   const isToday = dateStr === todayStr;
   const nowArgTime = isToday
     ? new Date().toLocaleTimeString("en-GB", { timeZone: ARG_TZ, hour: "2-digit", minute: "2-digit" })
     : null;
 
-  const availableSlots = allSlots
+  return allSlots
     .filter((slot) => {
       if (bookedTimes.has(slot.time)) return false;
       if (nowArgTime && slot.time <= nowArgTime) return false;
       return true;
     })
     .sort((a, b) => a.time.localeCompare(b.time));
+}
 
-  return availableSlots;
+// === Helper: calcular el lunes de una semana (weekStartsOn: 1) ===
+function getMondayOfWeek(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const dayOfWeekJs = date.getDay(); // 0=Dom, 1=Lun, ..., 6=Sab
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - (dayOfWeekJs === 0 ? 6 : dayOfWeekJs - 1));
+  return monday;
+}
+
+// === Helper: generar 7 fechas ISO a partir del lunes ===
+function generateWeekDates(monday: Date): { date: string; dayOfWeek: number }[] {
+  const dates: { date: string; dayOfWeek: number }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const isoDate = d.toLocaleDateString("sv-SE");
+    const dayOfWeekJs = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getDay();
+    dates.push({ date: isoDate, dayOfWeek: dayOfWeekJs });
+  }
+  return dates;
 }
 
 export async function GET(request: NextRequest) {
@@ -173,25 +188,21 @@ export async function GET(request: NextRequest) {
     const therapyTypesParam = searchParams.get("therapyTypes")?.trim() || "";
     const targetAudienceParam = searchParams.get("targetAudience")?.trim() || "";
     const therapyModalitiesParam = searchParams.get("therapyModalities")?.trim() || "";
-    const dayOfWeekParam = searchParams.get("dayOfWeek");
-    const date = searchParams.get("date")?.trim() || "";
+    const weekStartParam = searchParams.get("weekStart")?.trim() || "";
     const modality = searchParams.get("modality")?.trim().toLowerCase() || "";
 
     const therapyTypes = therapyTypesParam ? therapyTypesParam.split(",").map((t) => t.trim()).filter(Boolean) : [];
     const targetAudience = targetAudienceParam ? targetAudienceParam.split(",").map((t) => t.trim()).filter(Boolean) : [];
     const therapyModalities = therapyModalitiesParam ? therapyModalitiesParam.split(",").map((t) => t.trim()).filter(Boolean) : [];
-    const dayOfWeek = dayOfWeekParam ? parseInt(dayOfWeekParam, 10) : null;
+
+    // === Calcular rango de la semana (Lun-Dom) ===
+    const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+    const referenceDate = weekStartParam || todayStr;
+    const monday = getMondayOfWeek(referenceDate);
+    const weekDates = generateWeekDates(monday); // [{date, dayOfWeek} x7]
+    const weekDateStrings = weekDates.map((w) => w.date);
 
     // === Construir where clause para professionals ===
-    // Lógica flexibilizada (commit de hoy) para evitar falsos negativos:
-    //   - profession: contains insensitive (matchea "Psicólogo" con "Psicóloga",
-    //     "Licenciado en Psicología", etc.)
-    //   - specialty: contains insensitive (antes era match exacto, muy rigido)
-    //   - therapyTypes, targetAudience, therapyModalities: contains insensitive
-    //     con el string entre comillas dobles (porque son JSON arrays serializados)
-    //     + normalización de espacios para tolerar variaciones
-    // Filtros opcionales no restrictivos: si un param llega vacío, no se
-    // agrega al where (cortocircuito con && { ... }).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       available: true,
@@ -199,85 +210,40 @@ export async function GET(request: NextRequest) {
       licenseVerified: true,
     };
 
-    // Profesión difusa: "Psicólogo" debe matchear "Licenciado en Psicología",
-    // "Psicóloga", etc. Usamos contains insensitive.
     if (profession) {
       where.profession = { contains: profession, mode: "insensitive" };
     }
-
-    // Especialidad: antes era match exacto (where.specialty = specialty),
-    // ahora contains insensitive para tolerar variaciones de spacing.
     if (specialty) {
       where.specialty = { contains: specialty, mode: "insensitive" };
     }
 
-    // === Búsqueda insensible en JSON/Arrays ===
-    // Los campos therapyTypes, targetAudience y therapyModality son JSON
-    // strings (ej: '["Psicoanálisis","EMDR"]'). Para buscar, usamos
-    // contains con el string entre comillas dobles + mode insensitive.
-    // El mode: insensitive cubre mayúsculas/minúsculas; el contains del
-    // string entre comillas cubre el match exacto del item dentro del array.
     const andConditions: any[] = [];
-
     if (therapyTypes.length > 0) {
       for (const t of therapyTypes) {
-        andConditions.push({
-          therapyTypes: { contains: `"${t}"`, mode: "insensitive" },
-        });
+        andConditions.push({ therapyTypes: { contains: `"${t}"`, mode: "insensitive" } });
       }
     }
-
     if (targetAudience.length > 0) {
       for (const t of targetAudience) {
-        andConditions.push({
-          targetAudience: { contains: `"${t}"`, mode: "insensitive" },
-        });
+        andConditions.push({ targetAudience: { contains: `"${t}"`, mode: "insensitive" } });
       }
     }
-
-    // === NUEVO: Modalidad de Terapia (therapyModality) ===
-    // Campo JSON string en Professional, valores: Individual, Vincular,
-    // Evaluaciones, Terapia Grupal, Orientación a Padres, Asesoría a
-    // Empresas, Pericias, Discapacidad, Orientación Vocacional.
-    // No confundir con la modalidad de atención (Online/Presencial).
     if (therapyModalities.length > 0) {
       for (const t of therapyModalities) {
-        andConditions.push({
-          therapyModality: { contains: `"${t}"`, mode: "insensitive" },
-        });
+        andConditions.push({ therapyModality: { contains: `"${t}"`, mode: "insensitive" } });
       }
     }
-
     if (andConditions.length > 0) {
       where.AND = andConditions;
     }
 
-    // === BARRERA 1: Filtrado por modalidad a nivel PERFIL (where clause) ===
-    // El modelo Professional tiene 3 booleanos separados (onlineAttention,
-    // presentialAttention, homeAttention), no un campo modality único.
-    // Mapeamos la modalidad solicitada a esos booleanos:
-    //   presencial → presentialAttention=true OR homeAttention=true
-    //                (domicilio también es presencial — el terapeuta va al
-    //                paciente, no es online)
-    //   online     → onlineAttention=true (excluye a profesionales que solo
-    //                atienden presencial, ej: Lic. Stephanie Castaño)
-    //   híbrida    → al menos 2 de las 3 modalidades activas (para que pueda
-    //                ofrecer ambas)
-    //   ambas      → sin filtro (trae todos)
-    //
-    // Esto es un cortocircuito estricto: si el admin busca 'Presencial',
-    // cualquier profesional estrictamente Online queda fuera de la query.
+    // === BARRERA 1: Filtrado por modalidad a nivel PERFIL ===
     if (modality && modality !== "ambas") {
       if (modality === "presencial") {
-        where.OR = [
-          { presentialAttention: true },
-          { homeAttention: true },
-        ];
+        where.OR = [{ presentialAttention: true }, { homeAttention: true }];
       } else if (modality === "online") {
         where.onlineAttention = true;
       } else if (modality === "híbrida" || modality === "hibrida") {
-        // Híbrido: necesita al menos 2 modalidades activas. Como Prisma no
-        // soporta count directo en where, filtramos con OR de combinaciones.
         where.OR = [
           { onlineAttention: true, presentialAttention: true },
           { onlineAttention: true, homeAttention: true },
@@ -287,7 +253,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // === Traer professionals con sus schedules, overrides y appointments ===
+    // === Traer professionals con TODOS los schedules, overrides y appointments de la semana ===
     const professionals = await db.professional.findMany({
       where,
       select: {
@@ -297,69 +263,91 @@ export async function GET(request: NextRequest) {
         onlineAttention: true,
         presentialAttention: true,
         homeAttention: true,
-        // Incluimos therapyModality para que la UI lo pueda mostrar si
-        // hace falta, y para debuggear el cruce.
         therapyModality: true,
         user: { select: { id: true, name: true, email: true, phone: true } },
-        schedules: dayOfWeek != null ? { where: { dayOfWeek } } : true,
-        scheduleOverrides: date ? { where: { date } } : true,
-        appointments: date ? {
+        // Traer TODOS los schedules (sin filtro dayOfWeek) — necesitamos los 7 días
+        schedules: true,
+        // Overrides de las 7 fechas de la semana
+        scheduleOverrides: { where: { date: { in: weekDateStrings } } },
+        // Appointments de las 7 fechas de la semana (activos)
+        appointments: {
           where: {
-            date,
+            date: { in: weekDateStrings },
             status: { in: ["pending", "confirmed"] },
           },
           select: {
             id: true,
+            date: true,
             time: true,
             modality: true,
             status: true,
             patient: { select: { user: { select: { name: true, email: true, phone: true } } } },
           },
-        } : {
-          where: { status: { in: ["pending", "confirmed"] } },
-          select: { id: true, time: true, modality: true, status: true,
-            patient: { select: { user: { select: { name: true, email: true, phone: true } } } } },
         },
       },
       orderBy: { user: { name: "asc" } },
     });
 
-    // === Para cada professional, computar slots disponibles + filtrar por modalidad ===
-    // === BARRERA 2 (Runtime post-query): si un profesional pasa el filtro clínico
-    // pero al computar sus availableSlots para el día solicitado el total de
-    // slots compatibles con la modalidad requerida es 0, se remueve del array
-    // final. Esto cubre edge cases donde el perfil dice que atiende presencial
-    // pero su schedule del día solo tiene slots 'OL' (online).
-    const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+    // === Para cada professional, computar slots por día de la semana ===
+    const enrichedProfessionals = professionals.map((prof) => {
+      // Agrupar appointments por fecha
+      const appointmentsByDate: Record<string, typeof prof.appointments> = {};
+      for (const apt of prof.appointments) {
+        if (!appointmentsByDate[apt.date]) appointmentsByDate[apt.date] = [];
+        appointmentsByDate[apt.date].push(apt);
+      }
 
-    const enrichedProfessionalsRaw = professionals.map((prof) => {
-      const bookedTimes = new Set(prof.appointments.map((a) => a.time));
+      // Agrupar overrides por fecha
+      const overridesByDate: Record<string, typeof prof.scheduleOverrides> = {};
+      for (const ov of prof.scheduleOverrides) {
+        if (!overridesByDate[ov.date]) overridesByDate[ov.date] = [];
+        overridesByDate[ov.date].push(ov);
+      }
 
-      const availableSlotsRaw = date && dayOfWeek != null
-        ? computeAvailableSlots(
-            prof.schedules as { startTime: string; endTime: string; slotDuration: number; modality: string }[],
-            prof.scheduleOverrides as { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null }[],
-            bookedTimes,
-            date,
-            todayStr
-          )
-        : [];
+      // Computar slots para cada día de la semana
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const weeklySlots: Record<number, any> = {};
+      let totalFreeSlots = 0;
+      let totalBookedSlots = 0;
 
-      // Filtrar por modalidad compatible (Barrera 2a: a nivel slot)
-      const availableSlots = modality
-        ? availableSlotsRaw.filter((s) => isModalityCompatible(s.modality, modality))
-        : availableSlotsRaw;
+      for (const { date: dateStr, dayOfWeek } of weekDates) {
+        const dayAppointments = appointmentsByDate[dateStr] || [];
+        const dayOverrides = overridesByDate[dateStr] || [];
+        const bookedTimes = new Set(dayAppointments.map((a) => a.time));
 
-      // Slots ocupados (para mostrar ficha al hacer click)
-      const bookedSlots = prof.appointments.map((a) => ({
-        id: a.id,
-        time: a.time,
-        modality: a.modality,
-        status: a.status,
-        patientName: a.patient?.user?.name || "Paciente",
-        patientEmail: a.patient?.user?.email || null,
-        patientPhone: a.patient?.user?.phone || null,
-      }));
+        const availableSlotsRaw = computeAvailableSlots(
+          prof.schedules as { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number }[],
+          dayOverrides as { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null }[],
+          bookedTimes,
+          dateStr,
+          todayStr,
+          dayOfWeek
+        );
+
+        // Filtrar por modalidad compatible (Barrera 2)
+        const availableSlots = modality
+          ? availableSlotsRaw.filter((s) => isModalityCompatible(s.modality, modality))
+          : availableSlotsRaw;
+
+        const bookedSlots = dayAppointments.map((a) => ({
+          id: a.id,
+          time: a.time,
+          modality: a.modality,
+          status: a.status,
+          patientName: a.patient?.user?.name || "Paciente",
+          patientEmail: a.patient?.user?.email || null,
+          patientPhone: a.patient?.user?.phone || null,
+        }));
+
+        weeklySlots[dayOfWeek] = {
+          date: dateStr,
+          availableSlots,
+          bookedSlots,
+        };
+
+        totalFreeSlots += availableSlots.length;
+        totalBookedSlots += bookedSlots.length;
+      }
 
       const modalityBadges: string[] = [];
       if (prof.onlineAttention) modalityBadges.push("Online");
@@ -374,26 +362,17 @@ export async function GET(request: NextRequest) {
         specialty: prof.specialty,
         profession: prof.profession,
         modalityBadges,
-        availableSlots,
-        bookedSlots,
-        hasAvailability: availableSlots.length > 0,
+        weeklySlots,
+        totalFreeSlots,
+        totalBookedSlots,
+        hasAvailability: totalFreeSlots > 0,
       };
     });
 
-    // === Barrera 2b: remover profesionales con 0 slots compatibles ===
-    // Si se solicitó una modalidad específica Y una fecha concreta, los
-    // profesionales que no tienen ningún slot compatible ese día se
-    // eliminan del array final. Sin esto, aparecen en la grilla con
-    // 'Sin slots disponibles este día' y ensucian la vista.
-    // Si NO hay fecha concreta (solo filtro de perfil), los dejamos
-    // porque el admin podría querer ver el perfil igual.
-    const enrichedProfessionals = (modality && date)
-      ? enrichedProfessionalsRaw.filter((p) => p.availableSlots.length > 0)
-      : enrichedProfessionalsRaw;
-
-    // === Summary ===
-    const totalSlotsAvailable = enrichedProfessionals.reduce((sum, p) => sum + p.availableSlots.length, 0);
-    const professionalsWithSlots = enrichedProfessionals.filter((p) => p.hasAvailability).length;
+    // === Barrera 2b: si se solicitó modalidad específica, remover profesionales con 0 slots ===
+    const filteredProfessionals = modality
+      ? enrichedProfessionals.filter((p) => p.totalFreeSlots > 0)
+      : enrichedProfessionals;
 
     return NextResponse.json({
       criteria: {
@@ -402,20 +381,19 @@ export async function GET(request: NextRequest) {
         therapyTypes: therapyTypes.length > 0 ? therapyTypes : null,
         targetAudience: targetAudience.length > 0 ? targetAudience : null,
         therapyModalities: therapyModalities.length > 0 ? therapyModalities : null,
-        dayOfWeek: dayOfWeek,
-        date: date || null,
         modality: modality || null,
+        weekStart: weekDates[0].date,
+        weekEnd: weekDates[6].date,
       },
       summary: {
-        totalProfessionalsMatched: enrichedProfessionals.length,
-        professionalsWithSlots,
-        professionalsWithoutSlots: enrichedProfessionals.length - professionalsWithSlots,
-        totalSlotsAvailable,
-        avgSlotsPerProfessional: enrichedProfessionals.length > 0
-          ? Math.round((totalSlotsAvailable / enrichedProfessionals.length) * 10) / 10
-          : 0,
+        totalProfessionalsMatched: filteredProfessionals.length,
+        professionalsWithSlots: filteredProfessionals.filter((p) => p.hasAvailability).length,
+        professionalsWithoutSlots: filteredProfessionals.filter((p) => !p.hasAvailability).length,
+        totalSlotsAvailable: filteredProfessionals.reduce((sum, p) => sum + p.totalFreeSlots, 0),
+        totalBookedSlots: filteredProfessionals.reduce((sum, p) => sum + p.totalBookedSlots, 0),
       },
-      professionals: enrichedProfessionals,
+      weekDates: weekDates.map((w) => w.date),
+      professionals: filteredProfessionals,
     });
   } catch (error) {
     console.error("Error in search-professionals:", error);

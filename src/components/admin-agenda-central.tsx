@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   LayoutGrid,
   Search,
@@ -11,7 +11,6 @@ import {
   Users,
   TrendingUp,
   Stethoscope,
-  X,
   CheckCircle2,
   AlertCircle,
   Mail,
@@ -20,14 +19,10 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,127 +44,57 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import {
-  format,
-  startOfWeek,
-  endOfWeek,
-  addDays,
-  isToday,
-  parseISO,
-} from "date-fns";
+import { format, startOfWeek, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 // ====================================================================
-// CONSTANTES — listas de opciones para los filtros del buscador.
-// Sincronizadas con professional-register.tsx (commit 1b4aaa2 y anteriores).
+// CONSTANTES
 // ====================================================================
 
 const PROFESSIONS = [
-  "Psicólogo",
-  "Psiquiatra",
-  "Psicopedagogo",
-  "Musicoterapeuta",
-  "Licenciado en Psicología",
-  "Doctor en Psicología",
-  "Neuropsicólogo",
-  "Terapista Ocupacional",
-  "Trabajador Social",
-  "Estimulador/a Temprana",
-  "Neuropsicomotrista",
-  "Neuropsicolingüista",
-  "Nutricionista",
-  "Fonoaudiólogo/a",
-  "Otra",
+  "Psicólogo", "Psiquiatra", "Psicopedagogo", "Musicoterapeuta",
+  "Licenciado en Psicología", "Doctor en Psicología", "Neuropsicólogo",
+  "Terapista Ocupacional", "Trabajador Social", "Estimulador/a Temprana",
+  "Neuropsicomotrista", "Neuropsicolingüista", "Nutricionista",
+  "Fonoaudiólogo/a", "Otra",
 ];
 
 const SPECIALTIES = [
-  "Psicología Clínica",
-  "Neuropsicología",
-  "Psicología Laboral / Organizacional",
-  "Psicología Educacional",
-  "Psicología Deportiva",
-  "Psicología Forense",
-  "Psicología Social / Comunitaria",
-  "Psicología de la Salud",
-  "Sexología / Terapia Sexual",
-  "Adicciones",
-  "Duelo y Pérdida",
-  "Trastornos Alimentarios",
-  "Psicología Geriátrica",
-  "Psicología Transcultural",
-  "Psicología Perinatal",
-  "Psicooncología",
-  "Psiconutrición",
-  "Violencia y Abuso Sexual",
-  "Trastorno Obsesivo-Compulsivo (TOC)",
-  "Psicosis y Esquizofrenia",
-  "Hebefrenia",
+  "Psicología Clínica", "Neuropsicología", "Psicología Laboral / Organizacional",
+  "Psicología Educacional", "Psicología Deportiva", "Psicología Forense",
+  "Psicología Social / Comunitaria", "Psicología de la Salud",
+  "Sexología / Terapia Sexual", "Adicciones", "Duelo y Pérdida",
+  "Trastornos Alimentarios", "Psicología Geriátrica", "Psicología Transcultural",
+  "Psicología Perinatal", "Psicooncología", "Psiconutrición",
+  "Violencia y Abuso Sexual", "Trastorno Obsesivo-Compulsivo (TOC)",
+  "Psicosis y Esquizofrenia", "Hebefrenia",
   "Trastorno Límite de la Personalidad (TLP)",
-  "Ansiedad y Ataques de Pánico",
-  "Síndrome de Burnout",
-  "Acoso Laboral",
-  "Bullying",
-  "Autolesiones e Ideación Suicida",
+  "Ansiedad y Ataques de Pánico", "Síndrome de Burnout",
+  "Acoso Laboral", "Bullying", "Autolesiones e Ideación Suicida",
 ];
 
 const THERAPY_TYPES = [
-  "Psicología clínica",
-  "Psicoanálisis",
-  "Terapia cognitivo-conductual",
-  "Terapias vinculares",
-  "Terapia sistémica",
-  "Logoterapia",
-  "Terapia gestáltica",
-  "Neuropsicología",
-  "Mindfulness",
-  "Psicología laboral / organizacional",
-  "Psicología positiva",
-  "Psicología forense",
-  "Adicciones",
-  "EMDR",
-  "Trastornos alimentarios",
-  "Psiconutrición",
-  "Psicooncología",
-  "Psicología geriátrica",
-  "Psicología deportiva",
-  "Psicología perinatal",
-  "Terapia humanista",
-  "Terapia junguiana",
-  "Psicodrama",
-  "Psicoterapia Integral",
-  "Deportología",
-  "Psicocorporal Reichiana",
-  "Terapia transpersonal",
-  "Terapia constructivista",
-  "Otras terapias",
+  "Psicología clínica", "Psicoanálisis", "Terapia cognitivo-conductual",
+  "Terapias vinculares", "Terapia sistémica", "Logoterapia",
+  "Terapia gestáltica", "Neuropsicología", "Mindfulness",
+  "Psicología laboral / organizacional", "Psicología positiva",
+  "Psicología forense", "Adicciones", "EMDR",
+  "Trastornos alimentarios", "Psiconutrición", "Psicooncología",
+  "Psicología geriátrica", "Psicología deportiva", "Psicología perinatal",
+  "Terapia humanista", "Terapia junguiana", "Psicodrama",
+  "Psicoterapia Integral", "Deportología", "Psicocorporal Reichiana",
+  "Terapia transpersonal", "Terapia constructivista", "Otras terapias",
 ];
 
 const TARGET_AUDIENCES = [
-  "Niños/as",
-  "Adolescentes",
-  "Adultos mayores",
-  "Adultos",
-  "Jóvenes",
-  "Parejas",
-  "Familias",
-  "Orientación a padres",
+  "Niños/as", "Adolescentes", "Adultos mayores", "Adultos",
+  "Jóvenes", "Parejas", "Familias", "Orientación a padres",
 ];
 
-// === Modalidades de Terapia (NUEVO filtro) ===
-// NO confundir con la modalidad de atención (Online/Presencial/Híbrida).
-// Este es el campo therapyModality del Professional — valores: Individual,
-// Vincular, Evaluaciones, Terapia Grupal, etc.
-// Sincronizado con THERAPY_MODALITIES de professional-register.tsx.
 const THERAPY_MODALITIES = [
-  "Individual",
-  "Vincular",
-  "Evaluaciones",
-  "Terapia Grupal",
-  "Orientación a Padres",
-  "Asesoría a Empresas",
-  "Pericias",
-  "Discapacidad",
-  "Orientación Vocacional",
+  "Individual", "Vincular", "Evaluaciones", "Terapia Grupal",
+  "Orientación a Padres", "Asesoría a Empresas", "Pericias",
+  "Discapacidad", "Orientación Vocacional",
 ];
 
 const MODALITIES = [
@@ -179,31 +104,27 @@ const MODALITIES = [
   { value: "ambas", label: "Ambas" },
 ];
 
-const DAY_LABELS: Record<number, string> = {
-  0: "Domingo",
-  1: "Lunes",
-  2: "Martes",
-  3: "Miércoles",
-  4: "Jueves",
-  5: "Viernes",
-  6: "Sábado",
-};
+// Días de la semana: 1=Lun, 2=Mar, ..., 6=Sab, 0=Dom
+const WEEK_DAYS = [
+  { dayOfWeek: 1, short: "Lun", label: "Lunes" },
+  { dayOfWeek: 2, short: "Mar", label: "Martes" },
+  { dayOfWeek: 3, short: "Mié", label: "Miércoles" },
+  { dayOfWeek: 4, short: "Jue", label: "Jueves" },
+  { dayOfWeek: 5, short: "Vie", label: "Viernes" },
+  { dayOfWeek: 6, short: "Sáb", label: "Sábado" },
+  { dayOfWeek: 0, short: "Dom", label: "Domingo" },
+];
 
-// === Colores por modalidad (código visual consistente en toda la vista) ===
 const MODALITY_COLORS: Record<string, string> = {
-  P: "bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100",
-  OL: "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100",
-  H: "bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100",
-  ambas: "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100",
-  amb: "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100",
+  P: "bg-emerald-100 border-emerald-300 text-emerald-800 hover:bg-emerald-200",
+  OL: "bg-blue-100 border-blue-300 text-blue-800 hover:bg-blue-200",
+  H: "bg-purple-100 border-purple-300 text-purple-800 hover:bg-purple-200",
+  ambas: "bg-amber-100 border-amber-300 text-amber-800 hover:bg-amber-200",
+  amb: "bg-amber-100 border-amber-300 text-amber-800 hover:bg-amber-200",
 };
 
 const MODALITY_LABELS: Record<string, string> = {
-  P: "Presencial",
-  OL: "Online",
-  H: "Híbrido",
-  ambas: "Ambas",
-  amb: "Ambas",
+  P: "Presencial", OL: "Online", H: "Híbrido", ambas: "Ambas", amb: "Ambas",
 };
 
 // ====================================================================
@@ -227,6 +148,12 @@ interface BookedSlot {
   patientPhone: string | null;
 }
 
+interface DaySlots {
+  date: string;
+  availableSlots: AvailableSlot[];
+  bookedSlots: BookedSlot[];
+}
+
 interface ProfessionalResult {
   id: string;
   name: string;
@@ -235,28 +162,22 @@ interface ProfessionalResult {
   specialty: string;
   profession: string | null;
   modalityBadges: string[];
-  availableSlots: AvailableSlot[];
-  bookedSlots: BookedSlot[];
+  weeklySlots: Record<number, DaySlots>;
+  totalFreeSlots: number;
+  totalBookedSlots: number;
   hasAvailability: boolean;
 }
 
 interface SearchResponse {
-  criteria: {
-    profession: string | null;
-    specialty: string | null;
-    therapyTypes: string[] | null;
-    targetAudience: string[] | null;
-    dayOfWeek: number | null;
-    date: string | null;
-    modality: string | null;
-  };
+  criteria: Record<string, unknown>;
   summary: {
     totalProfessionalsMatched: number;
     professionalsWithSlots: number;
     professionalsWithoutSlots: number;
     totalSlotsAvailable: number;
-    avgSlotsPerProfessional: number;
+    totalBookedSlots: number;
   };
+  weekDates: string[];
   professionals: ProfessionalResult[];
 }
 
@@ -279,25 +200,51 @@ interface AssignFormData {
 }
 
 // ====================================================================
+// HELPERS
+// ====================================================================
+
+const ARG_TZ = "America/Argentina/Buenos_Aires";
+
+function isSlotInPast(date: string, time: string): boolean {
+  try {
+    const nowInArgentina = new Date(new Date().toLocaleString("en-US", { timeZone: ARG_TZ }));
+    const slotDateTimeStr = `${date}T${time}:00`;
+    const slotDateRaw = new Date(slotDateTimeStr);
+    const slotInArgentina = new Date(slotDateRaw.toLocaleString("en-US", { timeZone: ARG_TZ }));
+    return slotInArgentina < nowInArgentina;
+  } catch {
+    return false;
+  }
+}
+
+function getMondayOfWeek(weekOffset: number): Date {
+  const now = new Date();
+  const monday = startOfWeek(now, { weekStartsOn: 1 });
+  return addDays(monday, weekOffset * 7);
+}
+
+// ====================================================================
 // COMPONENTE PRINCIPAL
 // ====================================================================
 
 export function AdminAgendaCentral() {
   // === Estado del buscador ===
-  const [profession, setProfession] = useState<string>("");
-  const [specialty, setSpecialty] = useState<string>("");
+  const [profession, setProfession] = useState("");
+  const [specialty, setSpecialty] = useState("");
   const [selectedTherapyTypes, setSelectedTherapyTypes] = useState<string[]>([]);
   const [selectedTargetAudience, setSelectedTargetAudience] = useState<string[]>([]);
   const [selectedTherapyModalities, setSelectedTherapyModalities] = useState<string[]>([]);
-  const [dayOfWeek, setDayOfWeek] = useState<number>(1); // default: Lunes
-  const [modality, setModality] = useState<string>("");
-  const [weekOffset, setWeekOffset] = useState<number>(0); // 0 = esta semana, -1 = anterior, +1 = siguiente
+  const [modality, setModality] = useState("");
+  const [weekOffset, setWeekOffset] = useState(0);
 
   // === Estado de resultados ===
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(null);
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
+
+  // === Profesional activo (seleccionado en la columna 2) ===
+  const [activeProfessionalId, setActiveProfessionalId] = useState<string | null>(null);
 
   // === Estado de dialogs ===
   const [assignDialog, setAssignDialog] = useState<{
@@ -314,39 +261,25 @@ export function AdminAgendaCentral() {
   }>({ open: false, professional: null, slot: null });
 
   const [assignForm, setAssignForm] = useState<AssignFormData>({
-    patientName: "",
-    patientPhone: "",
-    patientEmail: "",
-    notes: "",
+    patientName: "", patientPhone: "", patientEmail: "", notes: "",
   });
   const [assigning, setAssigning] = useState(false);
 
-  // === Calcular fecha seleccionada basada en dayOfWeek + weekOffset ===
-  const selectedDate = useMemo(() => {
-    const now = new Date();
-    const mondayOfThisWeek = startOfWeek(now, { weekStartsOn: 1 });
-    const target = addDays(mondayOfThisWeek, weekOffset * 7 + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-    return format(target, "yyyy-MM-dd");
-  }, [dayOfWeek, weekOffset]);
+  // === Calcular weekStart (lunes de la semana seleccionada) ===
+  const monday = useMemo(() => getMondayOfWeek(weekOffset), [weekOffset]);
+  const weekStartISO = useMemo(() => format(monday, "yyyy-MM-dd"), [monday]);
 
-  const selectedDateLabel = useMemo(() => {
-    try {
-      const d = parseISO(selectedDate);
-      return format(d, "EEEE d 'de' MMMM", { locale: es });
-    } catch {
-      return selectedDate;
-    }
-  }, [selectedDate]);
+  const weekLabel = useMemo(() => {
+    const sunday = addDays(monday, 6);
+    return `${format(monday, "d 'de' MMM", { locale: es })} — ${format(sunday, "d 'de' MMM", { locale: es })}`;
+  }, [monday]);
 
-  // === Cargar métricas al montar ===
+  // === Cargar métricas ===
   const loadMetrics = useCallback(async () => {
     setLoadingMetrics(true);
     try {
       const res = await fetch("/api/admin/agenda-metrics");
-      if (res.ok) {
-        const data = await res.json();
-        setMetrics(data);
-      }
+      if (res.ok) setMetrics(await res.json());
     } catch (err) {
       console.error("Error loading metrics:", err);
     } finally {
@@ -354,22 +287,19 @@ export function AdminAgendaCentral() {
     }
   }, []);
 
-  useEffect(() => {
-    loadMetrics();
-  }, [loadMetrics]);
+  useEffect(() => { loadMetrics(); }, [loadMetrics]);
 
   // === Ejecutar búsqueda ===
   const handleSearch = useCallback(async () => {
     setSearching(true);
     try {
       const params = new URLSearchParams();
+      params.set("weekStart", weekStartISO);
       if (profession) params.set("profession", profession);
       if (specialty) params.set("specialty", specialty);
       if (selectedTherapyTypes.length > 0) params.set("therapyTypes", selectedTherapyTypes.join(","));
       if (selectedTargetAudience.length > 0) params.set("targetAudience", selectedTargetAudience.join(","));
       if (selectedTherapyModalities.length > 0) params.set("therapyModalities", selectedTherapyModalities.join(","));
-      params.set("dayOfWeek", String(dayOfWeek));
-      params.set("date", selectedDate);
       if (modality) params.set("modality", modality);
 
       const res = await fetch(`/api/admin/search-professionals?${params.toString()}`);
@@ -380,40 +310,40 @@ export function AdminAgendaCentral() {
       }
       const data: SearchResponse = await res.json();
       setSearchResults(data);
-      toast.success(`${data.summary.totalProfessionalsMatched} profesionales coinciden (${data.summary.totalSlotsAvailable} slots libres)`);
+
+      // Auto-seleccionar el primer profesional con slots
+      if (data.professionals.length > 0 && data.professionals[0].hasAvailability) {
+        setActiveProfessionalId(data.professionals[0].id);
+      } else {
+        setActiveProfessionalId(null);
+      }
+
+      toast.success(`${data.summary.totalProfessionalsMatched} profesionales — ${data.summary.totalSlotsAvailable} slots libres`);
     } catch (err) {
       console.error("Error searching:", err);
       toast.error("Error de conexión al buscar");
     } finally {
       setSearching(false);
     }
-  }, [profession, specialty, selectedTherapyTypes, selectedTargetAudience, selectedTherapyModalities, dayOfWeek, selectedDate, modality]);
+  }, [weekStartISO, profession, specialty, selectedTherapyTypes, selectedTargetAudience, selectedTherapyModalities, modality]);
 
-  // === Búsqueda automática al cambiar día/weekOffset (para que el admin vea
-  // resultados sin tener que clickear "Buscar" cada vez que navega semanas) ===
+  // === Búsqueda automática al cambiar semana ===
   useEffect(() => {
     handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayOfWeek, weekOffset]);
+  }, [weekOffset]);
 
-  // === Toggle arrays para los checkboxes multi-select ===
-  const toggleTherapyType = (t: string) => {
-    setSelectedTherapyTypes((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
-  };
-  const toggleTargetAudience = (t: string) => {
-    setSelectedTargetAudience((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
-  };
-  const toggleTherapyModality = (t: string) => {
-    setSelectedTherapyModalities((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
+  // === Toggles ===
+  const toggleArrayItem = (setter: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
+    setter((prev) => prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]);
   };
 
-  // === Abrir dialog de asignación ===
-  const openAssignDialog = (professional: ProfessionalResult, slot: AvailableSlot) => {
+  // === Handlers de dialogs ===
+  const openAssignDialog = (professional: ProfessionalResult, slot: AvailableSlot, date: string) => {
     setAssignForm({ patientName: "", patientPhone: "", patientEmail: "", notes: "" });
-    setAssignDialog({ open: true, professional, slot, date: selectedDate });
+    setAssignDialog({ open: true, professional, slot, date });
   };
 
-  // === Abrir dialog de ficha rápida (slot ocupado) ===
   const openFichaDialog = (professional: ProfessionalResult, slot: BookedSlot) => {
     setFichaDialog({ open: true, professional, slot });
   };
@@ -441,25 +371,12 @@ export function AdminAgendaCentral() {
           notes: assignForm.notes.trim() || null,
         }),
       });
-
       const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "Error al asignar el turno"); return; }
 
-      if (!res.ok) {
-        toast.error(data.error || "Error al asignar el turno");
-        return;
-      }
-
-      // Éxito — feedback al admin
       const patientVerb = data.created ? "creado" : "actualizado";
-      toast.success(
-        `Turno asignado a ${data.patient.name} (${patientVerb}). ` +
-        `${assignDialog.professional.name} — ${assignDialog.date} ${assignDialog.slot.time} hs.`
-      );
-
-      // Cerrar dialog
+      toast.success(`Turno asignado a ${data.patient.name} (${patientVerb}). ${assignDialog.professional.name} — ${assignDialog.date} ${assignDialog.slot.time} hs.`);
       setAssignDialog((prev) => ({ ...prev, open: false }));
-
-      // Recargar búsqueda para ver el slot como ocupado en tiempo real
       handleSearch();
     } catch (err) {
       console.error("Error assigning:", err);
@@ -469,24 +386,24 @@ export function AdminAgendaCentral() {
     }
   };
 
-  // === Limpiar filtros ===
   const handleClearFilters = () => {
-    setProfession("");
-    setSpecialty("");
-    setSelectedTherapyTypes([]);
-    setSelectedTargetAudience([]);
-    setSelectedTherapyModalities([]);
-    setModality("");
-    setDayOfWeek(1);
-    setWeekOffset(0);
+    setProfession(""); setSpecialty("");
+    setSelectedTherapyTypes([]); setSelectedTargetAudience([]);
+    setSelectedTherapyModalities([]); setModality("");
   };
 
+  // === Profesional activo ===
+  const activeProfessional = useMemo(() => {
+    if (!searchResults || !activeProfessionalId) return null;
+    return searchResults.professionals.find((p) => p.id === activeProfessionalId) || null;
+  }, [searchResults, activeProfessionalId]);
+
   // ====================================================================
-  // RENDER
+  // RENDER — Split View de 3 columnas
   // ====================================================================
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* === Header === */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -494,289 +411,206 @@ export function AdminAgendaCentral() {
             <LayoutGrid className="w-6 h-6 text-teal-600" />
             Agenda Centralizada
           </h1>
-          <p className="text-sm text-teal-600 mt-1">
-            Motor de asignación inteligente — cruce clínico en tiempo real
-          </p>
+          <p className="text-sm text-teal-600 mt-1">Grilla matricial semanal — Lun a Dom</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => { loadMetrics(); handleSearch(); }}
-          className="border-teal-200 text-teal-600 hover:bg-teal-50"
-        >
-          <RefreshCw className="w-4 h-4 mr-1" />
-          Actualizar
+        <Button variant="outline" size="sm" onClick={() => { loadMetrics(); handleSearch(); }} className="border-teal-200 text-teal-600 hover:bg-teal-50">
+          <RefreshCw className="w-4 h-4 mr-1" /> Actualizar
         </Button>
       </div>
 
       {/* === Dashboard de métricas === */}
       <MetricsDashboard metrics={metrics} loading={loadingMetrics} />
 
-      {/* === Layout principal: buscador + grilla === */}
-      <div className="grid lg:grid-cols-[280px_1fr] gap-4">
-        {/* === Buscador lateral === */}
-        <Card className="border-teal-100 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
-          <CardHeader className="pb-3">
+      {/* === Split View de 3 columnas === */}
+      <div className="grid lg:grid-cols-[260px_280px_1fr] gap-4">
+
+        {/* ============================================== */}
+        {/* COLUMNA 1: Buscador lateral + navegador semanas */}
+        {/* ============================================== */}
+        <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          <CardHeader className="pb-3 sticky top-0 bg-white z-10">
             <CardTitle className="text-base text-teal-900 flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              Filtros de búsqueda
+              <Filter className="w-4 h-4" /> Filtros
             </CardTitle>
+            {/* Navegador de semanas */}
+            <div className="flex items-center gap-1 mt-2">
+              <Button variant="outline" size="sm" onClick={() => setWeekOffset((w) => w - 1)} className="h-7 w-7 p-0 border-teal-200">
+                <ChevronLeft className="w-3 h-3" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)} className="text-teal-600 hover:bg-teal-50 text-xs flex-1">
+                {weekOffset === 0 ? "Esta semana" : `Semana ${weekOffset > 0 ? "+" : ""}${weekOffset}`}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setWeekOffset((w) => w + 1)} className="h-7 w-7 p-0 border-teal-200">
+                <ChevronRight className="w-3 h-3" />
+              </Button>
+            </div>
+            <p className="text-[10px] text-teal-500 text-center mt-1">{weekLabel}</p>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {/* Profesión */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label className="text-xs text-teal-700 font-medium">Profesión</Label>
-              <Select value={profession} onValueChange={(v) => setProfession(v === "__all__" ? "" : v)}>
-                <SelectTrigger className="h-8 text-xs border-teal-200">
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Todas</SelectItem>
-                  {PROFESSIONS.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
+              <Select value={profession || "__all__"} onValueChange={(v) => setProfession(v === "__all__" ? "" : v)}>
+                <SelectTrigger className="h-8 text-xs border-teal-200"><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent><SelectItem value="__all__">Todas</SelectItem>{PROFESSIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-
             {/* Especialidad */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label className="text-xs text-teal-700 font-medium">Especialidad</Label>
-              <Select value={specialty} onValueChange={(v) => setSpecialty(v === "__all__" ? "" : v)}>
-                <SelectTrigger className="h-8 text-xs border-teal-200">
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Todas</SelectItem>
-                  {SPECIALTIES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
+              <Select value={specialty || "__all__"} onValueChange={(v) => setSpecialty(v === "__all__" ? "" : v)}>
+                <SelectTrigger className="h-8 text-xs border-teal-200"><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent><SelectItem value="__all__">Todas</SelectItem>{SPECIALTIES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-
-            {/* Modalidad */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-teal-700 font-medium">Modalidad</Label>
-              <Select value={modality} onValueChange={(v) => setModality(v === "__all__" ? "" : v)}>
-                <SelectTrigger className="h-8 text-xs border-teal-200">
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Todas</SelectItem>
-                  {MODALITIES.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
-                </SelectContent>
+            {/* Modalidad de atención */}
+            <div className="space-y-1">
+              <Label className="text-xs text-teal-700 font-medium">Modalidad de atención</Label>
+              <Select value={modality || "__all__"} onValueChange={(v) => setModality(v === "__all__" ? "" : v)}>
+                <SelectTrigger className="h-8 text-xs border-teal-200"><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent><SelectItem value="__all__">Todas</SelectItem>{MODALITIES.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-
-            {/* Día de la semana */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-teal-700 font-medium">Día de la semana</Label>
-              <Select value={String(dayOfWeek)} onValueChange={(v) => setDayOfWeek(parseInt(v, 10))}>
-                <SelectTrigger className="h-8 text-xs border-teal-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(DAY_LABELS).filter(([k]) => k !== "0").map(([k, label]) => (
-                    <SelectItem key={k} value={k}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Tipos de terapia (multi-select con checkboxes) */}
-            <div className="space-y-1.5">
+            {/* Tipos de terapia */}
+            <div className="space-y-1">
               <Label className="text-xs text-teal-700 font-medium">Tipos de terapia</Label>
-              <div className="max-h-32 overflow-y-auto border border-teal-100 rounded-md p-2 bg-teal-50/30 space-y-1">
+              <div className="max-h-28 overflow-y-auto border border-teal-100 rounded-md p-1.5 bg-teal-50/30 space-y-0.5">
                 {THERAPY_TYPES.map((t) => (
                   <label key={t} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
-                    <Checkbox
-                      checked={selectedTherapyTypes.includes(t)}
-                      onCheckedChange={() => toggleTherapyType(t)}
-                      className="h-3 w-3"
-                    />
+                    <Checkbox checked={selectedTherapyTypes.includes(t)} onCheckedChange={() => toggleArrayItem(setSelectedTherapyTypes, t)} className="h-3 w-3" />
                     <span className="text-teal-700">{t}</span>
                   </label>
                 ))}
               </div>
             </div>
-
-            {/* Población objetivo (multi-select) */}
-            <div className="space-y-1.5">
+            {/* Población objetivo */}
+            <div className="space-y-1">
               <Label className="text-xs text-teal-700 font-medium">Población objetivo</Label>
-              <div className="border border-teal-100 rounded-md p-2 bg-teal-50/30 space-y-1">
+              <div className="border border-teal-100 rounded-md p-1.5 bg-teal-50/30 space-y-0.5">
                 {TARGET_AUDIENCES.map((t) => (
                   <label key={t} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
-                    <Checkbox
-                      checked={selectedTargetAudience.includes(t)}
-                      onCheckedChange={() => toggleTargetAudience(t)}
-                      className="h-3 w-3"
-                    />
+                    <Checkbox checked={selectedTargetAudience.includes(t)} onCheckedChange={() => toggleArrayItem(setSelectedTargetAudience, t)} className="h-3 w-3" />
                     <span className="text-teal-700">{t}</span>
                   </label>
                 ))}
               </div>
             </div>
-
-            {/* === NUEVO: Modalidad de Terapia (multi-select) === */}
-            {/* NO confundir con la modalidad de atención (Online/Presencial).
-                Este es el campo therapyModality del Professional. */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-teal-700 font-medium">
-                Modalidad de Terapia
-                <span className="text-[10px] text-teal-400 block font-normal">(Individual, Vincular, etc.)</span>
-              </Label>
-              <div className="border border-teal-100 rounded-md p-2 bg-teal-50/30 space-y-1">
+            {/* Modalidad de terapia */}
+            <div className="space-y-1">
+              <Label className="text-xs text-teal-700 font-medium">Modalidad de terapia <span className="text-[10px] text-teal-400">(Individual, Vincular...)</span></Label>
+              <div className="border border-teal-100 rounded-md p-1.5 bg-teal-50/30 space-y-0.5">
                 {THERAPY_MODALITIES.map((t) => (
                   <label key={t} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
-                    <Checkbox
-                      checked={selectedTherapyModalities.includes(t)}
-                      onCheckedChange={() => toggleTherapyModality(t)}
-                      className="h-3 w-3"
-                    />
+                    <Checkbox checked={selectedTherapyModalities.includes(t)} onCheckedChange={() => toggleArrayItem(setSelectedTherapyModalities, t)} className="h-3 w-3" />
                     <span className="text-teal-700">{t}</span>
                   </label>
                 ))}
               </div>
             </div>
-
             {/* Botones */}
-            <div className="space-y-2 pt-2">
-              <Button
-                onClick={handleSearch}
-                disabled={searching}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white h-8 text-xs"
-              >
-                {searching ? (
-                  <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Buscando...</>
-                ) : (
-                  <><Search className="w-3 h-3 mr-1" /> Buscar</>
-                )}
+            <div className="space-y-2 pt-1">
+              <Button onClick={handleSearch} disabled={searching} className="w-full bg-teal-600 hover:bg-teal-700 text-white h-8 text-xs">
+                {searching ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Buscando...</> : <><Search className="w-3 h-3 mr-1" /> Buscar</>}
               </Button>
-              <Button
-                onClick={handleClearFilters}
-                variant="outline"
-                size="sm"
-                className="w-full h-7 text-xs border-teal-200 text-teal-600 hover:bg-teal-50"
-              >
-                Limpiar filtros
-              </Button>
+              <Button onClick={handleClearFilters} variant="outline" size="sm" className="w-full h-7 text-xs border-teal-200 text-teal-600 hover:bg-teal-50">Limpiar</Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* === Grilla de resultados === */}
-        <div className="space-y-4">
-          {/* Navegación de semana */}
-          <Card className="border-teal-100">
-            <CardContent className="p-3 flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setWeekOffset((w) => w - 1)}
-                  className="h-8 w-8 p-0 border-teal-200"
+        {/* ============================================== */}
+        {/* COLUMNA 2: Lista de profesionales */}
+        {/* ============================================== */}
+        <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          <CardHeader className="pb-2 sticky top-0 bg-white z-10">
+            <CardTitle className="text-sm text-teal-900">
+              Profesionales {searchResults && `(${searchResults.summary.totalProfessionalsMatched})`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-2">
+            {searching ? (
+              <div className="py-8 text-center"><RefreshCw className="w-6 h-6 text-teal-400 mx-auto animate-spin" /></div>
+            ) : !searchResults ? (
+              <div className="py-8 text-center"><Search className="w-6 h-6 text-teal-300 mx-auto" /><p className="text-teal-500 mt-2 text-xs">Hacé clic en "Buscar"</p></div>
+            ) : searchResults.professionals.length === 0 ? (
+              <div className="py-8 text-center"><AlertCircle className="w-6 h-6 text-amber-400 mx-auto" /><p className="text-teal-600 mt-2 text-xs">Sin resultados</p></div>
+            ) : (
+              searchResults.professionals.map((prof) => (
+                <button
+                  key={prof.id}
+                  onClick={() => setActiveProfessionalId(prof.id)}
+                  className={`w-full text-left p-2.5 rounded-lg border transition-all ${
+                    activeProfessionalId === prof.id
+                      ? "border-teal-500 bg-teal-50 shadow-sm ring-1 ring-teal-300"
+                      : "border-teal-100 hover:border-teal-300 hover:bg-teal-50/50"
+                  }`}
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <div className="text-center min-w-[200px]">
-                  <p className="text-sm font-semibold text-teal-900 capitalize">{selectedDateLabel}</p>
-                  <p className="text-xs text-teal-500">Semana {weekOffset === 0 ? "actual" : weekOffset > 0 ? `+${weekOffset}` : weekOffset}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setWeekOffset((w) => w + 1)}
-                  className="h-8 w-8 p-0 border-teal-200"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setWeekOffset(0)}
-                className="text-teal-600 hover:bg-teal-50 text-xs"
-              >
-                Hoy
-              </Button>
-            </CardContent>
-          </Card>
+                  <p className="text-sm font-medium text-teal-900 truncate">{prof.name}</p>
+                  <p className="text-[10px] text-teal-500 truncate">{prof.specialty}</p>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1.5 py-0">
+                      {prof.totalFreeSlots} lib
+                    </Badge>
+                    <Badge variant="outline" className="text-[9px] bg-slate-50 border-slate-200 text-slate-600 px-1.5 py-0">
+                      {prof.totalBookedSlots} ocup
+                    </Badge>
+                  </div>
+                </button>
+              ))
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Resultados */}
-          {searching ? (
-            <Card className="border-teal-100">
-              <CardContent className="py-12 text-center">
-                <RefreshCw className="w-8 h-8 text-teal-400 mx-auto animate-spin" />
-                <p className="text-teal-600 mt-2 text-sm">Buscando profesionales...</p>
-              </CardContent>
-            </Card>
-          ) : !searchResults ? (
-            <Card className="border-teal-100">
-              <CardContent className="py-12 text-center">
-                <Search className="w-8 h-8 text-teal-300 mx-auto" />
-                <p className="text-teal-600 mt-2 text-sm">Hacé clic en "Buscar" para ver profesionales disponibles</p>
-              </CardContent>
-            </Card>
-          ) : searchResults.professionals.length === 0 ? (
-            <Card className="border-teal-100">
-              <CardContent className="py-12 text-center">
-                <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
-                <p className="text-teal-700 mt-2 text-sm font-medium">No hay profesionales que coincidan con los filtros</p>
-                <p className="text-teal-500 text-xs mt-1">Probá relajar algunos criterios de búsqueda</p>
-              </CardContent>
-            </Card>
-          ) : (
+        {/* ============================================== */}
+        {/* COLUMNA 3: Matriz Excel del profesional activo */}
+        {/* ============================================== */}
+        <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          {activeProfessional ? (
             <>
-              {/* Summary */}
-              <div className="flex items-center gap-2 flex-wrap text-xs">
-                <Badge variant="outline" className="bg-teal-50 border-teal-200 text-teal-700">
-                  {searchResults.summary.totalProfessionalsMatched} profesionales
-                </Badge>
-                <Badge variant="outline" className="bg-emerald-50 border-emerald-200 text-emerald-700">
-                  {searchResults.summary.totalSlotsAvailable} slots libres
-                </Badge>
-                {searchResults.summary.professionalsWithoutSlots > 0 && (
-                  <Badge variant="outline" className="bg-amber-50 border-amber-200 text-amber-700">
-                    {searchResults.summary.professionalsWithoutSlots} sin disponibilidad
-                  </Badge>
-                )}
-              </div>
-
-              {/* Lista de profesionales con sus slots */}
-              <div className="space-y-3">
-                {searchResults.professionals.map((prof) => (
-                  <ProfessionalCard
-                    key={prof.id}
-                    professional={prof}
-                    date={selectedDate}
-                    onSlotClick={(slot) => openAssignDialog(prof, slot)}
-                    onBookedSlotClick={(slot) => openFichaDialog(prof, slot)}
-                  />
-                ))}
-              </div>
+              <CardHeader className="pb-2 sticky top-0 bg-white z-10">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <CardTitle className="text-base text-teal-900 flex items-center gap-2">
+                      <User className="w-4 h-4 text-teal-600" />
+                      {activeProfessional.name}
+                    </CardTitle>
+                    <p className="text-xs text-teal-500">{activeProfessional.specialty} · {weekLabel}</p>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Badge variant="outline" className="text-[10px] bg-emerald-50 border-emerald-200 text-emerald-700">{activeProfessional.totalFreeSlots} libres</Badge>
+                    <Badge variant="outline" className="text-[10px] bg-slate-50 border-slate-200 text-slate-600">{activeProfessional.totalBookedSlots} ocupados</Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <ExcelMatrix
+                  professional={activeProfessional}
+                  weekDates={searchResults?.weekDates || []}
+                  onSlotClick={(slot, date) => openAssignDialog(activeProfessional, slot, date)}
+                  onBookedSlotClick={(slot) => openFichaDialog(activeProfessional, slot)}
+                />
+              </CardContent>
             </>
+          ) : (
+            <CardContent className="py-16 text-center">
+              <Calendar className="w-10 h-10 text-teal-300 mx-auto" />
+              <p className="text-teal-600 mt-3 text-sm">Seleccioná un profesional de la lista para ver su grilla semanal</p>
+            </CardContent>
           )}
-        </div>
+        </Card>
       </div>
 
-      {/* === Dialog de asignación rápida === */}
+      {/* === Dialogs === */}
       <AssignDialog
         open={assignDialog.open}
         onOpenChange={(open) => setAssignDialog((prev) => ({ ...prev, open }))}
         professional={assignDialog.professional}
         slot={assignDialog.slot}
         date={assignDialog.date}
-        dateLabel={selectedDateLabel}
         form={assignForm}
         onFormChange={setAssignForm}
         onConfirm={handleConfirmAssign}
         assigning={assigning}
       />
-
-      {/* === Dialog de ficha rápida (slot ocupado) === */}
       <FichaDialog
         open={fichaDialog.open}
         onOpenChange={(open) => setFichaDialog((prev) => ({ ...prev, open }))}
@@ -796,176 +630,144 @@ function MetricsDashboard({ metrics, loading }: { metrics: MetricsResponse | nul
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="border-teal-100">
-            <CardContent className="p-4 animate-pulse">
-              <div className="h-4 bg-teal-100 rounded w-1/2 mb-2"></div>
-              <div className="h-8 bg-teal-100 rounded w-2/3"></div>
-            </CardContent>
-          </Card>
+          <Card key={i} className="border-teal-100"><CardContent className="p-4 animate-pulse"><div className="h-4 bg-teal-100 rounded w-1/2 mb-2"></div><div className="h-8 bg-teal-100 rounded w-2/3"></div></CardContent></Card>
         ))}
       </div>
     );
   }
-
   const occupancyPercent = Math.round(metrics.occupancyRate * 100);
-
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <Card className="border-teal-100">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-4 h-4 text-teal-600" />
-            <p className="text-xs text-teal-500 font-medium">Ocupación</p>
-          </div>
-          <p className="text-2xl font-bold text-teal-900">{occupancyPercent}%</p>
-          <p className="text-xs text-teal-400 mt-0.5">{metrics.bookedSlotsThisWeek}/{metrics.totalSlotsThisWeek} turnos</p>
-        </CardContent>
-      </Card>
-      <Card className="border-teal-100">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Stethoscope className="w-4 h-4 text-emerald-600" />
-            <p className="text-xs text-teal-500 font-medium">Profesionales</p>
-          </div>
-          <p className="text-2xl font-bold text-teal-900">{metrics.activeProfessionals}</p>
-          <p className="text-xs text-teal-400 mt-0.5">activos</p>
-        </CardContent>
-      </Card>
-      <Card className="border-teal-100">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Calendar className="w-4 h-4 text-amber-600" />
-            <p className="text-xs text-teal-500 font-medium">Slots libres</p>
-          </div>
-          <p className="text-2xl font-bold text-teal-900">{metrics.freeSlotsThisWeek}</p>
-          <p className="text-xs text-teal-400 mt-0.5">esta semana</p>
-        </CardContent>
-      </Card>
-      <Card className="border-teal-100">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Users className="w-4 h-4 text-blue-600" />
-            <p className="text-xs text-teal-500 font-medium">Top especialidad</p>
-          </div>
-          {metrics.topSpecialties.length > 0 ? (
-            <>
-              <p className="text-sm font-bold text-teal-900 truncate">{metrics.topSpecialties[0].specialty}</p>
-              <p className="text-xs text-teal-400 mt-0.5">{metrics.topSpecialties[0].count} turnos</p>
-            </>
-          ) : (
-            <p className="text-sm text-teal-400">Sin datos</p>
-          )}
-        </CardContent>
-      </Card>
+      <Card className="border-teal-100"><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><TrendingUp className="w-4 h-4 text-teal-600" /><p className="text-xs text-teal-500 font-medium">Ocupación</p></div><p className="text-2xl font-bold text-teal-900">{occupancyPercent}%</p><p className="text-xs text-teal-400 mt-0.5">{metrics.bookedSlotsThisWeek}/{metrics.totalSlotsThisWeek}</p></CardContent></Card>
+      <Card className="border-teal-100"><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><Stethoscope className="w-4 h-4 text-emerald-600" /><p className="text-xs text-teal-500 font-medium">Profesionales</p></div><p className="text-2xl font-bold text-teal-900">{metrics.activeProfessionals}</p><p className="text-xs text-teal-400 mt-0.5">activos</p></CardContent></Card>
+      <Card className="border-teal-100"><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><Calendar className="w-4 h-4 text-amber-600" /><p className="text-xs text-teal-500 font-medium">Slots libres</p></div><p className="text-2xl font-bold text-teal-900">{metrics.freeSlotsThisWeek}</p><p className="text-xs text-teal-400 mt-0.5">esta semana</p></CardContent></Card>
+      <Card className="border-teal-100"><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-blue-600" /><p className="text-xs text-teal-500 font-medium">Top especialidad</p></div>{metrics.topSpecialties.length > 0 ? <><p className="text-sm font-bold text-teal-900 truncate">{metrics.topSpecialties[0].specialty}</p><p className="text-xs text-teal-400 mt-0.5">{metrics.topSpecialties[0].count} turnos</p></> : <p className="text-sm text-teal-400">Sin datos</p>}</CardContent></Card>
     </div>
   );
 }
 
 // ====================================================================
-// SUB-COMPONENTE: Tarjeta de profesional con sus slots
+// SUB-COMPONENTE: Matriz Excel (Lun-Dom × Horarios)
 // ====================================================================
 
-interface ProfessionalCardProps {
+interface ExcelMatrixProps {
   professional: ProfessionalResult;
-  date: string; // ISO "2026-06-23" — para evaluar si los slots están en el pasado
-  onSlotClick: (slot: AvailableSlot) => void;
+  weekDates: string[];
+  onSlotClick: (slot: AvailableSlot, date: string) => void;
   onBookedSlotClick: (slot: BookedSlot) => void;
 }
 
-// === Helper: evaluar si un slot (date + time) está en el pasado ===
-// Compara con el momento actual en timezone Argentina. Si el slot ya
-// pasó, devuelve true (el botón debe ser no-clickeable y con opacity-40).
-function isSlotInPast(date: string, time: string): boolean {
-  try {
-    const ARG_TZ = "America/Argentina/Buenos_Aires";
-    const nowInArgentina = new Date(new Date().toLocaleString("en-US", { timeZone: ARG_TZ }));
-    const slotDateTimeStr = `${date}T${time}:00`;
-    const slotDateRaw = new Date(slotDateTimeStr);
-    const slotInArgentina = new Date(slotDateRaw.toLocaleString("en-US", { timeZone: ARG_TZ }));
-    return slotInArgentina < nowInArgentina;
-  } catch {
-    return false; // si hay error de parseo, no bloquear
+function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }: ExcelMatrixProps) {
+  // Recolectar todos los horarios únicos (libres + ocupados) de TODOS los días
+  const allTimes = useMemo(() => {
+    const times = new Set<string>();
+    for (const day of WEEK_DAYS) {
+      const dayData = professional.weeklySlots[day.dayOfWeek];
+      if (dayData) {
+        dayData.availableSlots.forEach((s) => times.add(s.time));
+        dayData.bookedSlots.forEach((s) => times.add(s.time));
+      }
+    }
+    return Array.from(times).sort((a, b) => a.localeCompare(b));
+  }, [professional]);
+
+  if (allTimes.length === 0) {
+    return (
+      <div className="py-12 text-center">
+        <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
+        <p className="text-teal-600 mt-2 text-sm">Este profesional no tiene horarios configurados para esta semana</p>
+      </div>
+    );
   }
-}
 
-function ProfessionalCard({ professional, date, onSlotClick, onBookedSlotClick }: ProfessionalCardProps) {
   return (
-    <Card className={`border-teal-100 ${!professional.hasAvailability ? "opacity-60" : ""}`}>
-      <CardContent className="p-4">
-        {/* Header del profesional */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-teal-900">{professional.name}</p>
-            <p className="text-xs text-teal-600">{professional.specialty}</p>
-            {professional.profession && (
-              <p className="text-xs text-teal-400">{professional.profession}</p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-1 justify-end">
-            {professional.modalityBadges.map((m) => (
-              <Badge key={m} variant="outline" className="text-[10px] bg-teal-50 border-teal-200 text-teal-700">
-                {m}
-              </Badge>
-            ))}
-          </div>
-        </div>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-xs">
+        {/* Header: Hora | Lun | Mar | Mié | Jue | Vie | Sáb | Dom */}
+        <thead>
+          <tr>
+            <th className="border border-teal-100 bg-teal-50 p-1.5 text-teal-700 font-medium text-[10px] sticky left-0 z-10 min-w-[45px]">Hora</th>
+            {WEEK_DAYS.map((day) => {
+              const dayData = professional.weeklySlots[day.dayOfWeek];
+              const dateStr = dayData?.date || "";
+              const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
+              return (
+                <th key={day.dayOfWeek} className="border border-teal-100 bg-teal-50 p-1.5 text-teal-700 font-medium text-[10px] min-w-[80px]">
+                  {day.short} {dayNum}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {allTimes.map((time) => (
+            <tr key={time}>
+              {/* Columna Hora */}
+              <td className="border border-teal-100 bg-slate-50 p-1 text-center text-[10px] text-slate-500 font-mono sticky left-0 z-10">
+                {time}
+              </td>
+              {/* Celdas por día */}
+              {WEEK_DAYS.map((day) => {
+                const dayData = professional.weeklySlots[day.dayOfWeek];
+                if (!dayData) {
+                  return <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/30 p-1"></td>;
+                }
 
-        {/* Slots disponibles */}
-        {professional.availableSlots.length > 0 ? (
-          <div className="mb-3">
-            <p className="text-xs text-teal-500 mb-1.5 font-medium">Slots libres:</p>
-            <div className="flex flex-wrap gap-1.5">
-              {professional.availableSlots.map((slot) => {
-                const colorClass = MODALITY_COLORS[slot.modality] || MODALITY_COLORS.ambas;
-                const label = MODALITY_LABELS[slot.modality] || slot.modality;
-                const past = isSlotInPast(date, slot.time);
-                return (
-                  <button
-                    key={`${slot.time}-${slot.modality}`}
-                    onClick={() => !past && onSlotClick(slot)}
-                    disabled={past}
-                    className={`text-xs px-2 py-1 rounded-md border font-mono transition-colors ${
-                      past
-                        ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border-slate-200 text-slate-400"
-                        : colorClass
-                    }`}
-                    title={past
-                      ? `Slot no disponible (pasado) — ${slot.time} hs`
-                      : `${label} — ${slot.time} a ${slot.endTime} hs (click para asignar)`
-                    }
-                  >
-                    {slot.time}
-                  </button>
-                );
+                // Buscar slot libre a esta hora
+                const freeSlot = dayData.availableSlots.find((s) => s.time === time);
+                // Buscar slot ocupado a esta hora
+                const bookedSlot = dayData.bookedSlots.find((s) => s.time === time);
+                const past = isSlotInPast(dayData.date, time);
+
+                if (freeSlot) {
+                  const colorClass = MODALITY_COLORS[freeSlot.modality] || MODALITY_COLORS.ambas;
+                  const label = MODALITY_LABELS[freeSlot.modality] || freeSlot.modality;
+                  return (
+                    <td key={day.dayOfWeek} className="border border-teal-50 p-0.5">
+                      <button
+                        onClick={() => !past && onSlotClick(freeSlot, dayData.date)}
+                        disabled={past}
+                        className={`w-full h-full min-h-[28px] rounded border text-[10px] font-medium transition-colors ${past ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border-slate-200 text-slate-400" : colorClass}`}
+                        title={past ? `Pasado — ${time} hs` : `${label} — ${time} a ${freeSlot.endTime} hs (click para asignar)`}
+                      >
+                        {freeSlot.endTime}
+                      </button>
+                    </td>
+                  );
+                }
+
+                if (bookedSlot) {
+                  return (
+                    <td key={day.dayOfWeek} className="border border-teal-50 p-0.5">
+                      <button
+                        onClick={() => onBookedSlotClick(bookedSlot)}
+                        className={`w-full h-full min-h-[28px] rounded border border-slate-200 bg-slate-100 text-slate-700 text-[10px] font-medium hover:bg-slate-200 transition-colors truncate px-1 ${past ? "opacity-40" : ""}`}
+                        title={`${bookedSlot.patientName} — ${bookedSlot.status} (click para ver ficha)`}
+                      >
+                        {bookedSlot.patientName.split(" ")[0]}
+                      </button>
+                    </td>
+                  );
+                }
+
+                // Celda vacía — el profesional no atiende ese día/hora
+                return <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/30 p-1"></td>;
               })}
-            </div>
-          </div>
-        ) : (
-          <div className="mb-3">
-            <p className="text-xs text-amber-600 italic">Sin slots disponibles este día</p>
-          </div>
-        )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
-        {/* Slots ocupados */}
-        {professional.bookedSlots.length > 0 && (
-          <div>
-            <p className="text-xs text-teal-500 mb-1.5 font-medium">Turnos ocupados:</p>
-            <div className="flex flex-wrap gap-1.5">
-              {professional.bookedSlots.map((slot) => (
-                <button
-                  key={slot.id}
-                  onClick={() => onBookedSlotClick(slot)}
-                  className="text-xs px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors font-mono"
-                  title={`${slot.patientName} — ${slot.status} (click para ver ficha)`}
-                >
-                  {slot.time} · {slot.patientName}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {/* Leyenda */}
+      <div className="flex items-center gap-3 mt-3 flex-wrap text-[10px] text-teal-600">
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-300"></span>Presencial</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-300"></span>Online</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-purple-100 border border-purple-300"></span>Híbrido</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300"></span>Ambas</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-100 border border-slate-200"></span>Ocupado</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-50 border border-slate-200 opacity-40"></span>Pasado</span>
+      </div>
+    </div>
   );
 }
 
@@ -979,113 +781,39 @@ interface AssignDialogProps {
   professional: ProfessionalResult | null;
   slot: AvailableSlot | null;
   date: string;
-  dateLabel: string;
   form: AssignFormData;
   onFormChange: (form: AssignFormData) => void;
   onConfirm: () => void;
   assigning: boolean;
 }
 
-function AssignDialog({
-  open, onOpenChange, professional, slot, date, dateLabel,
-  form, onFormChange, onConfirm, assigning,
-}: AssignDialogProps) {
+function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFormChange, onConfirm, assigning }: AssignDialogProps) {
   if (!professional || !slot) return null;
   const modalityLabel = MODALITY_LABELS[slot.modality] || slot.modality;
+  let dateLabel = date;
+  try { dateLabel = format(parseISO(date), "EEEE d 'de' MMMM", { locale: es }); } catch { /* keep ISO */ }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-teal-900 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-teal-600" />
-            Asignar turno
-          </DialogTitle>
-          <DialogDescription className="text-teal-600">
-            {professional.name} — {professional.specialty}
-          </DialogDescription>
+          <DialogTitle className="text-teal-900 flex items-center gap-2"><Calendar className="w-5 h-5 text-teal-600" /> Asignar turno</DialogTitle>
+          <DialogDescription className="text-teal-600">{professional.name} — {professional.specialty}</DialogDescription>
         </DialogHeader>
-
-        {/* Resumen del slot */}
         <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1">
           <p className="text-sm text-teal-900 font-medium capitalize">{dateLabel}</p>
-          <p className="text-sm text-teal-700">
-            <Clock className="w-3.5 h-3.5 inline mr-1" />
-            {slot.time} a {slot.endTime} hs
-          </p>
+          <p className="text-sm text-teal-700"><Clock className="w-3.5 h-3.5 inline mr-1" />{slot.time} a {slot.endTime} hs</p>
           <p className="text-xs text-teal-600">Modalidad: {modalityLabel}</p>
         </div>
-
-        {/* Formulario */}
         <div className="space-y-3">
-          <div className="space-y-1">
-            <Label className="text-xs text-teal-700 font-medium">
-              Nombre del paciente <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              value={form.patientName}
-              onChange={(e) => onFormChange({ ...form, patientName: e.target.value })}
-              placeholder="Nombre y apellido"
-              className="h-8 text-sm border-teal-200"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-teal-700 font-medium">
-              Teléfono <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              value={form.patientPhone}
-              onChange={(e) => onFormChange({ ...form, patientPhone: e.target.value })}
-              placeholder="+54 11 xxxx-xxxx"
-              className="h-8 text-sm border-teal-200"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-teal-700 font-medium">
-              Email <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              type="email"
-              value={form.patientEmail}
-              onChange={(e) => onFormChange({ ...form, patientEmail: e.target.value })}
-              placeholder="paciente@email.com"
-              className="h-8 text-sm border-teal-200"
-            />
-            <p className="text-[10px] text-teal-500">
-              Si el email ya existe, se reutiliza el paciente (no se duplica)
-            </p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-teal-700 font-medium">Notas (opcional)</Label>
-            <Textarea
-              value={form.notes}
-              onChange={(e) => onFormChange({ ...form, notes: e.target.value })}
-              placeholder="Motivo de consulta, observaciones..."
-              className="text-sm border-teal-200 min-h-[60px]"
-              rows={2}
-            />
-          </div>
+          <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Nombre del paciente <span className="text-red-500">*</span></Label><Input value={form.patientName} onChange={(e) => onFormChange({ ...form, patientName: e.target.value })} placeholder="Nombre y apellido" className="h-8 text-sm border-teal-200" /></div>
+          <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Teléfono <span className="text-red-500">*</span></Label><Input value={form.patientPhone} onChange={(e) => onFormChange({ ...form, patientPhone: e.target.value })} placeholder="+54 11 xxxx-xxxx" className="h-8 text-sm border-teal-200" /></div>
+          <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Email <span className="text-red-500">*</span></Label><Input type="email" value={form.patientEmail} onChange={(e) => onFormChange({ ...form, patientEmail: e.target.value })} placeholder="paciente@email.com" className="h-8 text-sm border-teal-200" /><p className="text-[10px] text-teal-500">Si el email ya existe, se reutiliza el paciente (no se duplica)</p></div>
+          <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Notas (opcional)</Label><Textarea value={form.notes} onChange={(e) => onFormChange({ ...form, notes: e.target.value })} placeholder="Motivo de consulta, observaciones..." className="text-sm border-teal-200 min-h-[60px]" rows={2} /></div>
         </div>
-
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-teal-200 text-teal-600 hover:bg-teal-50"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={onConfirm}
-            disabled={assigning}
-            className="bg-teal-600 hover:bg-teal-700 text-white"
-          >
-            {assigning ? (
-              <><RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Asignando...</>
-            ) : (
-              <><CheckCircle2 className="w-4 h-4 mr-1" /> Confirmar asignación</>
-            )}
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cancelar</Button>
+          <Button onClick={onConfirm} disabled={assigning} className="bg-teal-600 hover:bg-teal-700 text-white">{assigning ? <><RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Asignando...</> : <><CheckCircle2 className="w-4 h-4 mr-1" /> Confirmar</>}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1106,83 +834,31 @@ interface FichaDialogProps {
 function FichaDialog({ open, onOpenChange, professional, slot }: FichaDialogProps) {
   if (!professional || !slot) return null;
   const modalityLabel = slot.modality ? MODALITY_LABELS[slot.modality] || slot.modality : "—";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-teal-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-teal-600" />
-            Ficha del turno
-          </DialogTitle>
-          <DialogDescription className="text-teal-600">
-            {professional.name} — {professional.specialty}
-          </DialogDescription>
+          <DialogTitle className="text-teal-900 flex items-center gap-2"><Users className="w-5 h-5 text-teal-600" /> Ficha del turno</DialogTitle>
+          <DialogDescription className="text-teal-600">{professional.name} — {professional.specialty}</DialogDescription>
         </DialogHeader>
-
         <div className="space-y-3">
-          {/* Datos del turno */}
           <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1">
-            <div className="flex items-center gap-2 text-sm text-teal-900">
-              <Clock className="w-4 h-4 text-teal-600" />
-              <span>{slot.time} hs</span>
-              <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">
-                {modalityLabel}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-teal-500">Estado:</span>
-              <Badge variant={slot.status === "confirmed" ? "default" : "outline"} className="text-xs">
-                {slot.status === "confirmed" ? "Confirmado" : slot.status === "pending" ? "Pendiente" : slot.status}
-              </Badge>
-            </div>
+            <div className="flex items-center gap-2 text-sm text-teal-900"><Clock className="w-4 h-4 text-teal-600" /><span>{slot.time} hs</span><Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{modalityLabel}</Badge></div>
+            <div className="flex items-center gap-2 text-xs"><span className="text-teal-500">Estado:</span><Badge variant={slot.status === "confirmed" ? "default" : "outline"} className="text-xs">{slot.status === "confirmed" ? "Confirmado" : slot.status === "pending" ? "Pendiente" : slot.status}</Badge></div>
           </div>
-
-          {/* Datos del paciente */}
           <div className="space-y-2">
             <p className="text-xs text-teal-500 font-medium uppercase tracking-wide">Paciente</p>
             <p className="text-sm font-medium text-teal-900">{slot.patientName}</p>
-
-            {/* Contacto rápido */}
             {(slot.patientPhone || slot.patientEmail) && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                {slot.patientPhone && (
-                  <a
-                    href={`https://wa.me/${slot.patientPhone.replace(/[^0-9]/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 hover:underline transition-colors"
-                  >
-                    <MessageCircle className="w-3 h-3 text-emerald-500" />
-                    {slot.patientPhone}
-                  </a>
-                )}
-                {slot.patientEmail && (
-                  <a
-                    href={`mailto:${slot.patientEmail}`}
-                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-700 hover:underline transition-colors"
-                  >
-                    <Mail className="w-3 h-3 text-teal-500" />
-                    {slot.patientEmail}
-                  </a>
-                )}
+                {slot.patientPhone && (<a href={`https://wa.me/${slot.patientPhone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 hover:underline transition-colors"><MessageCircle className="w-3 h-3 text-emerald-500" />{slot.patientPhone}</a>)}
+                {slot.patientEmail && (<a href={`mailto:${slot.patientEmail}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-700 hover:underline transition-colors"><Mail className="w-3 h-3 text-teal-500" />{slot.patientEmail}</a>)}
               </div>
             )}
-            {!slot.patientPhone && !slot.patientEmail && (
-              <p className="text-xs text-teal-400 italic">Sin datos de contacto</p>
-            )}
+            {!slot.patientPhone && !slot.patientEmail && <p className="text-xs text-teal-400 italic">Sin datos de contacto</p>}
           </div>
         </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-teal-200 text-teal-600 hover:bg-teal-50"
-          >
-            Cerrar
-          </Button>
-        </DialogFooter>
+        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
