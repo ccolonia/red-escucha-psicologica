@@ -751,6 +751,7 @@ export function AdminAgendaCentral() {
                   <ProfessionalCard
                     key={prof.id}
                     professional={prof}
+                    date={selectedDate}
                     onSlotClick={(slot) => openAssignDialog(prof, slot)}
                     onBookedSlotClick={(slot) => openFichaDialog(prof, slot)}
                   />
@@ -866,11 +867,28 @@ function MetricsDashboard({ metrics, loading }: { metrics: MetricsResponse | nul
 
 interface ProfessionalCardProps {
   professional: ProfessionalResult;
+  date: string; // ISO "2026-06-23" — para evaluar si los slots están en el pasado
   onSlotClick: (slot: AvailableSlot) => void;
   onBookedSlotClick: (slot: BookedSlot) => void;
 }
 
-function ProfessionalCard({ professional, onSlotClick, onBookedSlotClick }: ProfessionalCardProps) {
+// === Helper: evaluar si un slot (date + time) está en el pasado ===
+// Compara con el momento actual en timezone Argentina. Si el slot ya
+// pasó, devuelve true (el botón debe ser no-clickeable y con opacity-40).
+function isSlotInPast(date: string, time: string): boolean {
+  try {
+    const ARG_TZ = "America/Argentina/Buenos_Aires";
+    const nowInArgentina = new Date(new Date().toLocaleString("en-US", { timeZone: ARG_TZ }));
+    const slotDateTimeStr = `${date}T${time}:00`;
+    const slotDateRaw = new Date(slotDateTimeStr);
+    const slotInArgentina = new Date(slotDateRaw.toLocaleString("en-US", { timeZone: ARG_TZ }));
+    return slotInArgentina < nowInArgentina;
+  } catch {
+    return false; // si hay error de parseo, no bloquear
+  }
+}
+
+function ProfessionalCard({ professional, date, onSlotClick, onBookedSlotClick }: ProfessionalCardProps) {
   return (
     <Card className={`border-teal-100 ${!professional.hasAvailability ? "opacity-60" : ""}`}>
       <CardContent className="p-4">
@@ -900,12 +918,21 @@ function ProfessionalCard({ professional, onSlotClick, onBookedSlotClick }: Prof
               {professional.availableSlots.map((slot) => {
                 const colorClass = MODALITY_COLORS[slot.modality] || MODALITY_COLORS.ambas;
                 const label = MODALITY_LABELS[slot.modality] || slot.modality;
+                const past = isSlotInPast(date, slot.time);
                 return (
                   <button
                     key={`${slot.time}-${slot.modality}`}
-                    onClick={() => onSlotClick(slot)}
-                    className={`text-xs px-2 py-1 rounded-md border font-mono transition-colors ${colorClass}`}
-                    title={`${label} — ${slot.time} a ${slot.endTime} hs (click para asignar)`}
+                    onClick={() => !past && onSlotClick(slot)}
+                    disabled={past}
+                    className={`text-xs px-2 py-1 rounded-md border font-mono transition-colors ${
+                      past
+                        ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border-slate-200 text-slate-400"
+                        : colorClass
+                    }`}
+                    title={past
+                      ? `Slot no disponible (pasado) — ${slot.time} hs`
+                      : `${label} — ${slot.time} a ${slot.endTime} hs (click para asignar)`
+                    }
                   >
                     {slot.time}
                   </button>

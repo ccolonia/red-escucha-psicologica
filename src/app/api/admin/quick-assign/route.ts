@@ -93,6 +93,34 @@ export async function POST(request: NextRequest) {
     const trimmedNotes = notes?.trim() || null;
     const appointmentModality = modality || "P";
 
+    // === Bloqueo de asignaciones retroactivas (pasado) ===
+    // Combinar date ("2026-06-19") + time ("21:00") en un objeto Date
+    // ajustado a timezone Argentina. Si la fecha/hora del turno es
+    // anterior al momento actual, abortar con 400.
+    //
+    // El formato "2026-06-19T21:00:00" sin Z al final es interpretado
+    // como hora local por el motor JS, pero como el servidor de Vercel
+    // puede estar en otra timezone, forzamos la interpretación como
+    // America/Argentina/Buenos_Aires usando en-US con timeZone option.
+    const ARG_TZ = "America/Argentina/Buenos_Aires";
+    const nowInArgentina = new Date(new Date().toLocaleString("en-US", { timeZone: ARG_TZ }));
+
+    // Construir la fecha/hora del turno en Argentina: combinamos date + time
+    // en formato "YYYY-MM-DDTHH:MM:00" y lo parseamos como hora local de Argentina.
+    // Usamos el mismo truco: crear la fecha y luego reinterpretar.
+    const slotDateTimeStr = `${date}T${time}:00`;
+    const slotDateRaw = new Date(slotDateTimeStr);
+    // Ajustar la fecha del slot a la timezone de Argentina para comparar
+    // correctamente con nowInArgentina (ambos en la misma referencia temporal).
+    const slotInArgentina = new Date(slotDateRaw.toLocaleString("en-US", { timeZone: ARG_TZ }));
+
+    if (slotInArgentina < nowInArgentina) {
+      return NextResponse.json(
+        { error: "No es posible asignar turnos en fechas u horarios pasados." },
+        { status: 400 }
+      );
+    }
+
     // === Transacción atómica ===
     const result = await db.$transaction(async (tx) => {
       // 1. Verificar que el profesional existe y está disponible
