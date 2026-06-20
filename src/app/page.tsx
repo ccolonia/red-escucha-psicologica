@@ -172,7 +172,11 @@ function AppContent() {
       <AppNavigation />
       {/* Desktop: offset for sidebar */}
       <main className="md:ml-64 min-h-screen">
-        <div className="px-4 sm:px-6 lg:px-8 py-6 pt-16 md:pt-6 pb-24 md:pb-6 max-w-5xl mx-auto">
+        <div className={`px-4 sm:px-6 lg:px-8 py-6 pt-16 md:pt-6 pb-24 md:pb-6 ${
+          currentView === "admin-agenda-central"
+            ? "w-full max-w-none"
+            : "max-w-5xl mx-auto"
+        }`}>
           <DashboardContent />
         </div>
       </main>
