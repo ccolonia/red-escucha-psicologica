@@ -252,6 +252,41 @@ export async function GET(request: NextRequest) {
       where.AND = andConditions;
     }
 
+    // === BARRERA 1: Filtrado por modalidad a nivel PERFIL (where clause) ===
+    // El modelo Professional tiene 3 booleanos separados (onlineAttention,
+    // presentialAttention, homeAttention), no un campo modality único.
+    // Mapeamos la modalidad solicitada a esos booleanos:
+    //   presencial → presentialAttention=true OR homeAttention=true
+    //                (domicilio también es presencial — el terapeuta va al
+    //                paciente, no es online)
+    //   online     → onlineAttention=true (excluye a profesionales que solo
+    //                atienden presencial, ej: Lic. Stephanie Castaño)
+    //   híbrida    → al menos 2 de las 3 modalidades activas (para que pueda
+    //                ofrecer ambas)
+    //   ambas      → sin filtro (trae todos)
+    //
+    // Esto es un cortocircuito estricto: si el admin busca 'Presencial',
+    // cualquier profesional estrictamente Online queda fuera de la query.
+    if (modality && modality !== "ambas") {
+      if (modality === "presencial") {
+        where.OR = [
+          { presentialAttention: true },
+          { homeAttention: true },
+        ];
+      } else if (modality === "online") {
+        where.onlineAttention = true;
+      } else if (modality === "híbrida" || modality === "hibrida") {
+        // Híbrido: necesita al menos 2 modalidades activas. Como Prisma no
+        // soporta count directo en where, filtramos con OR de combinaciones.
+        where.OR = [
+          { onlineAttention: true, presentialAttention: true },
+          { onlineAttention: true, homeAttention: true },
+          { presentialAttention: true, homeAttention: true },
+          { onlineAttention: true, presentialAttention: true, homeAttention: true },
+        ];
+      }
+    }
+
     // === Traer professionals con sus schedules, overrides y appointments ===
     const professionals = await db.professional.findMany({
       where,
@@ -290,9 +325,14 @@ export async function GET(request: NextRequest) {
     });
 
     // === Para cada professional, computar slots disponibles + filtrar por modalidad ===
+    // === BARRERA 2 (Runtime post-query): si un profesional pasa el filtro clínico
+    // pero al computar sus availableSlots para el día solicitado el total de
+    // slots compatibles con la modalidad requerida es 0, se remueve del array
+    // final. Esto cubre edge cases donde el perfil dice que atiende presencial
+    // pero su schedule del día solo tiene slots 'OL' (online).
     const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
 
-    const enrichedProfessionals = professionals.map((prof) => {
+    const enrichedProfessionalsRaw = professionals.map((prof) => {
       const bookedTimes = new Set(prof.appointments.map((a) => a.time));
 
       const availableSlotsRaw = date && dayOfWeek != null
@@ -305,7 +345,7 @@ export async function GET(request: NextRequest) {
           )
         : [];
 
-      // Filtrar por modalidad compatible
+      // Filtrar por modalidad compatible (Barrera 2a: a nivel slot)
       const availableSlots = modality
         ? availableSlotsRaw.filter((s) => isModalityCompatible(s.modality, modality))
         : availableSlotsRaw;
@@ -339,6 +379,17 @@ export async function GET(request: NextRequest) {
         hasAvailability: availableSlots.length > 0,
       };
     });
+
+    // === Barrera 2b: remover profesionales con 0 slots compatibles ===
+    // Si se solicitó una modalidad específica Y una fecha concreta, los
+    // profesionales que no tienen ningún slot compatible ese día se
+    // eliminan del array final. Sin esto, aparecen en la grilla con
+    // 'Sin slots disponibles este día' y ensucian la vista.
+    // Si NO hay fecha concreta (solo filtro de perfil), los dejamos
+    // porque el admin podría querer ver el perfil igual.
+    const enrichedProfessionals = (modality && date)
+      ? enrichedProfessionalsRaw.filter((p) => p.availableSlots.length > 0)
+      : enrichedProfessionalsRaw;
 
     // === Summary ===
     const totalSlotsAvailable = enrichedProfessionals.reduce((sum, p) => sum + p.availableSlots.length, 0);
