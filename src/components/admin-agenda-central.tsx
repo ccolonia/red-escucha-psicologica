@@ -155,6 +155,23 @@ const TARGET_AUDIENCES = [
   "Orientación a padres",
 ];
 
+// === Modalidades de Terapia (NUEVO filtro) ===
+// NO confundir con la modalidad de atención (Online/Presencial/Híbrida).
+// Este es el campo therapyModality del Professional — valores: Individual,
+// Vincular, Evaluaciones, Terapia Grupal, etc.
+// Sincronizado con THERAPY_MODALITIES de professional-register.tsx.
+const THERAPY_MODALITIES = [
+  "Individual",
+  "Vincular",
+  "Evaluaciones",
+  "Terapia Grupal",
+  "Orientación a Padres",
+  "Asesoría a Empresas",
+  "Pericias",
+  "Discapacidad",
+  "Orientación Vocacional",
+];
+
 const MODALITIES = [
   { value: "presencial", label: "Presencial" },
   { value: "online", label: "Online" },
@@ -271,6 +288,7 @@ export function AdminAgendaCentral() {
   const [specialty, setSpecialty] = useState<string>("");
   const [selectedTherapyTypes, setSelectedTherapyTypes] = useState<string[]>([]);
   const [selectedTargetAudience, setSelectedTargetAudience] = useState<string[]>([]);
+  const [selectedTherapyModalities, setSelectedTherapyModalities] = useState<string[]>([]);
   const [dayOfWeek, setDayOfWeek] = useState<number>(1); // default: Lunes
   const [modality, setModality] = useState<string>("");
   const [weekOffset, setWeekOffset] = useState<number>(0); // 0 = esta semana, -1 = anterior, +1 = siguiente
@@ -349,6 +367,7 @@ export function AdminAgendaCentral() {
       if (specialty) params.set("specialty", specialty);
       if (selectedTherapyTypes.length > 0) params.set("therapyTypes", selectedTherapyTypes.join(","));
       if (selectedTargetAudience.length > 0) params.set("targetAudience", selectedTargetAudience.join(","));
+      if (selectedTherapyModalities.length > 0) params.set("therapyModalities", selectedTherapyModalities.join(","));
       params.set("dayOfWeek", String(dayOfWeek));
       params.set("date", selectedDate);
       if (modality) params.set("modality", modality);
@@ -368,7 +387,7 @@ export function AdminAgendaCentral() {
     } finally {
       setSearching(false);
     }
-  }, [profession, specialty, selectedTherapyTypes, selectedTargetAudience, dayOfWeek, selectedDate, modality]);
+  }, [profession, specialty, selectedTherapyTypes, selectedTargetAudience, selectedTherapyModalities, dayOfWeek, selectedDate, modality]);
 
   // === Búsqueda automática al cambiar día/weekOffset (para que el admin vea
   // resultados sin tener que clickear "Buscar" cada vez que navega semanas) ===
@@ -383,6 +402,9 @@ export function AdminAgendaCentral() {
   };
   const toggleTargetAudience = (t: string) => {
     setSelectedTargetAudience((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
+  };
+  const toggleTherapyModality = (t: string) => {
+    setSelectedTherapyModalities((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
   };
 
   // === Abrir dialog de asignación ===
@@ -447,6 +469,7 @@ export function AdminAgendaCentral() {
     setSpecialty("");
     setSelectedTherapyTypes([]);
     setSelectedTargetAudience([]);
+    setSelectedTherapyModalities([]);
     setModality("");
     setDayOfWeek(1);
     setWeekOffset(0);
@@ -583,6 +606,28 @@ export function AdminAgendaCentral() {
                     <Checkbox
                       checked={selectedTargetAudience.includes(t)}
                       onCheckedChange={() => toggleTargetAudience(t)}
+                      className="h-3 w-3"
+                    />
+                    <span className="text-teal-700">{t}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* === NUEVO: Modalidad de Terapia (multi-select) === */}
+            {/* NO confundir con la modalidad de atención (Online/Presencial).
+                Este es el campo therapyModality del Professional. */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-teal-700 font-medium">
+                Modalidad de Terapia
+                <span className="text-[10px] text-teal-400 block font-normal">(Individual, Vincular, etc.)</span>
+              </Label>
+              <div className="border border-teal-100 rounded-md p-2 bg-teal-50/30 space-y-1">
+                {THERAPY_MODALITIES.map((t) => (
+                  <label key={t} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
+                    <Checkbox
+                      checked={selectedTherapyModalities.includes(t)}
+                      onCheckedChange={() => toggleTherapyModality(t)}
                       className="h-3 w-3"
                     />
                     <span className="text-teal-700">{t}</span>

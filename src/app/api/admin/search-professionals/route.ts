@@ -172,15 +172,26 @@ export async function GET(request: NextRequest) {
     const specialty = searchParams.get("specialty")?.trim() || "";
     const therapyTypesParam = searchParams.get("therapyTypes")?.trim() || "";
     const targetAudienceParam = searchParams.get("targetAudience")?.trim() || "";
+    const therapyModalitiesParam = searchParams.get("therapyModalities")?.trim() || "";
     const dayOfWeekParam = searchParams.get("dayOfWeek");
     const date = searchParams.get("date")?.trim() || "";
     const modality = searchParams.get("modality")?.trim().toLowerCase() || "";
 
     const therapyTypes = therapyTypesParam ? therapyTypesParam.split(",").map((t) => t.trim()).filter(Boolean) : [];
     const targetAudience = targetAudienceParam ? targetAudienceParam.split(",").map((t) => t.trim()).filter(Boolean) : [];
+    const therapyModalities = therapyModalitiesParam ? therapyModalitiesParam.split(",").map((t) => t.trim()).filter(Boolean) : [];
     const dayOfWeek = dayOfWeekParam ? parseInt(dayOfWeekParam, 10) : null;
 
     // === Construir where clause para professionals ===
+    // Lógica flexibilizada (commit de hoy) para evitar falsos negativos:
+    //   - profession: contains insensitive (matchea "Psicólogo" con "Psicóloga",
+    //     "Licenciado en Psicología", etc.)
+    //   - specialty: contains insensitive (antes era match exacto, muy rigido)
+    //   - therapyTypes, targetAudience, therapyModalities: contains insensitive
+    //     con el string entre comillas dobles (porque son JSON arrays serializados)
+    //     + normalización de espacios para tolerar variaciones
+    // Filtros opcionales no restrictivos: si un param llega vacío, no se
+    // agrega al where (cortocircuito con && { ... }).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       available: true,
@@ -188,29 +199,57 @@ export async function GET(request: NextRequest) {
       licenseVerified: true,
     };
 
+    // Profesión difusa: "Psicólogo" debe matchear "Licenciado en Psicología",
+    // "Psicóloga", etc. Usamos contains insensitive.
     if (profession) {
       where.profession = { contains: profession, mode: "insensitive" };
     }
+
+    // Especialidad: antes era match exacto (where.specialty = specialty),
+    // ahora contains insensitive para tolerar variaciones de spacing.
     if (specialty) {
-      where.specialty = specialty;
+      where.specialty = { contains: specialty, mode: "insensitive" };
     }
-    // therapyTypes y targetAudience son JSON strings (ej: '["Psicoanálisis","EMDR"]')
-    // Para buscar coincidencias, usamos contains con el string entre comillas.
+
+    // === Búsqueda insensible en JSON/Arrays ===
+    // Los campos therapyTypes, targetAudience y therapyModality son JSON
+    // strings (ej: '["Psicoanálisis","EMDR"]'). Para buscar, usamos
+    // contains con el string entre comillas dobles + mode insensitive.
+    // El mode: insensitive cubre mayúsculas/minúsculas; el contains del
+    // string entre comillas cubre el match exacto del item dentro del array.
+    const andConditions: any[] = [];
+
     if (therapyTypes.length > 0) {
-      where.AND = therapyTypes.map((t) => ({
-        therapyTypes: { contains: `"${t}"` },
-      }));
-    }
-    if (targetAudience.length > 0) {
-      if (where.AND) {
-        where.AND.push(...targetAudience.map((t) => ({
-          targetAudience: { contains: `"${t}"` },
-        })));
-      } else {
-        where.AND = targetAudience.map((t) => ({
-          targetAudience: { contains: `"${t}"` },
-        }));
+      for (const t of therapyTypes) {
+        andConditions.push({
+          therapyTypes: { contains: `"${t}"`, mode: "insensitive" },
+        });
       }
+    }
+
+    if (targetAudience.length > 0) {
+      for (const t of targetAudience) {
+        andConditions.push({
+          targetAudience: { contains: `"${t}"`, mode: "insensitive" },
+        });
+      }
+    }
+
+    // === NUEVO: Modalidad de Terapia (therapyModality) ===
+    // Campo JSON string en Professional, valores: Individual, Vincular,
+    // Evaluaciones, Terapia Grupal, Orientación a Padres, Asesoría a
+    // Empresas, Pericias, Discapacidad, Orientación Vocacional.
+    // No confundir con la modalidad de atención (Online/Presencial).
+    if (therapyModalities.length > 0) {
+      for (const t of therapyModalities) {
+        andConditions.push({
+          therapyModality: { contains: `"${t}"`, mode: "insensitive" },
+        });
+      }
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     // === Traer professionals con sus schedules, overrides y appointments ===
@@ -223,6 +262,9 @@ export async function GET(request: NextRequest) {
         onlineAttention: true,
         presentialAttention: true,
         homeAttention: true,
+        // Incluimos therapyModality para que la UI lo pueda mostrar si
+        // hace falta, y para debuggear el cruce.
+        therapyModality: true,
         user: { select: { id: true, name: true, email: true, phone: true } },
         schedules: dayOfWeek != null ? { where: { dayOfWeek } } : true,
         scheduleOverrides: date ? { where: { date } } : true,
@@ -308,6 +350,7 @@ export async function GET(request: NextRequest) {
         specialty: specialty || null,
         therapyTypes: therapyTypes.length > 0 ? therapyTypes : null,
         targetAudience: targetAudience.length > 0 ? targetAudience : null,
+        therapyModalities: therapyModalities.length > 0 ? therapyModalities : null,
         dayOfWeek: dayOfWeek,
         date: date || null,
         modality: modality || null,
