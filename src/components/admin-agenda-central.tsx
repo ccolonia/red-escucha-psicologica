@@ -427,37 +427,43 @@ export function AdminAgendaCentral() {
     }
     setAssigning(true);
     try {
-      // Reutilizar el endpoint POST /api/appointments que ya existe.
-      // Pero ese endpoint requiere patientId directo, no datos del paciente.
-      // Para mantener el flujo "buscar o crear", vamos a usar el endpoint
-      // de patient-requests que ya hace upsert de Patient por email.
-      // Pero ese endpoint requiere un patientRequestId...
-      //
-      // Solución más simple: usar POST /api/appointments pero primero
-      // hacer upsert del Patient via /api/patients... pero no hay endpoint
-      // público de upsert.
-      //
-      // Mejor: crear un endpoint dedicado /api/admin/quick-assign que haga
-      // todo en una transacción. Pero eso es del Paso 4.
-      //
-      // Por ahora, como workaround, usamos el endpoint existente de
-      // patient-requests con action=assign, pero simulando que el admin
-      // está asignando una solicitud existente. Como no tenemos un
-      // PatientRequest, vamos a crear uno primero.
-      //
-      // ACTUALIZACIÓN: para no complicar, voy a usar directamente el
-      // endpoint POST /api/appointments con un patientId que obtengo
-      // haciendo una búsqueda previa por email. Si no existe, lo creo
-      // via /api/auth/register con role=patient. Pero eso manda email...
-      //
-      // Mejor enfoque: crear el endpoint /api/admin/quick-assign en el
-      // Paso 4 que haga todo limpio. Por ahora dejo el botón deshabilitado
-      // con un mensaje claro.
-      toast.info("La asignación rápida se implementará en el Paso 4 (endpoint /api/admin/quick-assign). Por ahora usá el Triage para asignar.");
+      const res = await fetch("/api/admin/quick-assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          professionalId: assignDialog.professional.id,
+          date: assignDialog.date,
+          time: assignDialog.slot.time,
+          modality: assignDialog.slot.modality,
+          patientName: assignForm.patientName.trim(),
+          patientPhone: assignForm.patientPhone.trim(),
+          patientEmail: assignForm.patientEmail.trim(),
+          notes: assignForm.notes.trim() || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || "Error al asignar el turno");
+        return;
+      }
+
+      // Éxito — feedback al admin
+      const patientVerb = data.created ? "creado" : "actualizado";
+      toast.success(
+        `Turno asignado a ${data.patient.name} (${patientVerb}). ` +
+        `${assignDialog.professional.name} — ${assignDialog.date} ${assignDialog.slot.time} hs.`
+      );
+
+      // Cerrar dialog
       setAssignDialog((prev) => ({ ...prev, open: false }));
+
+      // Recargar búsqueda para ver el slot como ocupado en tiempo real
+      handleSearch();
     } catch (err) {
       console.error("Error assigning:", err);
-      toast.error("Error al asignar el turno");
+      toast.error("Error de conexión al asignar el turno");
     } finally {
       setAssigning(false);
     }
