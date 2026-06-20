@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutGrid,
@@ -197,6 +197,7 @@ interface AssignFormData {
   patientPhone: string;
   patientEmail: string;
   notes: string;
+  modality: string; // "P" | "OL" | "H" — selector del dialog
 }
 
 // ====================================================================
@@ -261,7 +262,7 @@ export function AdminAgendaCentral() {
   }>({ open: false, professional: null, slot: null });
 
   const [assignForm, setAssignForm] = useState<AssignFormData>({
-    patientName: "", patientPhone: "", patientEmail: "", notes: "",
+    patientName: "", patientPhone: "", patientEmail: "", notes: "", modality: "P",
   });
   const [assigning, setAssigning] = useState(false);
 
@@ -344,7 +345,13 @@ export function AdminAgendaCentral() {
 
   // === Handlers de dialogs ===
   const openAssignDialog = (professional: ProfessionalResult, slot: AvailableSlot, date: string) => {
-    setAssignForm({ patientName: "", patientPhone: "", patientEmail: "", notes: "" });
+    setAssignForm({
+      patientName: "",
+      patientPhone: "",
+      patientEmail: "",
+      notes: "",
+      modality: slot.modality, // heredar del slot
+    });
     setAssignDialog({ open: true, professional, slot, date });
   };
 
@@ -368,7 +375,7 @@ export function AdminAgendaCentral() {
           professionalId: assignDialog.professional.id,
           date: assignDialog.date,
           time: assignDialog.slot.time,
-          modality: assignDialog.slot.modality,
+          modality: assignForm.modality,
           patientName: assignForm.patientName.trim(),
           patientPhone: assignForm.patientPhone.trim(),
           patientEmail: assignForm.patientEmail.trim(),
@@ -833,8 +840,66 @@ interface AssignDialogProps {
 }
 
 function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFormChange, onConfirm, assigning }: AssignDialogProps) {
+  const [patientSearch, setPatientSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<{ id: string; name: string; email: string; phone: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced search de pacientes
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (patientSearch.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/admin/search-patients?q=${encodeURIComponent(patientSearch.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data);
+          setShowSuggestions(true);
+        }
+      } catch (err) {
+        console.error("Error searching patients:", err);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [patientSearch]);
+
+  // Limpiar búsqueda cuando se cierra el dialog
+  useEffect(() => {
+    if (!open) {
+      setPatientSearch("");
+      setSearchResults([]);
+      setShowSuggestions(false);
+    }
+  }, [open]);
+
+  // Seleccionar paciente existente
+  const selectPatient = (patient: { name: string; email: string; phone: string }) => {
+    onFormChange({
+      ...form,
+      patientName: patient.name,
+      patientEmail: patient.email,
+      patientPhone: patient.phone,
+    });
+    setPatientSearch(patient.name);
+    setShowSuggestions(false);
+  };
+
+  // Cuando el admin escribe en el input de búsqueda, también actualiza patientName
+  // para que si no selecciona ningún suggestion, se use lo que escribió
+  const handleSearchInputChange = (value: string) => {
+    setPatientSearch(value);
+    onFormChange({ ...form, patientName: value });
+  };
+
   if (!professional || !slot) return null;
-  const modalityLabel = MODALITY_LABELS[slot.modality] || slot.modality;
   let dateLabel = date;
   try { dateLabel = format(parseISO(date), "EEEE d 'de' MMMM", { locale: es }); } catch { /* keep ISO */ }
 
@@ -848,17 +913,75 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
         <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1">
           <p className="text-sm text-teal-900 font-medium capitalize">{dateLabel}</p>
           <p className="text-sm text-teal-700"><Clock className="w-3.5 h-3.5 inline mr-1" />{slot.time} a {slot.endTime} hs</p>
-          <p className="text-xs text-teal-600">Modalidad: {modalityLabel}</p>
         </div>
+
         <div className="space-y-3">
-          <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Nombre del paciente <span className="text-red-500">*</span></Label><Input value={form.patientName} onChange={(e) => onFormChange({ ...form, patientName: e.target.value })} placeholder="Nombre y apellido" className="h-8 text-sm border-teal-200" /></div>
-          <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Teléfono <span className="text-red-500">*</span></Label><Input value={form.patientPhone} onChange={(e) => onFormChange({ ...form, patientPhone: e.target.value })} placeholder="+54 11 xxxx-xxxx" className="h-8 text-sm border-teal-200" /></div>
-          <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Email <span className="text-red-500">*</span></Label><Input type="email" value={form.patientEmail} onChange={(e) => onFormChange({ ...form, patientEmail: e.target.value })} placeholder="paciente@email.com" className="h-8 text-sm border-teal-200" /><p className="text-[10px] text-teal-500">Si el email ya existe, se reutiliza el paciente (no se duplica)</p></div>
-          <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Notas (opcional)</Label><Textarea value={form.notes} onChange={(e) => onFormChange({ ...form, notes: e.target.value })} placeholder="Motivo de consulta, observaciones..." className="text-sm border-teal-200 min-h-[60px]" rows={2} /></div>
+          {/* === Combobox de búsqueda de pacientes === */}
+          <div className="space-y-1 relative">
+            <Label className="text-xs text-teal-700 font-medium">Buscar paciente existente o escribir nuevo <span className="text-red-500">*</span></Label>
+            <div className="relative">
+              <Input
+                value={patientSearch}
+                onChange={(e) => handleSearchInputChange(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setShowSuggestions(true)}
+                placeholder="Escribí nombre o email para buscar..."
+                className="h-8 text-sm border-teal-200 pr-8"
+              />
+              {searching && <RefreshCw className="w-3.5 h-3.5 text-teal-400 animate-spin absolute right-2 top-2" />}
+            </div>
+            {/* Sugerencias de autocompletado */}
+            {showSuggestions && searchResults.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-teal-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {searchResults.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => selectPatient(p)}
+                    className="w-full text-left px-3 py-2 hover:bg-teal-50 transition-colors border-b border-teal-50 last:border-0"
+                  >
+                    <p className="text-sm font-medium text-teal-900">{p.name}</p>
+                    <p className="text-[10px] text-teal-500">{p.email} {p.phone && `· ${p.phone}`}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+            {showSuggestions && patientSearch.length >= 2 && !searching && searchResults.length === 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-teal-200 rounded-lg shadow-lg p-3">
+                <p className="text-xs text-teal-500">No se encontraron pacientes. Completá los campos abajo para crear uno nuevo.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Datos del paciente (autocompletados o manuales) */}
+          <div className="space-y-1">
+            <Label className="text-xs text-teal-700 font-medium">Nombre completo <span className="text-red-500">*</span></Label>
+            <Input value={form.patientName} onChange={(e) => { onFormChange({ ...form, patientName: e.target.value }); setPatientSearch(e.target.value); }} placeholder="Nombre y apellido" className="h-8 text-sm border-teal-200" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Teléfono <span className="text-red-500">*</span></Label><Input value={form.patientPhone} onChange={(e) => onFormChange({ ...form, patientPhone: e.target.value })} placeholder="+54 11 xxxx-xxxx" className="h-8 text-sm border-teal-200" /></div>
+            <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Email <span className="text-red-500">*</span></Label><Input type="email" value={form.patientEmail} onChange={(e) => onFormChange({ ...form, patientEmail: e.target.value })} placeholder="paciente@email.com" className="h-8 text-sm border-teal-200" /></div>
+          </div>
+
+          {/* === Selector de modalidad === */}
+          <div className="space-y-1">
+            <Label className="text-xs text-teal-700 font-medium">Modalidad de la sesión</Label>
+            <Select value={form.modality} onValueChange={(v) => onFormChange({ ...form, modality: v })}>
+              <SelectTrigger className="h-8 text-sm border-teal-200"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="P">Presencial</SelectItem>
+                <SelectItem value="OL">Online</SelectItem>
+                <SelectItem value="H">Híbrido</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-teal-500">Por defecto hereda la modalidad del slot, pero podés cambiarla.</p>
+          </div>
+
+          <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Notas (opcional)</Label><Textarea value={form.notes} onChange={(e) => onFormChange({ ...form, notes: e.target.value })} placeholder="Motivo de consulta, observaciones..." className="text-sm border-teal-200 min-h-[50px]" rows={2} /></div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cancelar</Button>
-          <Button onClick={onConfirm} disabled={assigning} className="bg-teal-600 hover:bg-teal-700 text-white">{assigning ? <><RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Asignando...</> : <><CheckCircle2 className="w-4 h-4 mr-1" /> Confirmar</>}</Button>
+          <Button onClick={onConfirm} disabled={assigning} className="bg-teal-600 hover:bg-teal-700 text-white">{assigning ? <><RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Asignando...</> : <><CheckCircle2 className="w-4 h-4 mr-1" /> Confirmar Turno</>}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
