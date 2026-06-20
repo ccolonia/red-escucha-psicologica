@@ -328,10 +328,14 @@ export function AdminAgendaCentral() {
   }, [weekStartISO, profession, specialty, selectedTherapyTypes, selectedTargetAudience, selectedTherapyModalities, modality]);
 
   // === Búsqueda automática al cambiar semana ===
+  // FIX: incluir handleSearch en deps para que el re-fetch se dispare
+  // correctamente cuando weekOffset cambia. Antes tenía eslint-disable
+  // que silenciaba la warning de deps faltantes, pero eso causaba que
+  // el useEffect no se re-ejecutara cuando handleSearch se recreaba
+  // con el nuevo weekStartISO.
   useEffect(() => {
     handleSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekOffset]);
+  }, [handleSearch]);
 
   // === Toggles ===
   const toggleArrayItem = (setter: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
@@ -581,7 +585,12 @@ export function AdminAgendaCentral() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-2">
+              <CardContent className={`pt-2 transition-opacity duration-200 ${searching ? "opacity-40 pointer-events-none" : ""}`}>
+                {searching && (
+                  <div className="absolute inset-0 flex items-center justify-center z-30">
+                    <RefreshCw className="w-8 h-8 text-teal-400 animate-spin" />
+                  </div>
+                )}
                 <ExcelMatrix
                   professional={activeProfessional}
                   weekDates={searchResults?.weekDates || []}
