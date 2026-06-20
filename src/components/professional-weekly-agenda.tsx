@@ -13,9 +13,27 @@ import {
   XCircle,
   MapPin,
   Monitor,
+  Copy,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   format,
@@ -182,6 +200,14 @@ export function ProfessionalWeeklyAgenda({
   const [isMobile, setIsMobile] = useState(false);
   const [userSelectedDay, setUserSelectedDay] = useState<Date | null>(null);
 
+  // === Estados para acciones masivas ===
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copyFromDay, setCopyFromDay] = useState("1");
+  const [copyToDay, setCopyToDay] = useState("2");
+  const [copying, setCopying] = useState(false);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+
   // Use prop professionalId if provided, otherwise use fetched one
   const professionalId = propProfessionalId || fetchedProfessionalId;
 
@@ -266,6 +292,74 @@ export function ProfessionalWeeklyAgenda({
     setCurrentWeekStart((prev) => addWeeks(prev, 1));
   const goToCurrentWeek = () =>
     setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+
+  // === Acciones masivas: Copiar día ===
+  const handleCopyDay = async () => {
+    if (!professionalId) return;
+    if (copyFromDay === copyToDay) {
+      toast.error("El día origen y destino deben ser distintos");
+      return;
+    }
+    setCopying(true);
+    try {
+      const res = await fetch(`/api/professionals/${professionalId}/schedule/copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "copy-day",
+          fromDay: parseInt(copyFromDay, 10),
+          toDay: parseInt(copyToDay, 10),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Error al copiar agenda");
+        return;
+      }
+      toast.success(data.message || `Día copiado correctamente (${data.created} bloques)`);
+      setCopyDialogOpen(false);
+      // Recargar schedules y overrides
+      const [schedRes, overRes] = await Promise.all([
+        fetch(`/api/professionals/${professionalId}/schedule`).then((r) => r.json()),
+        fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json()),
+      ]);
+      setSchedules(Array.isArray(schedRes) ? schedRes : []);
+      setOverrides(Array.isArray(overRes) ? overRes : []);
+    } catch (err) {
+      console.error("Error copying day:", err);
+      toast.error("Error de conexión al copiar agenda");
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  // === Acciones masivas: Duplicar plantilla semanal ===
+  const handleDuplicateTemplate = async () => {
+    if (!professionalId) return;
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/professionals/${professionalId}/schedule/copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "duplicate-template" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Error al duplicar plantilla");
+        return;
+      }
+      toast.success(data.message || "Plantilla replicada para la próxima semana");
+      setDuplicateDialogOpen(false);
+      // Recargar overrides (los schedules base no cambian)
+      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
+      setOverrides(Array.isArray(overRes) ? overRes : []);
+    } catch (err) {
+      console.error("Error duplicating template:", err);
+      toast.error("Error de conexión al duplicar plantilla");
+    } finally {
+      setDuplicating(false);
+    }
+  };
 
   // Check if a time slot is within the professional's schedule for a given day
   const isSlotInSchedule = useCallback(
@@ -740,8 +834,102 @@ export function ProfessionalWeeklyAgenda({
             <Calendar className="w-3 h-3 mr-1" />
             Hoy
           </Button>
+          {/* === Acciones masivas === */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCopyDialogOpen(true)}
+            className="border-teal-200 text-teal-600 hover:bg-teal-50 text-xs h-8"
+          >
+            <Copy className="w-3 h-3 mr-1" />
+            Copiar día
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDuplicateDialogOpen(true)}
+            className="border-teal-200 text-teal-600 hover:bg-teal-50 text-xs h-8"
+          >
+            <RefreshCw className="w-3 h-3 mr-1" />
+            Duplicar semana
+          </Button>
         </div>
       </div>
+
+      {/* === Dialog: Copiar día === */}
+      <Dialog open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-teal-900 flex items-center gap-2">
+              <Copy className="w-5 h-5 text-teal-600" />
+              Copiar agenda a otro día
+            </DialogTitle>
+            <DialogDescription className="text-teal-600">
+              Cloná la rutina de un día hacia otro. Los bloques existentes del día destino serán reemplazados.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-teal-700 font-medium">Desde (día origen)</Label>
+              <Select value={copyFromDay} onValueChange={setCopyFromDay}>
+                <SelectTrigger className="border-teal-200"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Lunes</SelectItem>
+                  <SelectItem value="2">Martes</SelectItem>
+                  <SelectItem value="3">Miércoles</SelectItem>
+                  <SelectItem value="4">Jueves</SelectItem>
+                  <SelectItem value="5">Viernes</SelectItem>
+                  <SelectItem value="6">Sábado</SelectItem>
+                  <SelectItem value="0">Domingo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-teal-700 font-medium">Hacia (día destino)</Label>
+              <Select value={copyToDay} onValueChange={setCopyToDay}>
+                <SelectTrigger className="border-teal-200"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Lunes</SelectItem>
+                  <SelectItem value="2">Martes</SelectItem>
+                  <SelectItem value="3">Miércoles</SelectItem>
+                  <SelectItem value="4">Jueves</SelectItem>
+                  <SelectItem value="5">Viernes</SelectItem>
+                  <SelectItem value="6">Sábado</SelectItem>
+                  <SelectItem value="0">Domingo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCopyDialogOpen(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cancelar</Button>
+            <Button onClick={handleCopyDay} disabled={copying} className="bg-teal-600 hover:bg-teal-700 text-white">
+              {copying ? <><RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Copiando...</> : <><Copy className="w-4 h-4 mr-1" /> Copiar</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* === Dialog: Duplicar semana entrante === */}
+      <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-teal-900 flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-teal-600" />
+              Confirmar semana entrante
+            </DialogTitle>
+            <DialogDescription className="text-teal-600">
+              ¿Querés replicar tu estructura base para la próxima semana calendario?
+              Se crearán bloques de disponibilidad explícitos (excepciones "extra") para cada día de la semana entrante.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDuplicateDialogOpen(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cancelar</Button>
+            <Button onClick={handleDuplicateTemplate} disabled={duplicating} className="bg-teal-600 hover:bg-teal-700 text-white">
+              {duplicating ? <><RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Duplicando...</> : <><CheckCircle2 className="w-4 h-4 mr-1" /> Confirmar</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Week stats */}
       <div className="flex gap-3">
