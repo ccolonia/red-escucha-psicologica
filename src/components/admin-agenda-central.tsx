@@ -658,20 +658,36 @@ interface ExcelMatrixProps {
 }
 
 function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }: ExcelMatrixProps) {
-  // Recolectar todos los horarios únicos (libres + ocupados) de TODOS los días
-  const allTimes = useMemo(() => {
-    const times = new Set<string>();
+  // === CORRECTIVO 1: Filas horarias FIJAS de 08:00 a 21:00 en bloques de 45 min ===
+  // Antes las filas se generaban dinámicamente a partir de los slots del
+  // profesional, lo que causaba desalineación. Ahora generamos una grilla
+  // fija completa (08:00, 08:45, 09:30, ..., 20:15) y para cada celda
+  // buscamos si hay un slot que coincida con esa hora Y ese día.
+  const FIXED_TIME_SLOTS = useMemo(() => {
+    const slots: string[] = [];
+    let h = 8, m = 0; // empezar 08:00
+    while (h < 21) { // hasta 21:00 (no inclusivo)
+      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+      m += 45;
+      if (m >= 60) { h += 1; m -= 60; }
+    }
+    return slots;
+  }, []);
+
+  // Verificar si el profesional tiene AL MENOS un slot en toda la semana
+  // (para mostrar mensaje de "sin horarios" si no tiene nada)
+  const hasAnySlot = useMemo(() => {
+    let total = 0;
     for (const day of WEEK_DAYS) {
       const dayData = professional.weeklySlots[day.dayOfWeek];
       if (dayData) {
-        dayData.availableSlots.forEach((s) => times.add(s.time));
-        dayData.bookedSlots.forEach((s) => times.add(s.time));
+        total += dayData.availableSlots.length + dayData.bookedSlots.length;
       }
     }
-    return Array.from(times).sort((a, b) => a.localeCompare(b));
+    return total > 0;
   }, [professional]);
 
-  if (allTimes.length === 0) {
+  if (!hasAnySlot) {
     return (
       <div className="py-12 text-center">
         <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
@@ -683,16 +699,18 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-xs">
-        {/* Header: Hora | Lun | Mar | Mié | Jue | Vie | Sáb | Dom */}
-        <thead>
+        {/* === CORRECTIVO 1: Encabezado fijo === */}
+        <thead className="sticky top-0 z-20">
           <tr>
-            <th className="border border-teal-100 bg-teal-50 p-1.5 text-teal-700 font-medium text-[10px] sticky left-0 z-10 min-w-[45px]">Hora</th>
+            <th className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] sticky left-0 z-20 min-w-[45px]">
+              Hora
+            </th>
             {WEEK_DAYS.map((day) => {
               const dayData = professional.weeklySlots[day.dayOfWeek];
               const dateStr = dayData?.date || "";
               const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
               return (
-                <th key={day.dayOfWeek} className="border border-teal-100 bg-teal-50 p-1.5 text-teal-700 font-medium text-[10px] min-w-[80px]">
+                <th key={day.dayOfWeek} className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] min-w-[85px] text-center">
                   {day.short} {dayNum}
                 </th>
               );
@@ -700,25 +718,32 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
           </tr>
         </thead>
         <tbody>
-          {allTimes.map((time) => (
-            <tr key={time}>
-              {/* Columna Hora */}
-              <td className="border border-teal-100 bg-slate-50 p-1 text-center text-[10px] text-slate-500 font-mono sticky left-0 z-10">
+          {/* === CORRECTIVO 2: Iteración base sobre horarios FIJOS === */}
+          {FIXED_TIME_SLOTS.map((time) => (
+            <tr key={time} className="hover:bg-teal-50/30">
+              {/* Columna Hora (fija a la izquierda) */}
+              <td className="border border-teal-100 bg-slate-100 p-1 text-center text-[10px] text-slate-600 font-mono font-semibold sticky left-0 z-10">
                 {time}
               </td>
-              {/* Celdas por día */}
+              {/* === 7 celdas por fila (una por día) === */}
               {WEEK_DAYS.map((day) => {
                 const dayData = professional.weeklySlots[day.dayOfWeek];
+
+                // Si no hay datos para este día → celda vacía gris
                 if (!dayData) {
-                  return <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/30 p-1"></td>;
+                  return (
+                    <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-0.5">
+                      <div className="w-full h-full min-h-[28px]"></div>
+                    </td>
+                  );
                 }
 
-                // Buscar slot libre a esta hora
+                // === Intersección: buscar slot que coincida con time AND day ===
                 const freeSlot = dayData.availableSlots.find((s) => s.time === time);
-                // Buscar slot ocupado a esta hora
                 const bookedSlot = dayData.bookedSlots.find((s) => s.time === time);
                 const past = isSlotInPast(dayData.date, time);
 
+                // === Celda LIBRE ===
                 if (freeSlot) {
                   const colorClass = MODALITY_COLORS[freeSlot.modality] || MODALITY_COLORS.ambas;
                   const label = MODALITY_LABELS[freeSlot.modality] || freeSlot.modality;
@@ -727,31 +752,42 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                       <button
                         onClick={() => !past && onSlotClick(freeSlot, dayData.date)}
                         disabled={past}
-                        className={`w-full h-full min-h-[28px] rounded border text-[10px] font-medium transition-colors ${past ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border-slate-200 text-slate-400" : colorClass}`}
+                        className={`w-full h-full min-h-[28px] rounded border text-[10px] font-medium transition-colors flex items-center justify-center ${
+                          past
+                            ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border-slate-200 text-slate-400"
+                            : colorClass
+                        }`}
                         title={past ? `Pasado — ${time} hs` : `${label} — ${time} a ${freeSlot.endTime} hs (click para asignar)`}
                       >
-                        {freeSlot.endTime}
+                        {label}
                       </button>
                     </td>
                   );
                 }
 
+                // === Celda OCUPADA ===
                 if (bookedSlot) {
                   return (
                     <td key={day.dayOfWeek} className="border border-teal-50 p-0.5">
                       <button
                         onClick={() => onBookedSlotClick(bookedSlot)}
-                        className={`w-full h-full min-h-[28px] rounded border border-slate-200 bg-slate-100 text-slate-700 text-[10px] font-medium hover:bg-slate-200 transition-colors truncate px-1 ${past ? "opacity-40" : ""}`}
+                        className={`w-full h-full min-h-[28px] rounded border border-slate-300 bg-slate-200 text-slate-800 text-[10px] font-semibold hover:bg-slate-300 transition-colors truncate px-1 ${
+                          past ? "opacity-40" : ""
+                        }`}
                         title={`${bookedSlot.patientName} — ${bookedSlot.status} (click para ver ficha)`}
                       >
-                        {bookedSlot.patientName.split(" ")[0]}
+                        {bookedSlot.patientName.split(" ").slice(0, 2).join(" ")}
                       </button>
                     </td>
                   );
                 }
 
-                // Celda vacía — el profesional no atiende ese día/hora
-                return <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/30 p-1"></td>;
+                // === Celda VACÍA — el profesional no atiende ese día/hora ===
+                return (
+                  <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-0.5">
+                    <div className="w-full h-full min-h-[28px]"></div>
+                  </td>
+                );
               })}
             </tr>
           ))}
@@ -764,7 +800,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-300"></span>Online</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-purple-100 border border-purple-300"></span>Híbrido</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300"></span>Ambas</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-100 border border-slate-200"></span>Ocupado</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-200 border border-slate-300"></span>Ocupado</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-50 border border-slate-200 opacity-40"></span>Pasado</span>
       </div>
     </div>
