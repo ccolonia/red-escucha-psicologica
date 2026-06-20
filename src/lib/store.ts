@@ -24,6 +24,7 @@ export type AppView =
   | "admin-liquidation"
   | "admin-cms"
   | "admin-profile"
+  | "admin-agenda-central"
   | "forgot-password"
   | "professional-register";
 
