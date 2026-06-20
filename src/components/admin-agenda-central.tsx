@@ -697,8 +697,8 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-xs">
+    <div className="w-full overflow-x-auto">
+      <table className="min-w-[900px] border-collapse text-xs">
         {/* === CORRECTIVO 1: Encabezado fijo === */}
         <thead className="sticky top-0 z-20">
           <tr>
@@ -710,7 +710,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
               const dateStr = dayData?.date || "";
               const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
               return (
-                <th key={day.dayOfWeek} className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] min-w-[85px] text-center">
+                <th key={day.dayOfWeek} className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] min-w-[120px] text-center">
                   {day.short} {dayNum}
                 </th>
               );
