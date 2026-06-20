@@ -237,6 +237,8 @@ export function AdminAgendaCentral() {
   const [selectedTherapyModalities, setSelectedTherapyModalities] = useState<string[]>([]);
   const [modality, setModality] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
+  // === Columna de filtros colapsable ===
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   // === Estado de resultados ===
   const [searching, setSearching] = useState(false);
@@ -432,101 +434,121 @@ export function AdminAgendaCentral() {
       {/* === Dashboard de métricas === */}
       <MetricsDashboard metrics={metrics} loading={loadingMetrics} />
 
-      {/* === Split View de 3 columnas === */}
-      <div className="grid lg:grid-cols-[260px_280px_1fr] gap-4">
+      {/* === Split View de 3 columnas (colapsable) === */}
+      <div className={`grid gap-4 transition-all duration-300 ${
+        filtersOpen
+          ? "lg:grid-cols-[260px_230px_1fr]"
+          : "lg:grid-cols-[40px_230px_1fr]"
+      }`}>
 
         {/* ============================================== */}
-        {/* COLUMNA 1: Buscador lateral + navegador semanas */}
+        {/* COLUMNA 1: Buscador lateral colapsable */}
         {/* ============================================== */}
-        <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
-          <CardHeader className="pb-3 sticky top-0 bg-white z-10">
-            <CardTitle className="text-base text-teal-900 flex items-center gap-2">
-              <Filter className="w-4 h-4" /> Filtros
-            </CardTitle>
-            {/* Navegador de semanas */}
-            <div className="flex items-center gap-1 mt-2">
-              <Button variant="outline" size="sm" onClick={() => setWeekOffset((w) => w - 1)} className="h-7 w-7 p-0 border-teal-200">
+        {filtersOpen ? (
+          <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+            <CardHeader className="pb-2 sticky top-0 bg-white z-10">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm text-teal-900 flex items-center gap-2">
+                  <Filter className="w-4 h-4" /> Filtros
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setFiltersOpen(false)} className="h-6 w-6 p-0 text-teal-400 hover:bg-teal-50">
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+              </div>
+              {/* Navegador de semanas */}
+              <div className="flex items-center gap-1 mt-1">
+                <Button variant="outline" size="sm" onClick={() => setWeekOffset((w) => w - 1)} className="h-6 w-6 p-0 border-teal-200">
+                  <ChevronLeft className="w-3 h-3" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)} className="text-teal-600 hover:bg-teal-50 text-[10px] flex-1">
+                  {weekOffset === 0 ? "Esta semana" : `Semana ${weekOffset > 0 ? "+" : ""}${weekOffset}`}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setWeekOffset((w) => w + 1)} className="h-6 w-6 p-0 border-teal-200">
+                  <ChevronRight className="w-3 h-3" />
+                </Button>
+              </div>
+              <p className="text-[9px] text-teal-500 text-center mt-0.5">{weekLabel}</p>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="space-y-1">
+                <Label className="text-[10px] text-teal-700 font-medium">Profesión</Label>
+                <Select value={profession || "__all__"} onValueChange={(v) => setProfession(v === "__all__" ? "" : v)}>
+                  <SelectTrigger className="h-7 text-[11px] border-teal-200"><SelectValue placeholder="Todas" /></SelectTrigger>
+                  <SelectContent><SelectItem value="__all__">Todas</SelectItem>{PROFESSIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-teal-700 font-medium">Especialidad</Label>
+                <Select value={specialty || "__all__"} onValueChange={(v) => setSpecialty(v === "__all__" ? "" : v)}>
+                  <SelectTrigger className="h-7 text-[11px] border-teal-200"><SelectValue placeholder="Todas" /></SelectTrigger>
+                  <SelectContent><SelectItem value="__all__">Todas</SelectItem>{SPECIALTIES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-teal-700 font-medium">Modalidad atención</Label>
+                <Select value={modality || "__all__"} onValueChange={(v) => setModality(v === "__all__" ? "" : v)}>
+                  <SelectTrigger className="h-7 text-[11px] border-teal-200"><SelectValue placeholder="Todas" /></SelectTrigger>
+                  <SelectContent><SelectItem value="__all__">Todas</SelectItem>{MODALITIES.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-teal-700 font-medium">Tipos de terapia</Label>
+                <div className="max-h-24 overflow-y-auto border border-teal-100 rounded-md p-1 bg-teal-50/30 space-y-0.5">
+                  {THERAPY_TYPES.map((t) => (
+                    <label key={t} className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
+                      <Checkbox checked={selectedTherapyTypes.includes(t)} onCheckedChange={() => toggleArrayItem(setSelectedTherapyTypes, t)} className="h-3 w-3" />
+                      <span className="text-teal-700">{t}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-teal-700 font-medium">Población objetivo</Label>
+                <div className="border border-teal-100 rounded-md p-1 bg-teal-50/30 space-y-0.5">
+                  {TARGET_AUDIENCES.map((t) => (
+                    <label key={t} className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
+                      <Checkbox checked={selectedTargetAudience.includes(t)} onCheckedChange={() => toggleArrayItem(setSelectedTargetAudience, t)} className="h-3 w-3" />
+                      <span className="text-teal-700">{t}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-teal-700 font-medium">Modalidad de terapia</Label>
+                <div className="border border-teal-100 rounded-md p-1 bg-teal-50/30 space-y-0.5">
+                  {THERAPY_MODALITIES.map((t) => (
+                    <label key={t} className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
+                      <Checkbox checked={selectedTherapyModalities.includes(t)} onCheckedChange={() => toggleArrayItem(setSelectedTherapyModalities, t)} className="h-3 w-3" />
+                      <span className="text-teal-700">{t}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5 pt-1">
+                <Button onClick={handleSearch} disabled={searching} className="w-full bg-teal-600 hover:bg-teal-700 text-white h-7 text-[11px]">
+                  {searching ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Buscando...</> : <><Search className="w-3 h-3 mr-1" /> Buscar</>}
+                </Button>
+                <Button onClick={handleClearFilters} variant="outline" size="sm" className="w-full h-6 text-[10px] border-teal-200 text-teal-600 hover:bg-teal-50">Limpiar</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-teal-100 flex flex-col items-center py-2 gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setFiltersOpen(true)} className="h-8 w-8 p-0 text-teal-600 hover:bg-teal-50">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <Filter className="w-4 h-4 text-teal-400" />
+            {/* Navegador de semanas compacto cuando colapsado */}
+            <div className="flex flex-col gap-1">
+              <Button variant="outline" size="sm" onClick={() => setWeekOffset((w) => w - 1)} className="h-6 w-6 p-0 border-teal-200">
                 <ChevronLeft className="w-3 h-3" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)} className="text-teal-600 hover:bg-teal-50 text-xs flex-1">
-                {weekOffset === 0 ? "Esta semana" : `Semana ${weekOffset > 0 ? "+" : ""}${weekOffset}`}
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setWeekOffset((w) => w + 1)} className="h-7 w-7 p-0 border-teal-200">
+              <Button variant="outline" size="sm" onClick={() => setWeekOffset((w) => w + 1)} className="h-6 w-6 p-0 border-teal-200">
                 <ChevronRight className="w-3 h-3" />
               </Button>
             </div>
-            <p className="text-[10px] text-teal-500 text-center mt-1">{weekLabel}</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Profesión */}
-            <div className="space-y-1">
-              <Label className="text-xs text-teal-700 font-medium">Profesión</Label>
-              <Select value={profession || "__all__"} onValueChange={(v) => setProfession(v === "__all__" ? "" : v)}>
-                <SelectTrigger className="h-8 text-xs border-teal-200"><SelectValue placeholder="Todas" /></SelectTrigger>
-                <SelectContent><SelectItem value="__all__">Todas</SelectItem>{PROFESSIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            {/* Especialidad */}
-            <div className="space-y-1">
-              <Label className="text-xs text-teal-700 font-medium">Especialidad</Label>
-              <Select value={specialty || "__all__"} onValueChange={(v) => setSpecialty(v === "__all__" ? "" : v)}>
-                <SelectTrigger className="h-8 text-xs border-teal-200"><SelectValue placeholder="Todas" /></SelectTrigger>
-                <SelectContent><SelectItem value="__all__">Todas</SelectItem>{SPECIALTIES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            {/* Modalidad de atención */}
-            <div className="space-y-1">
-              <Label className="text-xs text-teal-700 font-medium">Modalidad de atención</Label>
-              <Select value={modality || "__all__"} onValueChange={(v) => setModality(v === "__all__" ? "" : v)}>
-                <SelectTrigger className="h-8 text-xs border-teal-200"><SelectValue placeholder="Todas" /></SelectTrigger>
-                <SelectContent><SelectItem value="__all__">Todas</SelectItem>{MODALITIES.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            {/* Tipos de terapia */}
-            <div className="space-y-1">
-              <Label className="text-xs text-teal-700 font-medium">Tipos de terapia</Label>
-              <div className="max-h-28 overflow-y-auto border border-teal-100 rounded-md p-1.5 bg-teal-50/30 space-y-0.5">
-                {THERAPY_TYPES.map((t) => (
-                  <label key={t} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
-                    <Checkbox checked={selectedTherapyTypes.includes(t)} onCheckedChange={() => toggleArrayItem(setSelectedTherapyTypes, t)} className="h-3 w-3" />
-                    <span className="text-teal-700">{t}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            {/* Población objetivo */}
-            <div className="space-y-1">
-              <Label className="text-xs text-teal-700 font-medium">Población objetivo</Label>
-              <div className="border border-teal-100 rounded-md p-1.5 bg-teal-50/30 space-y-0.5">
-                {TARGET_AUDIENCES.map((t) => (
-                  <label key={t} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
-                    <Checkbox checked={selectedTargetAudience.includes(t)} onCheckedChange={() => toggleArrayItem(setSelectedTargetAudience, t)} className="h-3 w-3" />
-                    <span className="text-teal-700">{t}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            {/* Modalidad de terapia */}
-            <div className="space-y-1">
-              <Label className="text-xs text-teal-700 font-medium">Modalidad de terapia <span className="text-[10px] text-teal-400">(Individual, Vincular...)</span></Label>
-              <div className="border border-teal-100 rounded-md p-1.5 bg-teal-50/30 space-y-0.5">
-                {THERAPY_MODALITIES.map((t) => (
-                  <label key={t} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-teal-100/50 rounded px-1 py-0.5">
-                    <Checkbox checked={selectedTherapyModalities.includes(t)} onCheckedChange={() => toggleArrayItem(setSelectedTherapyModalities, t)} className="h-3 w-3" />
-                    <span className="text-teal-700">{t}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            {/* Botones */}
-            <div className="space-y-2 pt-1">
-              <Button onClick={handleSearch} disabled={searching} className="w-full bg-teal-600 hover:bg-teal-700 text-white h-8 text-xs">
-                {searching ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Buscando...</> : <><Search className="w-3 h-3 mr-1" /> Buscar</>}
-              </Button>
-              <Button onClick={handleClearFilters} variant="outline" size="sm" className="w-full h-7 text-xs border-teal-200 text-teal-600 hover:bg-teal-50">Limpiar</Button>
-            </div>
-          </CardContent>
-        </Card>
+          </Card>
+        )}
 
         {/* ============================================== */}
         {/* COLUMNA 2: Lista de profesionales */}
@@ -549,16 +571,16 @@ export function AdminAgendaCentral() {
                 <button
                   key={prof.id}
                   onClick={() => setActiveProfessionalId(prof.id)}
-                  className={`w-full text-left p-2.5 rounded-lg border transition-all ${
+                  className={`w-full text-left p-2 rounded-lg border transition-all ${
                     activeProfessionalId === prof.id
                       ? "border-teal-500 bg-teal-50 shadow-sm ring-1 ring-teal-300"
                       : "border-teal-100 hover:border-teal-300 hover:bg-teal-50/50"
                   }`}
                 >
-                  <p className="text-sm font-medium text-teal-900 truncate">{prof.name}</p>
+                  <p className="text-xs font-medium text-teal-900 truncate">{prof.name}</p>
                   <p className="text-[10px] text-teal-500 truncate">{prof.specialty}</p>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1.5 py-0">
+                  <div className="flex items-center gap-1 mt-1">
+                    <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1 py-0">
                       {prof.totalFreeSlots} lib
                     </Badge>
                     <Badge variant="outline" className="text-[9px] bg-slate-50 border-slate-200 text-slate-600 px-1.5 py-0">
@@ -644,20 +666,20 @@ export function AdminAgendaCentral() {
 function MetricsDashboard({ metrics, loading }: { metrics: MetricsResponse | null; loading: boolean }) {
   if (loading || !metrics) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="border-teal-100"><CardContent className="p-4 animate-pulse"><div className="h-4 bg-teal-100 rounded w-1/2 mb-2"></div><div className="h-8 bg-teal-100 rounded w-2/3"></div></CardContent></Card>
+          <Card key={i} className="border-teal-100"><CardContent className="p-2 animate-pulse"><div className="h-3 bg-teal-100 rounded w-1/2 mb-1"></div><div className="h-6 bg-teal-100 rounded w-2/3"></div></CardContent></Card>
         ))}
       </div>
     );
   }
   const occupancyPercent = Math.round(metrics.occupancyRate * 100);
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <Card className="border-teal-100"><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><TrendingUp className="w-4 h-4 text-teal-600" /><p className="text-xs text-teal-500 font-medium">Ocupación</p></div><p className="text-2xl font-bold text-teal-900">{occupancyPercent}%</p><p className="text-xs text-teal-400 mt-0.5">{metrics.bookedSlotsThisWeek}/{metrics.totalSlotsThisWeek}</p></CardContent></Card>
-      <Card className="border-teal-100"><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><Stethoscope className="w-4 h-4 text-emerald-600" /><p className="text-xs text-teal-500 font-medium">Profesionales</p></div><p className="text-2xl font-bold text-teal-900">{metrics.activeProfessionals}</p><p className="text-xs text-teal-400 mt-0.5">activos</p></CardContent></Card>
-      <Card className="border-teal-100"><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><Calendar className="w-4 h-4 text-amber-600" /><p className="text-xs text-teal-500 font-medium">Slots libres</p></div><p className="text-2xl font-bold text-teal-900">{metrics.freeSlotsThisWeek}</p><p className="text-xs text-teal-400 mt-0.5">esta semana</p></CardContent></Card>
-      <Card className="border-teal-100"><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-blue-600" /><p className="text-xs text-teal-500 font-medium">Top especialidad</p></div>{metrics.topSpecialties.length > 0 ? <><p className="text-sm font-bold text-teal-900 truncate">{metrics.topSpecialties[0].specialty}</p><p className="text-xs text-teal-400 mt-0.5">{metrics.topSpecialties[0].count} turnos</p></> : <p className="text-sm text-teal-400">Sin datos</p>}</CardContent></Card>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <Card className="border-teal-100"><CardContent className="p-2"><div className="flex items-center gap-1.5 mb-0.5"><TrendingUp className="w-3.5 h-3.5 text-teal-600" /><p className="text-[10px] text-teal-500 font-medium">Ocupación</p></div><p className="text-xl font-bold text-teal-900">{occupancyPercent}%</p><p className="text-[10px] text-teal-400">{metrics.bookedSlotsThisWeek}/{metrics.totalSlotsThisWeek}</p></CardContent></Card>
+      <Card className="border-teal-100"><CardContent className="p-2"><div className="flex items-center gap-1.5 mb-0.5"><Stethoscope className="w-3.5 h-3.5 text-emerald-600" /><p className="text-[10px] text-teal-500 font-medium">Profesionales</p></div><p className="text-xl font-bold text-teal-900">{metrics.activeProfessionals}</p><p className="text-[10px] text-teal-400">activos</p></CardContent></Card>
+      <Card className="border-teal-100"><CardContent className="p-2"><div className="flex items-center gap-1.5 mb-0.5"><Calendar className="w-3.5 h-3.5 text-amber-600" /><p className="text-[10px] text-teal-500 font-medium">Slots libres</p></div><p className="text-xl font-bold text-teal-900">{metrics.freeSlotsThisWeek}</p><p className="text-[10px] text-teal-400">esta semana</p></CardContent></Card>
+      <Card className="border-teal-100"><CardContent className="p-2"><div className="flex items-center gap-1.5 mb-0.5"><Users className="w-3.5 h-3.5 text-blue-600" /><p className="text-[10px] text-teal-500 font-medium">Top especialidad</p></div>{metrics.topSpecialties.length > 0 ? <><p className="text-xs font-bold text-teal-900 truncate">{metrics.topSpecialties[0].specialty}</p><p className="text-[10px] text-teal-400">{metrics.topSpecialties[0].count} turnos</p></> : <p className="text-xs text-teal-400">Sin datos</p>}</CardContent></Card>
     </div>
   );
 }
@@ -800,7 +822,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
                 // === Celda VACÍA — el profesional no atiende ese día/hora ===
                 return (
-                  <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-0.5">
+                  <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-0.5 hover:bg-slate-100/60 transition-colors">
                     <div className="w-full h-full min-h-[28px]"></div>
                   </td>
                 );
