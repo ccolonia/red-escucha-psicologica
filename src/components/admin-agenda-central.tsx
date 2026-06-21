@@ -397,9 +397,12 @@ export function AdminAgendaCentral() {
       if (!res.ok) { toast.error(data.error || "Error al asignar el turno"); return; }
 
       const patientVerb = data.created ? "creado" : "actualizado";
-      const emailMsg = data.emailSent?.patient
-        ? " Se envió email de confirmación al paciente."
-        : " No se pudo enviar email de confirmación.";
+      const emailFlags = [];
+      if (data.emailSent?.patient) emailFlags.push("paciente notificado");
+      if (data.emailSent?.professional) emailFlags.push("profesional notificado");
+      const emailMsg = emailFlags.length > 0
+        ? ` ${emailFlags.join(" · ")}.`
+        : " No se pudieron enviar notificaciones.";
       toast.success(`Turno asignado a ${data.patient.name} (${patientVerb}).${emailMsg} ${assignDialog.professional.name} — ${assignDialog.date} ${assignDialog.slot.time} hs.`);
       setAssignDialog((prev) => ({ ...prev, open: false }));
       handleSearch();
