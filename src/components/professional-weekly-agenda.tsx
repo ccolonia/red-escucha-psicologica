@@ -15,9 +15,13 @@ import {
   Monitor,
   Copy,
   RefreshCw,
+  Mail,
+  MessageCircle,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -58,8 +62,9 @@ interface Appointment {
   timeEnd?: string;
   status: string;
   reason: string | null;
+  notes: string | null;
   modality: string | null;
-  patient: { user: { name: string } };
+  patient: { user: { name: string; email: string; phone: string | null } };
   professional: { user: { name: string } };
 }
 
@@ -207,6 +212,15 @@ export function ProfessionalWeeklyAgenda({
   const [copying, setCopying] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+
+  // === Ficha rápida del paciente (paridad con admin) ===
+  const [fichaAppointment, setFichaAppointment] = useState<Appointment | null>(null);
+  const [fichaDialogOpen, setFichaDialogOpen] = useState(false);
+
+  const openFichaDialog = (apt: Appointment) => {
+    setFichaAppointment(apt);
+    setFichaDialogOpen(true);
+  };
 
   // Use prop professionalId if provided, otherwise use fetched one
   const professionalId = propProfessionalId || fetchedProfessionalId;
@@ -550,7 +564,8 @@ export function ProfessionalWeeklyAgenda({
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.15 }}
-        className={`${colors.bg} ${colors.text} ${colors.border} border rounded-md px-2 py-1 text-xs cursor-default overflow-hidden`}
+        onClick={() => openFichaDialog(apt)}
+        className={`${colors.bg} ${colors.text} ${colors.border} border rounded-md px-2 py-1 text-xs cursor-pointer overflow-hidden hover:shadow-md transition-shadow`}
       >
         <div className="flex items-center justify-between gap-1">
           <span className="font-medium truncate">{apt.patient.user.name}</span>
@@ -1009,6 +1024,113 @@ export function ProfessionalWeeklyAgenda({
           Fuera de agenda
         </div>
       </div>
+
+      {/* === Ficha rápida del paciente (paridad con admin) === */}
+      <Dialog open={fichaDialogOpen} onOpenChange={setFichaDialogOpen}>
+        <DialogContent className="max-w-md">
+          {fichaAppointment && (() => {
+            const apt = fichaAppointment;
+            const isRescheduled = apt.status === "rescheduled";
+            const statusLabel = apt.status === "confirmed" ? "Confirmado"
+              : apt.status === "pending" ? "Pendiente"
+              : apt.status === "rescheduled" ? "Reprogramado"
+              : apt.status === "completed" ? "Atendido"
+              : apt.status === "absent" ? "Ausente"
+              : apt.status;
+            const modalityLabel = apt.modality === "P" ? "Presencial"
+              : apt.modality === "OL" ? "Online"
+              : apt.modality === "H" ? "Híbrido"
+              : apt.modality === "ambas" ? "Ambas"
+              : "—";
+            const timeDisplay = apt.timeEnd ? `${apt.time}–${apt.timeEnd} hs` : `${apt.time} hs`;
+            const patientName = apt.patient?.user?.name || "Paciente";
+            const patientEmail = apt.patient?.user?.email || null;
+            const patientPhone = apt.patient?.user?.phone || null;
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-teal-900 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-teal-600" /> Ficha del turno
+                  </DialogTitle>
+                  <DialogDescription className="text-teal-600">{timeDisplay}</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3">
+                  {/* Datos del turno */}
+                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-teal-900">
+                      <Clock className="w-4 h-4 text-teal-600" />
+                      <span>{timeDisplay}</span>
+                      <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{modalityLabel}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-teal-500">Estado:</span>
+                      <Badge variant={isRescheduled ? "destructive" : apt.status === "confirmed" ? "default" : "outline"} className="text-xs">{statusLabel}</Badge>
+                    </div>
+                  </div>
+
+                  {/* Alerta de Reprogramación */}
+                  {isRescheduled && (
+                    <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-orange-600" />
+                        <p className="text-sm font-semibold text-orange-800">Reprogramado — Pendiente de acción</p>
+                      </div>
+                      {apt.notes && (
+                        <div className="mt-2">
+                          <p className="text-xs text-orange-600 font-medium mb-1">Notas:</p>
+                          <p className="text-sm text-orange-800 bg-white rounded-md p-2 border border-orange-200">{apt.notes}</p>
+                        </div>
+                      )}
+                      {!apt.notes && <p className="text-xs text-orange-500 italic">Sin notas de reprogramación.</p>}
+                    </div>
+                  )}
+
+                  {/* Datos del paciente */}
+                  <div className="space-y-2">
+                    <p className="text-xs text-teal-500 font-medium uppercase tracking-wide">Paciente</p>
+                    <p className="text-sm font-medium text-teal-900">{patientName}</p>
+                    {(patientPhone || patientEmail) && (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                        {patientPhone && (
+                          <a href={`https://wa.me/${patientPhone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 hover:underline transition-colors">
+                            <MessageCircle className="w-3 h-3 text-emerald-500" />{patientPhone}
+                          </a>
+                        )}
+                        {patientEmail && (
+                          <a href={`mailto:${patientEmail}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-700 hover:underline transition-colors">
+                            <Mail className="w-3 h-3 text-teal-500" />{patientEmail}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {!patientPhone && !patientEmail && <p className="text-xs text-teal-400 italic">Sin datos de contacto</p>}
+                  </div>
+
+                  {/* Notas generales (si no es rescheduled pero tiene notas) */}
+                  {!isRescheduled && apt.notes && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-2">
+                      <p className="text-xs text-slate-500 font-medium mb-1">Notas:</p>
+                      <p className="text-sm text-slate-700">{apt.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Motivo de consulta */}
+                  {apt.reason && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-2">
+                      <p className="text-xs text-slate-500 font-medium mb-1">Motivo:</p>
+                      <p className="text-sm text-slate-700">{apt.reason}</p>
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setFichaDialogOpen(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
