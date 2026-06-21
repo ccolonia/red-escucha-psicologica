@@ -143,6 +143,7 @@ interface BookedSlot {
   time: string;
   modality: string | null;
   status: string;
+  notes: string | null;
   patientName: string;
   patientEmail: string | null;
   patientPhone: string | null;
@@ -794,18 +795,23 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   );
                 }
 
-                // === Celda OCUPADA ===
+                // === Celda OCUPADA (incluye rescheduled con estilo de alerta) ===
                 if (bookedSlot) {
+                  const isRescheduled = bookedSlot.status === "rescheduled";
+                  const cellClass = isRescheduled
+                    ? "w-full text-center rounded-lg py-2 text-xs font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate"
+                    : "w-full text-center rounded-lg py-2 text-xs font-semibold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
+                  const cellText = isRescheduled
+                    ? "⚠️ Reprogramado"
+                    : bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
                   return (
                     <td key={day.dayOfWeek} className="border border-teal-50 p-1">
                       <button
                         onClick={() => onBookedSlotClick(bookedSlot)}
-                        className={`w-full text-center rounded-lg py-2 text-xs font-semibold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate ${
-                          past ? "opacity-40" : ""
-                        }`}
-                        title={`${bookedSlot.patientName} — ${bookedSlot.status} (click para ver ficha)`}
+                        className={`${cellClass} ${past ? "opacity-40" : ""}`}
+                        title={`${bookedSlot.patientName} — ${bookedSlot.status}${bookedSlot.notes ? ` — ${bookedSlot.notes}` : ""} (click para ver ficha)`}
                       >
-                        {bookedSlot.patientName.split(" ").slice(0, 2).join(" ")}
+                        {cellText}
                       </button>
                     </td>
                   );
@@ -1015,6 +1021,9 @@ interface FichaDialogProps {
 function FichaDialog({ open, onOpenChange, professional, slot }: FichaDialogProps) {
   if (!professional || !slot) return null;
   const modalityLabel = slot.modality ? MODALITY_LABELS[slot.modality] || slot.modality : "—";
+  const isRescheduled = slot.status === "rescheduled";
+  const statusLabel = slot.status === "confirmed" ? "Confirmado" : slot.status === "pending" ? "Pendiente" : slot.status === "rescheduled" ? "Reprogramado" : slot.status;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -1025,8 +1034,26 @@ function FichaDialog({ open, onOpenChange, professional, slot }: FichaDialogProp
         <div className="space-y-3">
           <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1">
             <div className="flex items-center gap-2 text-sm text-teal-900"><Clock className="w-4 h-4 text-teal-600" /><span>{slot.time} hs</span><Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{modalityLabel}</Badge></div>
-            <div className="flex items-center gap-2 text-xs"><span className="text-teal-500">Estado:</span><Badge variant={slot.status === "confirmed" ? "default" : "outline"} className="text-xs">{slot.status === "confirmed" ? "Confirmado" : slot.status === "pending" ? "Pendiente" : slot.status}</Badge></div>
+            <div className="flex items-center gap-2 text-xs"><span className="text-teal-500">Estado:</span><Badge variant={isRescheduled ? "destructive" : slot.status === "confirmed" ? "default" : "outline"} className="text-xs">{statusLabel}</Badge></div>
           </div>
+
+          {/* === Alerta de Reprogramación === */}
+          {isRescheduled && (
+            <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-orange-600" />
+                <p className="text-sm font-semibold text-orange-800">Reprogramado — Pendiente de acción</p>
+              </div>
+              {slot.notes && (
+                <div className="mt-2">
+                  <p className="text-xs text-orange-600 font-medium mb-1">Notas del profesional:</p>
+                  <p className="text-sm text-orange-800 bg-white rounded-md p-2 border border-orange-200">{slot.notes}</p>
+                </div>
+              )}
+              {!slot.notes && <p className="text-xs text-orange-500 italic">Sin notas de reprogramación.</p>}
+            </div>
+          )}
+
           <div className="space-y-2">
             <p className="text-xs text-teal-500 font-medium uppercase tracking-wide">Paciente</p>
             <p className="text-sm font-medium text-teal-900">{slot.patientName}</p>
@@ -1038,6 +1065,14 @@ function FichaDialog({ open, onOpenChange, professional, slot }: FichaDialogProp
             )}
             {!slot.patientPhone && !slot.patientEmail && <p className="text-xs text-teal-400 italic">Sin datos de contacto</p>}
           </div>
+
+          {/* Mostrar notas generales si no es rescheduled pero tiene notas */}
+          {!isRescheduled && slot.notes && (
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-2">
+              <p className="text-xs text-slate-500 font-medium mb-1">Notas:</p>
+              <p className="text-sm text-slate-700">{slot.notes}</p>
+            </div>
+          )}
         </div>
         <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button></DialogFooter>
       </DialogContent>

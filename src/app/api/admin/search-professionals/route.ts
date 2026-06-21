@@ -273,7 +273,7 @@ export async function GET(request: NextRequest) {
         appointments: {
           where: {
             date: { in: weekDateStrings },
-            status: { in: ["pending", "confirmed"] },
+            status: { in: ["pending", "confirmed", "rescheduled"] },
           },
           select: {
             id: true,
@@ -281,6 +281,7 @@ export async function GET(request: NextRequest) {
             time: true,
             modality: true,
             status: true,
+            notes: true,
             patient: { select: { user: { select: { name: true, email: true, phone: true } } } },
           },
         },
@@ -334,6 +335,7 @@ export async function GET(request: NextRequest) {
           time: a.time,
           modality: a.modality,
           status: a.status,
+          notes: a.notes || null,
           patientName: a.patient?.user?.name || "Paciente",
           patientEmail: a.patient?.user?.email || null,
           patientPhone: a.patient?.user?.phone || null,
