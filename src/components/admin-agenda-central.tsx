@@ -116,11 +116,11 @@ const WEEK_DAYS = [
 ];
 
 const MODALITY_COLORS: Record<string, string> = {
-  P: "bg-emerald-100 border-emerald-300 text-emerald-800 hover:bg-emerald-200",
-  OL: "bg-blue-100 border-blue-300 text-blue-800 hover:bg-blue-200",
-  H: "bg-purple-100 border-purple-300 text-purple-800 hover:bg-purple-200",
-  ambas: "bg-amber-100 border-amber-300 text-amber-800 hover:bg-amber-200",
-  amb: "bg-amber-100 border-amber-300 text-amber-800 hover:bg-amber-200",
+  P: "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium hover:bg-emerald-100 transition-colors",
+  OL: "bg-blue-50 border border-blue-200 text-blue-600 rounded-lg py-2 text-xs font-medium hover:bg-blue-100 transition-colors",
+  H: "bg-purple-50 border border-purple-200 text-purple-600 rounded-lg py-2 text-xs font-medium hover:bg-purple-100 transition-colors",
+  ambas: "bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors",
+  amb: "bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors",
 };
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -777,13 +777,13 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   const colorClass = MODALITY_COLORS[freeSlot.modality] || MODALITY_COLORS.ambas;
                   const label = MODALITY_LABELS[freeSlot.modality] || freeSlot.modality;
                   return (
-                    <td key={day.dayOfWeek} className="border border-teal-50 p-0.5">
+                    <td key={day.dayOfWeek} className="border border-teal-50 p-1">
                       <button
                         onClick={() => !past && onSlotClick(freeSlot, dayData.date)}
                         disabled={past}
-                        className={`w-full h-full min-h-[28px] rounded border text-[10px] font-medium transition-colors flex items-center justify-center ${
+                        className={`w-full text-center transition-colors ${
                           past
-                            ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border-slate-200 text-slate-400"
+                            ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border border-slate-200 text-slate-400 rounded-lg py-2 text-xs font-medium"
                             : colorClass
                         }`}
                         title={past ? `Pasado — ${time} hs` : `${label} — ${time} a ${freeSlot.endTime} hs (click para asignar)`}
@@ -797,10 +797,10 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 // === Celda OCUPADA ===
                 if (bookedSlot) {
                   return (
-                    <td key={day.dayOfWeek} className="border border-teal-50 p-0.5">
+                    <td key={day.dayOfWeek} className="border border-teal-50 p-1">
                       <button
                         onClick={() => onBookedSlotClick(bookedSlot)}
-                        className={`w-full h-full min-h-[28px] rounded border border-slate-300 bg-slate-200 text-slate-800 text-[10px] font-semibold hover:bg-slate-300 transition-colors truncate px-1 ${
+                        className={`w-full text-center rounded-lg py-2 text-xs font-semibold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate ${
                           past ? "opacity-40" : ""
                         }`}
                         title={`${bookedSlot.patientName} — ${bookedSlot.status} (click para ver ficha)`}
@@ -813,8 +813,8 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
                 // === Celda VACÍA — el profesional no atiende ese día/hora ===
                 return (
-                  <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-0.5 hover:bg-slate-100/60 transition-colors">
-                    <div className="w-full h-full min-h-[28px]"></div>
+                  <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-1 hover:bg-slate-100/60 transition-colors">
+                    <div className="w-full py-2"></div>
                   </td>
                 );
               })}
@@ -825,11 +825,11 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
       {/* Leyenda */}
       <div className="flex items-center gap-3 mt-3 flex-wrap text-[10px] text-teal-600">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-300"></span>Presencial</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-300"></span>Online</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-purple-100 border border-purple-300"></span>Híbrido</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300"></span>Ambas</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-200 border border-slate-300"></span>Ocupado</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-50 border border-emerald-200"></span>Presencial</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-50 border border-blue-200"></span>Online</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-purple-50 border border-purple-200"></span>Híbrido</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-50 border border-amber-200"></span>Ambas</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-100 border border-slate-300"></span>Ocupado</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-50 border border-slate-200 opacity-40"></span>Pasado</span>
       </div>
     </div>
