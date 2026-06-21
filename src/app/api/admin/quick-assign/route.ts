@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendTriagePatientNotification } from "@/lib/email";
 
 // POST /api/admin/quick-assign
 //
@@ -275,6 +276,47 @@ export async function POST(request: NextRequest) {
       };
     });
 
+    // === Notificación automática al paciente ===
+    // Dispara email de confirmación al paciente después de que la cita
+    // se creó exitosamente. try/catch aislado: si el email falla, la cita
+    // NO se revierte (ya está confirmada en DB). Solo se loguea el error.
+    const emailSent = { patient: false };
+    try {
+      const professionalName = result.appointment.professional?.user?.name || "Profesional";
+      // Calcular timeEnd según slotDuration del schedule del profesional
+      let timeEnd: string | null = null;
+      if (result.appointment.time) {
+        const [h, m] = result.appointment.time.split(":").map(Number);
+        const profSchedules = await db.professionalSchedule.findMany({
+          where: {
+            professionalId,
+            dayOfWeek: new Date(result.appointment.date + "T12:00:00").getDay() || 7,
+          },
+          select: { slotDuration: true },
+          take: 1,
+        });
+        const slotDuration = profSchedules[0]?.slotDuration || 45;
+        const totalMin = h * 60 + m + slotDuration;
+        timeEnd = `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
+      }
+
+      const notifResult = await sendTriagePatientNotification({
+        patientEmail: result.patient.email,
+        patientName: result.patient.name,
+        professionalName,
+        modality: result.appointment.modality || "P",
+        date: result.appointment.date,
+        time: result.appointment.time,
+        timeEnd,
+      });
+      emailSent.patient = !notifResult.error;
+      if (notifResult.error) {
+        console.error("Failed to send quick-assign patient notification:", notifResult.error);
+      }
+    } catch (emailErr) {
+      console.error("Quick-assign notification exception:", emailErr);
+    }
+
     return NextResponse.json({
       success: true,
       appointment: {
@@ -286,6 +328,7 @@ export async function POST(request: NextRequest) {
       },
       patient: result.patient,
       created: result.created,
+      emailSent,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error al asignar el turno";

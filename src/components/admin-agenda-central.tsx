@@ -13,6 +13,7 @@ import {
   Stethoscope,
   CheckCircle2,
   AlertCircle,
+  XCircle,
   Mail,
   Phone,
   MessageCircle,
@@ -268,6 +269,7 @@ export function AdminAgendaCentral() {
     patientName: "", patientPhone: "", patientEmail: "", notes: "", modality: "P",
   });
   const [assigning, setAssigning] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   // === Calcular weekStart (lunes de la semana seleccionada) ===
   const monday = useMemo(() => getMondayOfWeek(weekOffset), [weekOffset]);
@@ -389,7 +391,10 @@ export function AdminAgendaCentral() {
       if (!res.ok) { toast.error(data.error || "Error al asignar el turno"); return; }
 
       const patientVerb = data.created ? "creado" : "actualizado";
-      toast.success(`Turno asignado a ${data.patient.name} (${patientVerb}). ${assignDialog.professional.name} — ${assignDialog.date} ${assignDialog.slot.time} hs.`);
+      const emailMsg = data.emailSent?.patient
+        ? " Se envió email de confirmación al paciente."
+        : " No se pudo enviar email de confirmación.";
+      toast.success(`Turno asignado a ${data.patient.name} (${patientVerb}).${emailMsg} ${assignDialog.professional.name} — ${assignDialog.date} ${assignDialog.slot.time} hs.`);
       setAssignDialog((prev) => ({ ...prev, open: false }));
       handleSearch();
     } catch (err) {
@@ -397,6 +402,33 @@ export function AdminAgendaCentral() {
       toast.error("Error de conexión al asignar el turno");
     } finally {
       setAssigning(false);
+    }
+  };
+
+  // === Cancelar turno desde la ficha rápida ===
+  const handleCancelAppointment = async (slot: BookedSlot) => {
+    if (!slot) return;
+    if (!confirm(`¿Confirmar cancelación del turno de ${slot.patientName}?\n\nEl slot quedará libre para nueva asignación.`)) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/appointments/${slot.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Error al cancelar el turno");
+        return;
+      }
+      toast.success(`Turno de ${slot.patientName} cancelado. Slot liberado.`);
+      setFichaDialog((prev) => ({ ...prev, open: false }));
+      handleSearch(); // re-fetch automático de la grilla
+    } catch (err) {
+      console.error("Error cancelling appointment:", err);
+      toast.error("Error de conexión al cancelar el turno");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -655,6 +687,8 @@ export function AdminAgendaCentral() {
         onOpenChange={(open) => setFichaDialog((prev) => ({ ...prev, open }))}
         professional={fichaDialog.professional}
         slot={fichaDialog.slot}
+        onCancel={handleCancelAppointment}
+        cancelling={cancelling}
       />
     </div>
   );
@@ -1016,9 +1050,11 @@ interface FichaDialogProps {
   onOpenChange: (open: boolean) => void;
   professional: ProfessionalResult | null;
   slot: BookedSlot | null;
+  onCancel?: (slot: BookedSlot) => void;
+  cancelling?: boolean;
 }
 
-function FichaDialog({ open, onOpenChange, professional, slot }: FichaDialogProps) {
+function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancelling }: FichaDialogProps) {
   if (!professional || !slot) return null;
   const modalityLabel = slot.modality ? MODALITY_LABELS[slot.modality] || slot.modality : "—";
   const isRescheduled = slot.status === "rescheduled";
@@ -1074,7 +1110,20 @@ function FichaDialog({ open, onOpenChange, professional, slot }: FichaDialogProp
             </div>
           )}
         </div>
-        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button></DialogFooter>
+        <DialogFooter className="flex justify-between gap-2 sm:justify-between">
+          {onCancel && slot.status !== "cancelled" && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onCancel(slot)}
+              disabled={cancelling}
+              className="text-xs"
+            >
+              {cancelling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Cancelando...</> : <><XCircle className="w-3 h-3 mr-1" /> Cancelar Turno</>}
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
