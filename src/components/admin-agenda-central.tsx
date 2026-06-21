@@ -200,6 +200,8 @@ interface AssignFormData {
   patientEmail: string;
   notes: string;
   modality: string; // "P" | "OL" | "H" — selector del dialog
+  isLead: boolean;
+  leadId: string | null;
 }
 
 // ====================================================================
@@ -266,7 +268,7 @@ export function AdminAgendaCentral() {
   }>({ open: false, professional: null, slot: null });
 
   const [assignForm, setAssignForm] = useState<AssignFormData>({
-    patientName: "", patientPhone: "", patientEmail: "", notes: "", modality: "P",
+    patientName: "", patientPhone: "", patientEmail: "", notes: "", modality: "P", isLead: false, leadId: null,
   });
   const [assigning, setAssigning] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -356,6 +358,8 @@ export function AdminAgendaCentral() {
       patientEmail: "",
       notes: "",
       modality: slot.modality, // heredar del slot
+      isLead: false,
+      leadId: null,
     });
     setAssignDialog({ open: true, professional, slot, date });
   };
@@ -385,6 +389,8 @@ export function AdminAgendaCentral() {
           patientPhone: assignForm.patientPhone.trim(),
           patientEmail: assignForm.patientEmail.trim(),
           notes: assignForm.notes.trim() || null,
+          isLead: assignForm.isLead,
+          leadId: assignForm.leadId,
         }),
       });
       const data = await res.json();
@@ -894,7 +900,8 @@ interface AssignDialogProps {
 
 function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFormChange, onConfirm, assigning }: AssignDialogProps) {
   const [patientSearch, setPatientSearch] = useState("");
-  const [searchResults, setSearchResults] = useState<{ id: string; name: string; email: string; phone: string }[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -934,12 +941,16 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
   }, [open]);
 
   // Seleccionar paciente existente
-  const selectPatient = (patient: { name: string; email: string; phone: string }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const selectPatient = (patient: any) => {
+    const cleanName = patient.isLead ? patient.name.replace(" (Solicitud Online)", "") : patient.name;
     onFormChange({
       ...form,
-      patientName: patient.name,
+      patientName: cleanName,
       patientEmail: patient.email,
       patientPhone: patient.phone,
+      isLead: patient.isLead || false,
+      leadId: patient.isLead ? patient.id : null,
     });
     setPatientSearch(patient.name);
     setShowSuggestions(false);
@@ -949,7 +960,7 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
   // para que si no selecciona ningún suggestion, se use lo que escribió
   const handleSearchInputChange = (value: string) => {
     setPatientSearch(value);
-    onFormChange({ ...form, patientName: value });
+    onFormChange({ ...form, patientName: value, isLead: false, leadId: null });
   };
 
   if (!professional || !slot) return null;

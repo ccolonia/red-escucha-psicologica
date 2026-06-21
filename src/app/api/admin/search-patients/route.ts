@@ -6,15 +6,19 @@ import { db } from "@/lib/db";
 
 // GET /api/admin/search-patients?q=...
 //
-// Busca pacientes existentes por nombre, apellido o email para el
-// autocompletado del Dialog de asignación rápida. Devuelve top 10
-// resultados con id, name, email y phone para que el frontend pueda
-// autocompletar el form.
+// Búsqueda cruzada para el combobox de la Agenda Central:
+// 1. Busca en Patient (pacientes formales con ficha)
+// 2. Busca en PatientRequest con status "pending" (solicitudes de triage
+//    que están esperando asignación — son los "leads" del form público)
 //
-// Response:
-//   200 + [{ id, name, email, phone }] — lista de pacientes (máx 10)
-//   401/403 — no autenticado / no admin
-//   500 — error
+// Devuelve top 10 resultados unificados con discriminador isLead:
+//   - Pacientes formales: { id, name, email, phone, isLead: false }
+//   - Solicitudes pendientes: { id, name, email, phone, isLead: true,
+//     leadReason, leadModality, leadPatientAge, leadGuardianName }
+//
+// El frontend usa isLead para mostrar "(Solicitud Online)" después del
+// nombre y para que el backend de quick-assign sepa que debe hacer
+// upsert de Patient + marcar el PatientRequest como "assigned".
 
 export async function GET(request: NextRequest) {
   unstable_noStore();
@@ -36,32 +40,69 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
-    // Buscar pacientes por name o email del User asociado.
-    // Usamos OR con contains insensitive para match flexible.
-    const patients = await db.patient.findMany({
-      where: {
-        OR: [
-          { user: { name: { contains: q, mode: "insensitive" } } },
-          { user: { email: { contains: q, mode: "insensitive" } } },
-        ],
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true, phone: true } },
-      },
-      take: 10,
-      orderBy: { user: { name: "asc" } },
-    });
+    // === Consulta paralela: Patient + PatientRequest pending ===
+    const [patients, leadRequests] = await Promise.all([
+      // 1. Pacientes formales (ficha existente)
+      db.patient.findMany({
+        where: {
+          OR: [
+            { user: { name: { contains: q, mode: "insensitive" } } },
+            { user: { email: { contains: q, mode: "insensitive" } } },
+          ],
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true, phone: true } },
+        },
+        take: 10,
+        orderBy: { user: { name: "asc" } },
+      }),
+      // 2. Solicitudes de triage pendientes (leads del form público)
+      db.patientRequest.findMany({
+        where: {
+          status: "pending",
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { email: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        take: 10,
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
-    // Mapear a formato plano para el frontend
-    const results = patients.map((p) => ({
-      id: p.id,
-      userId: p.userId,
-      name: p.user.name,
-      email: p.user.email,
-      phone: p.user.phone || "",
-    }));
+    // === Unificar resultados ===
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const results: any[] = [];
 
-    return NextResponse.json(results);
+    // Pacientes formales (isLead: false)
+    for (const p of patients) {
+      results.push({
+        id: p.id,
+        userId: p.userId,
+        name: p.user.name,
+        email: p.user.email,
+        phone: p.user.phone || "",
+        isLead: false,
+      });
+    }
+
+    // Solicitudes pendientes (isLead: true)
+    for (const r of leadRequests) {
+      results.push({
+        id: r.id,
+        name: `${r.name} (Solicitud Online)`,
+        email: r.email,
+        phone: r.phone || "",
+        isLead: true,
+        leadReason: r.reason,
+        leadModality: r.modality,
+        leadPatientAge: r.patientAge,
+        leadGuardianName: r.guardianName,
+      });
+    }
+
+    // Limitar a 10 resultados totales
+    return NextResponse.json(results.slice(0, 10));
   } catch (error) {
     console.error("Error in search-patients:", error);
     return NextResponse.json(

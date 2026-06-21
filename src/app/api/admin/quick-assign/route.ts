@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
       patientPhone,
       patientEmail,
       notes,
+      isLead,
+      leadId,
     } = body;
 
     // === Validación de campos obligatorios ===
@@ -263,6 +265,22 @@ export async function POST(request: NextRequest) {
           professional: { include: { user: { select: { name: true } } } },
         },
       });
+
+      // 6. Si viene de un PatientRequest (isLead), marcarlo como "assigned"
+      // para sacarlo de la bandeja de pendientes del Triage.
+      if (isLead && leadId) {
+        await tx.patientRequest.update({
+          where: { id: leadId },
+          data: {
+            status: "assigned",
+            assignedToId: professionalId,
+            appointmentId: appointment.id,
+          },
+        }).catch(() => {
+          // Si el PatientRequest no existe o ya fue asignado, no romper
+          // el flujo — el appointment ya está creado.
+        });
+      }
 
       return {
         appointment,
