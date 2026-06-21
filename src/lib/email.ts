@@ -1043,6 +1043,38 @@ const MODALITY_EMAIL_MAP: Record<string, string> = {
   híbrida: "Híbrida (lo que suceda primero)",
 };
 
+// === Helper: sanitizar teléfono para WhatsApp ===
+// Limpia espacios, guiones, paréntesis y el símbolo +.
+// Si no empieza con 54 (Argentina), asume formato local y agrega 549
+// (código de país + prefijo de celular obligatorio para WhatsApp Argentina).
+// Ej: "+54 11 6866-7898" → "5491168667898"
+//     "1168667898" → "5491168667898"
+//     "5491168667898" → "5491168667898" (sin cambios)
+function formatPhoneForWhatsApp(phone: string | null): string | null {
+  if (!phone) return null;
+  // Quitar todo lo que no sea dígito
+  let cleaned = phone.replace(/[^0-9]/g, "");
+  if (cleaned.length === 0) return null;
+
+  // Si ya empieza con 549, dejarlo así
+  if (cleaned.startsWith("549")) {
+    return cleaned;
+  }
+  // Si empieza con 54 (pero no 549), agregar el 9
+  if (cleaned.startsWith("54") && cleaned.length > 2) {
+    // Verificar si el 3er dígito es 9 (ya tiene el prefijo de celular)
+    if (cleaned.startsWith("549")) return cleaned;
+    // Si es 54 + código de área sin el 9, insertarlo
+    return "549" + cleaned.substring(2);
+  }
+  // Si empieza con 0 (ej: 01168667898), quitar el 0 y agregar 549
+  if (cleaned.startsWith("0")) {
+    cleaned = cleaned.substring(1);
+  }
+  // Asumir Argentina: agregar 549
+  return "549" + cleaned;
+}
+
 export async function sendTriageProfessionalNotification({
   professionalEmail,
   professionalName,
@@ -1118,7 +1150,7 @@ export async function sendTriageProfessionalNotification({
                     <div class="label">Paciente</div>
                     <div class="value" style="font-weight:600;font-size:17px;">${patientName}</div>
                   </div>
-                  ${patientPhone ? `<div class="field"><div class="label">Teléfono del paciente</div><div class="value"><a href="tel:${patientPhone}" style="color:#6a8a6a;">${patientPhone}</a></div></div>` : ""}
+                  ${patientPhone ? (() => { const waPhone = formatPhoneForWhatsApp(patientPhone); return `<div class="field"><div class="label">Teléfono del paciente</div><div class="value"><a href="https://wa.me/${waPhone}" target="_blank" style="color:#6a8a6a;text-decoration:none;">${patientPhone}</a> <a href="https://wa.me/${waPhone}" target="_blank" style="display:inline-block;margin-left:8px;padding:4px 12px;background-color:#25D366;color:#ffffff;text-decoration:none;border-radius:4px;font-size:12px;font-weight:600;">Enviar WhatsApp</a></div></div>`; })() : ""}
                   <div class="field">
                     <div class="label">Modalidad</div>
                     <div class="value">${modalityLabel}</div>
