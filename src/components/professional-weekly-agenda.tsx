@@ -143,12 +143,12 @@ const STATUS_LABELS: Record<string, string> = {
 // Modality display for available cells (grid background)
 const MODALITY_CELL_DISPLAY: Record<
   string,
-  { icon: React.ComponentType<{ className?: string }>; label: string }
+  { icon: React.ComponentType<{ className?: string }>; label: string; colorClass: string }
 > = {
-  OL: { icon: Monitor, label: "Online" },
-  P: { icon: MapPin, label: "Presencial" },
-  ambas: { icon: MapPin, label: "Presencial y Online" },
-  H: { icon: MapPin, label: "Híbrida" },
+  OL: { icon: Monitor, label: "Online", colorClass: "bg-blue-50 border border-blue-200 text-blue-600 rounded-lg py-2 text-xs font-medium hover:bg-blue-100 transition-colors" },
+  P: { icon: MapPin, label: "Presencial", colorClass: "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium hover:bg-emerald-100 transition-colors" },
+  ambas: { icon: MapPin, label: "Ambas", colorClass: "bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors" },
+  H: { icon: MapPin, label: "Híbrido", colorClass: "bg-purple-50 border border-purple-200 text-purple-600 rounded-lg py-2 text-xs font-medium hover:bg-purple-100 transition-colors" },
 };
 
 // Modality display for appointment cards
@@ -523,13 +523,12 @@ export function ProfessionalWeeklyAgenda({
     if (!modality) return null;
     const display = MODALITY_CELL_DISPLAY[modality];
     if (!display) return null;
-    const Icon = display.icon;
     return (
       <div
-        className="flex items-center justify-center w-full h-full"
+        className={`flex items-center justify-center w-full ${display.colorClass}`}
         title={display.label}
       >
-        <Icon className="w-3 h-3 text-emerald-500/70" />
+        {display.label}
       </div>
     );
   };
@@ -766,11 +765,10 @@ export function ProfessionalWeeklyAgenda({
                     <div className="ml-2">{renderAppointment(apt)}</div>
                   )}
                   {state === "available" && (
-                    <div className="ml-2 flex items-center gap-1 text-emerald-600">
-                      {ModIcon && <ModIcon className="w-3 h-3" />}
-                      <span className="text-[11px] font-medium">
+                    <div className="ml-2 flex-1">
+                      <div className={`flex items-center justify-center w-full ${modalityDisplay?.colorClass || "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium"}`}>
                         {modalityDisplay?.label || "Disponible"}
-                      </span>
+                      </div>
                     </div>
                   )}
                 </div>
