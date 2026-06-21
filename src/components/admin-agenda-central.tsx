@@ -696,34 +696,25 @@ interface ExcelMatrixProps {
 }
 
 function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }: ExcelMatrixProps) {
-  // === CORRECTIVO 1: Filas horarias FIJAS de 08:00 a 21:00 en bloques de 45 min ===
-  // Antes las filas se generaban dinámicamente a partir de los slots del
-  // profesional, lo que causaba desalineación. Ahora generamos una grilla
-  // fija completa (08:00, 08:45, 09:30, ..., 20:15) y para cada celda
-  // buscamos si hay un slot que coincida con esa hora Y ese día.
-  const FIXED_TIME_SLOTS = useMemo(() => {
-    const slots: string[] = [];
-    let h = 8, m = 0; // empezar 08:00
-    while (h < 21) { // hasta 21:00 (no inclusivo)
-      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-      m += 45;
-      if (m >= 60) { h += 1; m -= 60; }
-    }
-    return slots;
-  }, []);
-
-  // Verificar si el profesional tiene AL MENOS un slot en toda la semana
-  // (para mostrar mensaje de "sin horarios" si no tiene nada)
-  const hasAnySlot = useMemo(() => {
-    let total = 0;
+  // === FILAS DINÁMICAS: extraer horas de inicio reales de los slots del
+  // profesional para TODA la semana seleccionada. Esto reemplaza al array
+  // fijo de 45 min que causaba desajuste con profesionales que usan 30 min.
+  // Ej: si el profesional tiene slots 09:00, 09:30, 10:00, 10:30...,
+  // esas son las filas que se renderizan, no un grid genérico.
+  const dynamicTimeSlots = useMemo(() => {
+    const times = new Set<string>();
     for (const day of WEEK_DAYS) {
       const dayData = professional.weeklySlots[day.dayOfWeek];
       if (dayData) {
-        total += dayData.availableSlots.length + dayData.bookedSlots.length;
+        dayData.availableSlots.forEach((s) => times.add(s.time));
+        dayData.bookedSlots.forEach((s) => times.add(s.time));
       }
     }
-    return total > 0;
+    return Array.from(times).sort((a, b) => a.localeCompare(b));
   }, [professional]);
+
+  // Verificar si el profesional tiene AL MENOS un slot en toda la semana
+  const hasAnySlot = dynamicTimeSlots.length > 0;
 
   if (!hasAnySlot) {
     return (
@@ -757,7 +748,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
         </thead>
         <tbody>
           {/* === CORRECTIVO 2: Iteración base sobre horarios FIJOS === */}
-          {FIXED_TIME_SLOTS.map((time) => (
+          {dynamicTimeSlots.map((time) => (
             <tr key={time} className="hover:bg-teal-50/30">
               {/* Columna Hora (fija a la izquierda) */}
               <td className="border border-teal-100 bg-slate-100 p-1 text-center text-[10px] text-slate-600 font-mono font-semibold sticky left-0 z-10">
