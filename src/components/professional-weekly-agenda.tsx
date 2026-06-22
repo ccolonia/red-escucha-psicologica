@@ -216,10 +216,48 @@ export function ProfessionalWeeklyAgenda({
   // === Ficha rápida del paciente (paridad con admin) ===
   const [fichaAppointment, setFichaAppointment] = useState<Appointment | null>(null);
   const [fichaDialogOpen, setFichaDialogOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const openFichaDialog = (apt: Appointment) => {
     setFichaAppointment(apt);
     setFichaDialogOpen(true);
+  };
+
+  // === Cancelar turno desde la ficha rápida ===
+  // Usa 'cancelled_by_professional' que dispara email automático al paciente
+  // (sendCancellationByProfessionalEmail en el backend PATCH /api/appointments/[id])
+  const handleCancelFromFicha = async () => {
+    if (!fichaAppointment) return;
+    if (!confirm(`¿Confirmar cancelación del turno de ${fichaAppointment.patient?.user?.name || "paciente"}?\n\nSe enviará un email al paciente avisando de la cancelación.`)) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/appointments/${fichaAppointment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled_by_professional" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Error al cancelar el turno");
+        return;
+      }
+      // Feedback según si se envió email al paciente
+      if (data.emailSent?.patient) {
+        toast.success(`Turno cancelado. Se envió email al paciente.`);
+      } else {
+        toast.warning(`Turno cancelado. No se pudo enviar email al paciente — recomendamos contactarlo por WhatsApp.`);
+      }
+      // Actualizar estado local del appointment
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === fichaAppointment.id ? { ...a, status: "cancelled_by_professional" } : a))
+      );
+      setFichaDialogOpen(false);
+    } catch (err) {
+      console.error("Error cancelling from ficha:", err);
+      toast.error("Error de conexión al cancelar el turno");
+    } finally {
+      setCancelling(false);
+    }
   };
 
   // Use prop professionalId if provided, otherwise use fetched one
@@ -1123,7 +1161,18 @@ export function ProfessionalWeeklyAgenda({
                     </div>
                   )}
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex justify-between gap-2 sm:justify-between">
+                  {fichaAppointment && fichaAppointment.status !== "cancelled" && fichaAppointment.status !== "cancelled_by_professional" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleCancelFromFicha}
+                      disabled={cancelling}
+                      className="text-xs"
+                    >
+                      {cancelling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Cancelando...</> : <><XCircle className="w-3 h-3 mr-1" /> Cancelar Turno</>}
+                    </Button>
+                  )}
                   <Button variant="outline" onClick={() => setFichaDialogOpen(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
                 </DialogFooter>
               </>
