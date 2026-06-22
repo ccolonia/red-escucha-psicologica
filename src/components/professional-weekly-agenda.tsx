@@ -606,10 +606,10 @@ export function ProfessionalWeeklyAgenda({
         className={`${colors.bg} ${colors.text} ${colors.border} border rounded-md px-2 py-1 text-xs cursor-pointer overflow-hidden hover:shadow-md transition-shadow`}
       >
         <div className="flex items-center justify-between gap-1">
-          <span className="font-medium truncate">{apt.patient.user.name}</span>
+          <span className="font-bold truncate">{apt.patient.user.name}</span>
           {ModIcon && <ModIcon className="w-3 h-3 flex-shrink-0 opacity-60" />}
         </div>
-        <div className="text-[10px] opacity-70 mt-0.5 font-mono">
+        <div className="text-[10px] opacity-70 mt-0.5 font-mono font-bold">
           {timeDisplay}
         </div>
         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
@@ -1096,7 +1096,11 @@ export function ProfessionalWeeklyAgenda({
                 <div className="space-y-3">
                   {/* Datos del turno */}
                   <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-teal-900">
+                    <div className="flex items-center gap-2 text-sm text-teal-900 font-bold">
+                      <Calendar className="w-4 h-4 text-teal-600" />
+                      <span className="capitalize">{(() => { try { return format(parseISO(apt.date), "EEEE d 'de' MMMM", { locale: es }); } catch { return apt.date; } })()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-teal-900 font-bold">
                       <Clock className="w-4 h-4 text-teal-600" />
                       <span>{timeDisplay}</span>
                       <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{modalityLabel}</Badge>

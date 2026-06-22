@@ -142,6 +142,7 @@ interface AvailableSlot {
 interface BookedSlot {
   id: string;
   time: string;
+  date?: string;
   modality: string | null;
   status: string;
   notes: string | null;
@@ -843,7 +844,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   const isRescheduled = bookedSlot.status === "rescheduled";
                   const cellClass = isRescheduled
                     ? "w-full text-center rounded-lg py-2 text-xs font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate"
-                    : "w-full text-center rounded-lg py-2 text-xs font-semibold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
+                    : "w-full text-center rounded-lg py-2 text-xs font-bold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
                   const cellText = isRescheduled
                     ? "⚠️ Reprogramado"
                     : bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
@@ -1083,7 +1084,8 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
         </DialogHeader>
         <div className="space-y-3">
           <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1">
-            <div className="flex items-center gap-2 text-sm text-teal-900"><Clock className="w-4 h-4 text-teal-600" /><span>{slot.time} hs</span><Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{modalityLabel}</Badge></div>
+            <div className="flex items-center gap-2 text-sm text-teal-900 font-bold"><Calendar className="w-4 h-4 text-teal-600" /><span className="capitalize">{(() => { try { return format(parseISO(slot.date || ""), "EEEE d 'de' MMMM", { locale: es }); } catch { return slot.date || ""; } })()}</span></div>
+            <div className="flex items-center gap-2 text-sm text-teal-900 font-bold"><Clock className="w-4 h-4 text-teal-600" /><span>{slot.time} hs</span><Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{modalityLabel}</Badge></div>
             <div className="flex items-center gap-2 text-xs"><span className="text-teal-500">Estado:</span><Badge variant={isRescheduled ? "destructive" : slot.status === "confirmed" ? "default" : "outline"} className="text-xs">{statusLabel}</Badge></div>
           </div>
 

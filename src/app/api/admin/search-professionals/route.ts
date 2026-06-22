@@ -333,6 +333,7 @@ export async function GET(request: NextRequest) {
         const bookedSlots = dayAppointments.map((a) => ({
           id: a.id,
           time: a.time,
+          date: dateStr,
           modality: a.modality,
           status: a.status,
           notes: a.notes || null,
