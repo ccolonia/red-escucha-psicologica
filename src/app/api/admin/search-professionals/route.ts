@@ -155,13 +155,21 @@ function getMondayOfWeek(dateStr: string): Date {
 }
 
 // === Helper: generar 7 fechas ISO a partir del lunes ===
+// CRÍTICO: todas las fechas se generan en timezone Argentina (UTC-3)
+// para evitar desfasajes en el cambio de mes (ej: junio→julio) cuando
+// el servidor Vercel está en UTC. Si no forzamos ARG_TZ, una fecha
+// como 2026-07-01 podría generarse como 2026-06-30 a ciertas horas,
+// causando que los overrides de bloqueo se apliquen al día equivocado.
 function generateWeekDates(monday: Date): { date: string; dayOfWeek: number }[] {
   const dates: { date: string; dayOfWeek: number }[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    const isoDate = d.toLocaleDateString("sv-SE");
-    const dayOfWeekJs = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getDay();
+    // Usar formato YYYY-MM-DD con timezone Argentina forzada
+    const isoDate = d.toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+    // Calcular dayOfWeek en timezone Argentina también
+    const [yy, mm, dd] = isoDate.split("-").map(Number);
+    const dayOfWeekJs = new Date(yy, mm - 1, dd).getDay();
     dates.push({ date: isoDate, dayOfWeek: dayOfWeekJs });
   }
   return dates;
