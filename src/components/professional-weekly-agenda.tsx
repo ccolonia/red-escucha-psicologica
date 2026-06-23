@@ -171,19 +171,22 @@ const MODALITY_BADGE: Record<
   H: { icon: MapPin, label: "H", color: "bg-violet-50 text-violet-600 border-violet-200" },
 };
 
-// Generate time slots from 07:00 to 22:00 in 30-min blocks
-function generateTimeSlots(): string[] {
+// Generate time slots dynamically based on the professional's slotDuration.
+// ANTES: array fijo de 30 min (07:00, 07:30, 08:00...). Esto causaba
+// desfasaje visual cuando el profesional configuraba bloques de 45 min.
+// AHORA: genera slots según el slotDuration más común de los schedules
+// del profesional. Si no hay schedules, usa 45 min por defecto.
+function generateTimeSlotsDynamic(slotDuration: number): string[] {
   const slots: string[] = [];
-  for (let h = 7; h <= 22; h++) {
-    slots.push(`${h.toString().padStart(2, "0")}:00`);
-    if (h < 22) {
-      slots.push(`${h.toString().padStart(2, "0")}:30`);
-    }
+  let h = 7, m = 0; // empezar 07:00
+  const endH = 22; // hasta 22:00
+  while (h < endH) {
+    slots.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
+    m += slotDuration;
+    while (m >= 60) { h += 1; m -= 60; }
   }
   return slots;
 }
-
-const TIME_SLOTS = generateTimeSlots();
 
 // ===== Component =====
 interface ProfessionalWeeklyAgendaProps {
@@ -262,6 +265,21 @@ export function ProfessionalWeeklyAgenda({
 
   // Use prop professionalId if provided, otherwise use fetched one
   const professionalId = propProfessionalId || fetchedProfessionalId;
+
+  // === TIME_SLOTS dinámico según slotDuration del profesional ===
+  // Calcula el slotDuration más común de los schedules cargados.
+  // Si no hay schedules, usa 45 min por defecto.
+  const timeSlots = useMemo(() => {
+    if (schedules.length === 0) return generateTimeSlotsDynamic(45);
+    // Encontrar el slotDuration más frecuente
+    const counts: Record<number, number> = {};
+    for (const s of schedules) {
+      counts[s.slotDuration] = (counts[s.slotDuration] || 0) + 1;
+    }
+    const mostCommon = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    const slotDuration = mostCommon ? parseInt(mostCommon[0], 10) : 45;
+    return generateTimeSlotsDynamic(slotDuration);
+  }, [schedules]);
 
   // Detect mobile screen
   useEffect(() => {
@@ -496,7 +514,7 @@ export function ProfessionalWeeklyAgenda({
       return appointments.find((a) => {
         if (a.date !== dateStr) return false;
         // Encontrar el slot más cercano anterior al start real
-        const slotsBefore = TIME_SLOTS.filter((s) => s <= a.time);
+        const slotsBefore = timeSlots.filter((s) => s <= a.time);
         const snappedSlot = slotsBefore[slotsBefore.length - 1];
         return snappedSlot === time;
       });
@@ -691,7 +709,7 @@ export function ProfessionalWeeklyAgenda({
 
         {/* Time rows */}
         <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
-          {TIME_SLOTS.map((time) => (
+          {timeSlots.map((time) => (
             <div
               key={time}
               className="grid grid-cols-[60px_repeat(6,1fr)] border-b border-teal-50/50 last:border-b-0"
@@ -782,7 +800,7 @@ export function ProfessionalWeeklyAgenda({
 
         {/* Time slots for selected day */}
         <div className="space-y-0.5">
-          {TIME_SLOTS.map((time) => {
+          {timeSlots.map((time) => {
             const state = getCellState(dateStr, time, dayOfWeek);
             const apt = getAppointmentForCell(dateStr, time);
             const modality =

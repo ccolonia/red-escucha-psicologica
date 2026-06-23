@@ -281,7 +281,7 @@ export async function GET(request: NextRequest) {
         appointments: {
           where: {
             date: { in: weekDateStrings },
-            status: { in: ["pending", "confirmed", "rescheduled"] },
+            status: { in: ["pending", "confirmed", "rescheduled", "cancelled_by_professional", "completed", "absent"] },
           },
           select: {
             id: true,

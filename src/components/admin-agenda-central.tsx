@@ -839,15 +839,30 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   );
                 }
 
-                // === Celda OCUPADA (incluye rescheduled con estilo de alerta) ===
+                // === Celda OCUPADA (con estilos según estado) ===
                 if (bookedSlot) {
                   const isRescheduled = bookedSlot.status === "rescheduled";
-                  const cellClass = isRescheduled
-                    ? "w-full text-center rounded-lg py-2 text-xs font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate"
-                    : "w-full text-center rounded-lg py-2 text-xs font-bold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
-                  const cellText = isRescheduled
-                    ? "⚠️ Reprogramado"
-                    : bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
+                  const isCancelledByProf = bookedSlot.status === "cancelled_by_professional";
+                  const isCompleted = bookedSlot.status === "completed";
+                  const isAbsent = bookedSlot.status === "absent";
+
+                  let cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
+                  let cellText = bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
+
+                  if (isRescheduled) {
+                    cellClass = "w-full text-center rounded-lg py-2 text-xs font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate";
+                    cellText = "⚠️ Reprogramado";
+                  } else if (isCancelledByProf) {
+                    cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-red-50 border border-red-300 text-red-600 hover:bg-red-100 transition-colors truncate line-through";
+                    cellText = bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
+                  } else if (isCompleted) {
+                    cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-gray-100 border border-gray-300 text-gray-500 hover:bg-gray-200 transition-colors truncate";
+                    cellText = `✓ ${bookedSlot.patientName.split(" ").slice(0, 2).join(" ")}`;
+                  } else if (isAbsent) {
+                    cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors truncate";
+                    cellText = `⊘ ${bookedSlot.patientName.split(" ").slice(0, 2).join(" ")}`;
+                  }
+
                   return (
                     <td key={day.dayOfWeek} className="border border-teal-50 p-1">
                       <button
