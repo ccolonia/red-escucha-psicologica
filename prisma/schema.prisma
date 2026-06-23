@@ -112,7 +112,7 @@ model ProfessionalSchedule {
   dayOfWeek      Int          // 1=Lunes, 2=Martes, 3=Miercoles, 4=Jueves, 5=Viernes, 6=Sabado
   startTime      String       // "09:00"
   endTime        String       // "18:00"
-  slotDuration   Int          @default(45) // Duracion del turno en minutos (30, 45, 60)
+  slotDuration   Int          @default(45) // Duracion del turno en minutos (40, 45, 60)
   modality       String       @default("ambas") // "P" presencial, "OL" online, "ambas"
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt

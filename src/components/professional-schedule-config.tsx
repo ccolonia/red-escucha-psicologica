@@ -79,7 +79,7 @@ const MODALITY_MAP: Record<string, { label: string; icon: React.ComponentType<{ 
   ambas: { label: "Presencial y Online", icon: CheckCircle2 },
 };
 
-const DURATION_OPTIONS = [30, 45, 60];
+const DURATION_OPTIONS = [40, 45, 60];
 
 const TIME_OPTIONS = (() => {
   const options: string[] = [];
