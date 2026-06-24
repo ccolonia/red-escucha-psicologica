@@ -81,11 +81,16 @@ const MODALITY_MAP: Record<string, { label: string; icon: React.ComponentType<{ 
 
 const DURATION_OPTIONS = [40, 45, 60];
 
+// Opciones horarias de 06:00 a 24:00 (medianoche) en intervalos de 30 min.
+// Ampliado desde el rango anterior (07:00-22:00) para soportar jornadas
+// extendidas. 24:00 se representa como "24:00" (cierre de jornada).
 const TIME_OPTIONS = (() => {
   const options: string[] = [];
-  for (let h = 7; h <= 22; h++) {
+  for (let h = 6; h <= 24; h++) {
     options.push(`${h.toString().padStart(2, "0")}:00`);
-    options.push(`${h.toString().padStart(2, "0")}:30`);
+    if (h < 24) {
+      options.push(`${h.toString().padStart(2, "0")}:30`);
+    }
   }
   return options;
 })();
