@@ -772,7 +772,18 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
   return (
     <div className="w-full overflow-x-auto">
-      <table className="min-w-[900px] border-collapse text-xs">
+      <table className="min-w-[900px] border-collapse text-xs table-fixed" style={{ tableLayout: "fixed" }}>
+        {/* === Anchos de columna fijos para evitar drifting === */}
+        <colgroup>
+          <col style={{ width: "55px" }} />
+          <col style={{ width: "auto" }} />
+          <col style={{ width: "auto" }} />
+          <col style={{ width: "auto" }} />
+          <col style={{ width: "auto" }} />
+          <col style={{ width: "auto" }} />
+          <col style={{ width: "auto" }} />
+          <col style={{ width: "auto" }} />
+        </colgroup>
         {/* === CORRECTIVO 1: Encabezado fijo === */}
         <thead className="sticky top-0 z-20">
           <tr>
