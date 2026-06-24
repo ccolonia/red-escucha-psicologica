@@ -774,9 +774,15 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
   // Cada fila es su propio <div className="grid grid-cols-[...]"> independiente.
   // NO usar un único grid gigante con React.Fragment (causa drifting).
   // NO usar position:sticky (interfiere con el track layout del grid).
-  // NO usar minmax() (permite resize independiente por fila).
-  // 1fr puro garantiza que TODAS las filas tengan las mismas anchuras.
-  const GRID_TEMPLATE = "grid grid-cols-[55px_repeat(7,1fr)]";
+  // NO usar minmax() ni 1fr (permite resize independiente por fila si hay overflow).
+  // Anchos FIJOS en píxeles garantiza que TODAS las filas tengan las mismas anchuras,
+  // sin importar el contenido (truncate, emoji largo, nombres, etc.).
+  // 60px hora + 7 × 120px días = 900px total (encaja en min-w-[900px]).
+  const GRID_TEMPLATE = "grid grid-cols-[60px_repeat(7,120px)]";
+
+  // Clase común para TODAS las celdas de día (libres, ocupadas y vacías).
+  // min-w-0 + overflow-hidden evita que el contenido expanda la columna.
+  const CELL_BASE = "border-l border-teal-50/50 p-1 min-h-[36px] min-w-0 overflow-hidden";
 
   return (
     <div className="w-full overflow-x-auto">
@@ -784,7 +790,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
         {/* === Header row (su propio grid) === */}
         <div className={GRID_TEMPLATE + " border-b border-teal-200"}>
-          <div className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100">
+          <div className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100 min-w-0">
             Hora
           </div>
           {WEEK_DAYS.map((day) => {
@@ -792,7 +798,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
             const dateStr = dayData?.date || "";
             const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
             return (
-              <div key={day.dayOfWeek} className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100 border-l border-teal-200">
+              <div key={day.dayOfWeek} className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100 border-l border-teal-200 min-w-0 overflow-hidden">
                 {day.short} {dayNum}
               </div>
             );
@@ -803,7 +809,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
         {dynamicTimeSlots.map((time) => (
           <div key={time} className={GRID_TEMPLATE + " border-b border-teal-50/50 last:border-b-0"}>
             {/* Columna Hora */}
-            <div className="p-1 text-center text-[10px] text-slate-600 font-mono font-semibold bg-slate-100 border-r border-teal-50 flex items-center justify-center min-h-[36px]">
+            <div className="p-1 text-center text-[10px] text-slate-600 font-mono font-semibold bg-slate-100 border-r border-teal-50 flex items-center justify-center min-h-[36px] min-w-0">
               {time}
             </div>
 
@@ -814,7 +820,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
               // Si no hay datos para este día → celda vacía
               if (!dayData) {
                 return (
-                  <div key={day.dayOfWeek} className="bg-slate-50/40 border-l border-teal-50/50 p-1 min-h-[36px]"></div>
+                  <div key={day.dayOfWeek} className={CELL_BASE + " bg-slate-50/40"}></div>
                 );
               }
 
@@ -827,11 +833,11 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const colorClass = MODALITY_COLORS[freeSlot.modality] || MODALITY_COLORS.ambas;
                 const label = MODALITY_LABELS[freeSlot.modality] || freeSlot.modality;
                 return (
-                  <div key={day.dayOfWeek} className="border-l border-teal-50/50 p-1 min-h-[36px] flex items-center bg-slate-50/20">
+                  <div key={day.dayOfWeek} className={CELL_BASE + " flex items-center bg-slate-50/20"}>
                     <button
                       onClick={() => !past && onSlotClick(freeSlot, dayData.date)}
                       disabled={past}
-                      className={`w-full text-center transition-colors ${
+                      className={`w-full text-center transition-colors truncate ${
                         past
                           ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border border-slate-200 text-slate-400 rounded-lg py-2 text-xs font-medium"
                           : colorClass
@@ -869,7 +875,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 }
 
                 return (
-                  <div key={day.dayOfWeek} className="border-l border-teal-50/50 p-1 min-h-[36px] flex items-center bg-slate-50/20">
+                  <div key={day.dayOfWeek} className={CELL_BASE + " flex items-center bg-slate-50/20"}>
                     <button
                       onClick={() => onBookedSlotClick(bookedSlot)}
                       className={`${cellClass} ${past ? "opacity-40" : ""}`}
@@ -883,7 +889,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
               // Celda VACÍA
               return (
-                <div key={day.dayOfWeek} className="bg-slate-50/40 border-l border-teal-50/50 p-1 min-h-[36px] hover:bg-slate-100/60 transition-colors"></div>
+                <div key={day.dayOfWeek} className={CELL_BASE + " bg-slate-50/40 hover:bg-slate-100/60 transition-colors"}></div>
               );
             })}
           </div>
