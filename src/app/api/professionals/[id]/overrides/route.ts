@@ -80,13 +80,17 @@ export async function POST(
       );
     }
 
+    // type === "block" puede ser:
+    // - Bloqueo de día completo: sin startTime/endTime (null)
+    // - Bloqueo parcial de slot: con startTime/endTime (ej: "09:00"-"09:45")
+
     const override = await db.scheduleOverride.create({
       data: {
         professionalId: id,
         date,
         type,
-        startTime: type === "extra" ? startTime : null,
-        endTime: type === "extra" ? endTime : null,
+        startTime: startTime || null,
+        endTime: endTime || null,
         slotDuration: type === "extra" ? (slotDuration || 45) : null,
         modality: type === "extra" ? (modality || "ambas") : null,
         reason: reason || null,

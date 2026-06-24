@@ -221,6 +221,17 @@ export function ProfessionalWeeklyAgenda({
   const [fichaDialogOpen, setFichaDialogOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
+  // === Bloqueo/desbloqueo de slots individuales ===
+  const [slotBlockDialog, setSlotBlockDialog] = useState<{
+    open: boolean;
+    date: string;
+    time: string;
+    endTime: string;
+    dayLabel: string;
+    overrideId: string | null;
+  }>({ open: false, date: "", time: "", endTime: "", dayLabel: "", overrideId: null });
+  const [slotBlocking, setSlotBlocking] = useState(false);
+
   const openFichaDialog = (apt: Appointment) => {
     setFichaAppointment(apt);
     setFichaDialogOpen(true);
@@ -260,6 +271,81 @@ export function ProfessionalWeeklyAgenda({
       toast.error("Error de conexión al cancelar el turno");
     } finally {
       setCancelling(false);
+    }
+  };
+
+  // === Bloquear/desbloquear slot individual ===
+  const openSlotBlockDialog = (date: string, time: string, endTime: string, dayLabel: string) => {
+    // Verificar si ya existe un override de bloqueo para este slot
+    const existing = overrides.find((o) =>
+      o.date === date && o.type === "block" && o.startTime === time && o.endTime === endTime
+    );
+    setSlotBlockDialog({
+      open: true,
+      date,
+      time,
+      endTime,
+      dayLabel,
+      overrideId: existing?.id || null,
+    });
+  };
+
+  const handleBlockSlot = async () => {
+    if (!professionalId || !slotBlockDialog.date) return;
+    setSlotBlocking(true);
+    try {
+      const res = await fetch(`/api/professionals/${professionalId}/overrides`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: slotBlockDialog.date,
+          type: "block",
+          startTime: slotBlockDialog.time,
+          endTime: slotBlockDialog.endTime,
+          reason: "Bloqueado desde grilla",
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Error al bloquear slot");
+        return;
+      }
+      toast.success(`Slot ${slotBlockDialog.time} bloqueado correctamente`);
+      setSlotBlockDialog((prev) => ({ ...prev, open: false }));
+      // Recargar overrides
+      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
+      setOverrides(Array.isArray(overRes) ? overRes : []);
+    } catch (err) {
+      console.error("Error blocking slot:", err);
+      toast.error("Error de conexión al bloquear slot");
+    } finally {
+      setSlotBlocking(false);
+    }
+  };
+
+  const handleUnblockSlot = async () => {
+    if (!professionalId || !slotBlockDialog.overrideId) return;
+    setSlotBlocking(true);
+    try {
+      const res = await fetch(
+        `/api/professionals/${professionalId}/overrides?overrideId=${slotBlockDialog.overrideId}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Error al desbloquear slot");
+        return;
+      }
+      toast.success(`Slot ${slotBlockDialog.time} desbloqueado correctamente`);
+      setSlotBlockDialog((prev) => ({ ...prev, open: false }));
+      // Recargar overrides
+      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
+      setOverrides(Array.isArray(overRes) ? overRes : []);
+    } catch (err) {
+      console.error("Error unblocking slot:", err);
+      toast.error("Error de conexión al desbloquear slot");
+    } finally {
+      setSlotBlocking(false);
     }
   };
 
@@ -753,6 +839,15 @@ export function ProfessionalWeeklyAgenda({
                   <div
                     key={`${dateStr}-${time}`}
                     className={cellClass}
+                    onClick={state === "available" ? () => {
+                      const dur = schedules.find((s) => s.dayOfWeek === dayOfWeek)?.slotDuration || 45;
+                      const [h, m] = time.split(":").map(Number);
+                      const total = h * 60 + m + dur;
+                      const endTime = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+                      const dayLabel = format(parseISO(dateStr), "EEEE d 'de' MMMM", { locale: es });
+                      openSlotBlockDialog(dateStr, time, endTime, dayLabel);
+                    } : undefined}
+                    style={state === "available" ? { cursor: "pointer" } : undefined}
                   >
                     {state === "booked" && apt && renderAppointment(apt)}
                     {state === "available" && renderModalityIndicator(modality)}
@@ -837,9 +932,18 @@ export function ProfessionalWeeklyAgenda({
                   )}
                   {state === "available" && (
                     <div className="ml-2 flex-1">
-                      <div className={`flex items-center justify-center w-full ${modalityDisplay?.colorClass || "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium"}`}>
+                      <button
+                        onClick={() => openSlotBlockDialog(dateStr, time, (() => {
+                          // Calcular endTime según slotDuration del profesional
+                          const dur = schedules.find((s) => s.dayOfWeek === dayOfWeek)?.slotDuration || 45;
+                          const [h, m] = time.split(":").map(Number);
+                          const total = h * 60 + m + dur;
+                          return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+                        })(), format(parseISO(dateStr), "EEEE d 'de' MMMM", { locale: es }))}
+                        className={`flex items-center justify-center w-full ${modalityDisplay?.colorClass || "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium"}`}
+                      >
                         {modalityDisplay?.label || "Disponible"}
-                      </div>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1200,6 +1304,52 @@ export function ProfessionalWeeklyAgenda({
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* === Dialog: Bloquear/Desbloquear slot individual === */}
+      <Dialog open={slotBlockDialog.open} onOpenChange={(open) => setSlotBlockDialog((prev) => ({ ...prev, open }))}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-teal-900 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-teal-600" />
+              Gestionar Slot
+            </DialogTitle>
+            <DialogDescription className="text-teal-600 capitalize">
+              {slotBlockDialog.dayLabel} — {slotBlockDialog.time} a {slotBlockDialog.endTime} hs
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-slate-600">
+              {slotBlockDialog.overrideId
+                ? "Este slot está actualmente bloqueado. Podés desbloquearlo para que vuelva a estar disponible para asignación."
+                : "Este slot está disponible. Podés bloquearlo para que ni el admin ni los pacientes puedan asignar turnos en este horario."}
+            </p>
+          </div>
+          <DialogFooter className="flex justify-between gap-2 sm:justify-between">
+            {slotBlockDialog.overrideId ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUnblockSlot}
+                disabled={slotBlocking}
+                className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              >
+                {slotBlocking ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Desbloqueando...</> : <>🔓 Desbloquear horario</>}
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBlockSlot}
+                disabled={slotBlocking}
+                className="text-xs"
+              >
+                {slotBlocking ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Bloqueando...</> : <>🛑 Bloquear este horario</>}
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setSlotBlockDialog((prev) => ({ ...prev, open: false }))} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
