@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutGrid,
@@ -772,132 +772,116 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
   return (
     <div className="w-full overflow-x-auto">
-      <table className="min-w-[900px] border-collapse text-xs table-fixed" style={{ tableLayout: "fixed" }}>
-        {/* === Anchos de columna fijos para evitar drifting === */}
-        <colgroup>
-          <col style={{ width: "55px" }} />
-          <col style={{ width: "auto" }} />
-          <col style={{ width: "auto" }} />
-          <col style={{ width: "auto" }} />
-          <col style={{ width: "auto" }} />
-          <col style={{ width: "auto" }} />
-          <col style={{ width: "auto" }} />
-          <col style={{ width: "auto" }} />
-        </colgroup>
-        {/* === CORRECTIVO 1: Encabezado fijo === */}
-        <thead className="sticky top-0 z-20">
-          <tr>
-            <th className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] sticky left-0 z-20 min-w-[45px]">
-              Hora
-            </th>
+      {/* === CSS Grid en vez de <table> === */}
+      {/* Grid de 8 columnas: 1 hora + 7 días. El grid garantiza que cada
+          celda se coloque en su columna exacta, sin importar si tiene
+          contenido o está vacía. Elimina el drifting del <table>. */}
+      <div className="min-w-[900px] grid grid-cols-[55px_repeat(7,minmax(110px,1fr))] gap-0">
+
+        {/* === Header row === */}
+        <div className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] text-center sticky left-0 z-20">
+          Hora
+        </div>
+        {WEEK_DAYS.map((day) => {
+          const dayData = professional.weeklySlots[day.dayOfWeek];
+          const dateStr = dayData?.date || "";
+          const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
+          return (
+            <div key={day.dayOfWeek} className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] text-center">
+              {day.short} {dayNum}
+            </div>
+          );
+        })}
+
+        {/* === Data rows: una por cada hora dinámica === */}
+        {dynamicTimeSlots.map((time) => (
+          <React.Fragment key={time}>
+            {/* Columna Hora */}
+            <div className="border border-teal-100 bg-slate-100 p-1 text-center text-[10px] text-slate-600 font-mono font-semibold sticky left-0 z-10">
+              {time}
+            </div>
+            {/* === 7 celdas por fila (una por día) — SIEMPRE 7 === */}
             {WEEK_DAYS.map((day) => {
               const dayData = professional.weeklySlots[day.dayOfWeek];
-              const dateStr = dayData?.date || "";
-              const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
+
+              // Si no hay datos para este día → celda vacía
+              if (!dayData) {
+                return (
+                  <div key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-1 min-h-[36px]"></div>
+                );
+              }
+
+              const freeSlot = dayData.availableSlots.find((s) => s.time === time);
+              const bookedSlot = dayData.bookedSlots.find((s) => s.time === time);
+              const past = isSlotInPast(dayData.date, time);
+
+              // Celda LIBRE
+              if (freeSlot) {
+                const colorClass = MODALITY_COLORS[freeSlot.modality] || MODALITY_COLORS.ambas;
+                const label = MODALITY_LABELS[freeSlot.modality] || freeSlot.modality;
+                return (
+                  <div key={day.dayOfWeek} className="border border-teal-50 p-1 min-h-[36px] flex items-center">
+                    <button
+                      onClick={() => !past && onSlotClick(freeSlot, dayData.date)}
+                      disabled={past}
+                      className={`w-full text-center transition-colors ${
+                        past
+                          ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border border-slate-200 text-slate-400 rounded-lg py-2 text-xs font-medium"
+                          : colorClass
+                      }`}
+                      title={past ? `Pasado — ${time} hs` : `${label} — ${time} a ${freeSlot.endTime} hs (click para asignar)`}
+                    >
+                      {label}
+                    </button>
+                  </div>
+                );
+              }
+
+              // Celda OCUPADA
+              if (bookedSlot) {
+                const isRescheduled = bookedSlot.status === "rescheduled";
+                const isCancelledByProf = bookedSlot.status === "cancelled_by_professional";
+                const isCompleted = bookedSlot.status === "completed";
+                const isAbsent = bookedSlot.status === "absent";
+
+                let cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
+                let cellText = bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
+
+                if (isRescheduled) {
+                  cellClass = "w-full text-center rounded-lg py-2 text-xs font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate";
+                  cellText = "⚠️ Reprogramado";
+                } else if (isCancelledByProf) {
+                  cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-red-50 border border-red-300 text-red-600 hover:bg-red-100 transition-colors truncate line-through";
+                  cellText = bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
+                } else if (isCompleted) {
+                  cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-gray-100 border border-gray-300 text-gray-500 hover:bg-gray-200 transition-colors truncate";
+                  cellText = `✓ ${bookedSlot.patientName.split(" ").slice(0, 2).join(" ")}`;
+                } else if (isAbsent) {
+                  cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors truncate";
+                  cellText = `⊘ ${bookedSlot.patientName.split(" ").slice(0, 2).join(" ")}`;
+                }
+
+                return (
+                  <div key={day.dayOfWeek} className="border border-teal-50 p-1 min-h-[36px] flex items-center">
+                    <button
+                      onClick={() => onBookedSlotClick(bookedSlot)}
+                      className={`${cellClass} ${past ? "opacity-40" : ""}`}
+                      title={`${bookedSlot.patientName} — ${bookedSlot.status}${bookedSlot.notes ? ` — ${bookedSlot.notes}` : ""} (click para ver ficha)`}
+                    >
+                      {cellText}
+                    </button>
+                  </div>
+                );
+              }
+
+              // Celda VACÍA
               return (
-                <th key={day.dayOfWeek} className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] min-w-[120px] text-center">
-                  {day.short} {dayNum}
-                </th>
+                <div key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-1 min-h-[36px] hover:bg-slate-100/60 transition-colors"></div>
               );
             })}
-          </tr>
-        </thead>
-        <tbody>
-          {/* === CORRECTIVO 2: Iteración base sobre horarios FIJOS === */}
-          {dynamicTimeSlots.map((time) => (
-            <tr key={time} className="hover:bg-teal-50/30">
-              {/* Columna Hora (fija a la izquierda) */}
-              <td className="border border-teal-100 bg-slate-100 p-1 text-center text-[10px] text-slate-600 font-mono font-semibold sticky left-0 z-10">
-                {time}
-              </td>
-              {/* === 7 celdas por fila (una por día) === */}
-              {WEEK_DAYS.map((day) => {
-                const dayData = professional.weeklySlots[day.dayOfWeek];
-
-                // Si no hay datos para este día → celda vacía gris
-                if (!dayData) {
-                  return (
-                    <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-0.5">
-                      <div className="w-full h-full min-h-[28px]"></div>
-                    </td>
-                  );
-                }
-
-                // === Intersección: buscar slot que coincida con time AND day ===
-                const freeSlot = dayData.availableSlots.find((s) => s.time === time);
-                const bookedSlot = dayData.bookedSlots.find((s) => s.time === time);
-                const past = isSlotInPast(dayData.date, time);
-
-                // === Celda LIBRE ===
-                if (freeSlot) {
-                  const colorClass = MODALITY_COLORS[freeSlot.modality] || MODALITY_COLORS.ambas;
-                  const label = MODALITY_LABELS[freeSlot.modality] || freeSlot.modality;
-                  return (
-                    <td key={day.dayOfWeek} className="border border-teal-50 p-1">
-                      <button
-                        onClick={() => !past && onSlotClick(freeSlot, dayData.date)}
-                        disabled={past}
-                        className={`w-full text-center transition-colors ${
-                          past
-                            ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border border-slate-200 text-slate-400 rounded-lg py-2 text-xs font-medium"
-                            : colorClass
-                        }`}
-                        title={past ? `Pasado — ${time} hs` : `${label} — ${time} a ${freeSlot.endTime} hs (click para asignar)`}
-                      >
-                        {label}
-                      </button>
-                    </td>
-                  );
-                }
-
-                // === Celda OCUPADA (con estilos según estado) ===
-                if (bookedSlot) {
-                  const isRescheduled = bookedSlot.status === "rescheduled";
-                  const isCancelledByProf = bookedSlot.status === "cancelled_by_professional";
-                  const isCompleted = bookedSlot.status === "completed";
-                  const isAbsent = bookedSlot.status === "absent";
-
-                  let cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
-                  let cellText = bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
-
-                  if (isRescheduled) {
-                    cellClass = "w-full text-center rounded-lg py-2 text-xs font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate";
-                    cellText = "⚠️ Reprogramado";
-                  } else if (isCancelledByProf) {
-                    cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-red-50 border border-red-300 text-red-600 hover:bg-red-100 transition-colors truncate line-through";
-                    cellText = bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
-                  } else if (isCompleted) {
-                    cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-gray-100 border border-gray-300 text-gray-500 hover:bg-gray-200 transition-colors truncate";
-                    cellText = `✓ ${bookedSlot.patientName.split(" ").slice(0, 2).join(" ")}`;
-                  } else if (isAbsent) {
-                    cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors truncate";
-                    cellText = `⊘ ${bookedSlot.patientName.split(" ").slice(0, 2).join(" ")}`;
-                  }
-
-                  return (
-                    <td key={day.dayOfWeek} className="border border-teal-50 p-1">
-                      <button
-                        onClick={() => onBookedSlotClick(bookedSlot)}
-                        className={`${cellClass} ${past ? "opacity-40" : ""}`}
-                        title={`${bookedSlot.patientName} — ${bookedSlot.status}${bookedSlot.notes ? ` — ${bookedSlot.notes}` : ""} (click para ver ficha)`}
-                      >
-                        {cellText}
-                      </button>
-                    </td>
-                  );
-                }
-
-                // === Celda VACÍA — el profesional no atiende ese día/hora ===
-                return (
-                  <td key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-1 hover:bg-slate-100/60 transition-colors">
-                    <div className="w-full py-2"></div>
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </React.Fragment>
+        ))}
+      </div>
 
       {/* Leyenda */}
       <div className="flex items-center gap-3 mt-3 flex-wrap text-[10px] text-teal-600">
