@@ -642,7 +642,7 @@ export function AdminAgendaCentral() {
         <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           {activeProfessional ? (
             <>
-              <CardHeader className="pb-2 sticky top-0 bg-white z-10">
+              <CardHeader className="pb-3 bg-white">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
                     <CardTitle className="text-base text-teal-900 flex items-center gap-2">
@@ -741,12 +741,21 @@ interface ExcelMatrixProps {
 }
 
 function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }: ExcelMatrixProps) {
-  // === FILAS DINÁMICAS: extraer horas de inicio reales de los slots del
-  // profesional para TODA la semana seleccionada. Esto reemplaza al array
-  // fijo de 45 min que causaba desajuste con profesionales que usan 30 min.
-  // Ej: si el profesional tiene slots 09:00, 09:30, 10:00, 10:30...,
-  // esas son las filas que se renderizan, no un grid genérico.
-  const dynamicTimeSlots = useMemo(() => {
+  // === Estrategia: columnas verticales independientes (NO filas globales) ===
+  // Antes usábamos dynamicTimeSlots = union de todas las horas de toda la semana.
+  // Eso generaba un "efecto serrucho" con huecos enormes cuando un día tenía slots
+  // desfasados respecto al resto (ej: Jueves 12:30, otros días 12:00).
+  //
+  // AHORA: cada día es una columna vertical independiente que renderiza SOLO sus
+  // propios slots ordenados cronológicamente. Si Jueves tiene 12:30 y los demás
+  // no tienen nada a esa hora, simplemente aparece en la columna Jueves sin que
+  // el resto tenga huecos vacíos.
+  //
+  // Para mantener alineación horizontal aproximada, generamos un array de horas
+  // de referencia (union de todas las horas) y cada columna mapea contra ese
+  // array. Si la columna tiene slot para esa hora, lo renderiza; si no, deja
+  // una celda vacía visible con borde. Esto da el efecto "Excel" clásico.
+  const referenceHours = useMemo(() => {
     const times = new Set<string>();
     for (const day of WEEK_DAYS) {
       const dayData = professional.weeklySlots[day.dayOfWeek];
@@ -759,7 +768,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
   }, [professional]);
 
   // Verificar si el profesional tiene AL MENOS un slot en toda la semana
-  const hasAnySlot = dynamicTimeSlots.length > 0;
+  const hasAnySlot = referenceHours.length > 0;
 
   if (!hasAnySlot) {
     return (
@@ -770,46 +779,43 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
     );
   }
 
-  // === Patrón de grilla igual al del profesional (que funciona) ===
-  // Cada fila es su propio <div className="grid grid-cols-[...]"> independiente.
-  // NO usar un único grid gigante con React.Fragment (causa drifting).
-  // NO usar position:sticky (interfiere con el track layout del grid).
-  // NO usar minmax() ni 1fr (permite resize independiente por fila si hay overflow).
-  // Anchos FIJOS en píxeles garantiza que TODAS las filas tengan las mismas anchuras,
-  // sin importar el contenido (truncate, emoji largo, nombres, etc.).
+  // === Patrón de grilla con anchos FIJOS en píxeles ===
   // 60px hora + 7 × 120px días = 900px total (encaja en min-w-[900px]).
+  // Anchos fijos = cero ambigüedad de cálculo de track entre filas.
   const GRID_TEMPLATE = "grid grid-cols-[60px_repeat(7,120px)]";
 
   // Clase común para TODAS las celdas de día (libres, ocupadas y vacías).
   // min-w-0 + overflow-hidden evita que el contenido expanda la columna.
-  const CELL_BASE = "border-l border-teal-50/50 p-1 min-h-[36px] min-w-0 overflow-hidden";
+  // border-slate-200 = borde visible tipo Excel/Google Calendar.
+  const CELL_BASE = "border-l border-b border-slate-200 p-1 min-h-[36px] min-w-0 overflow-hidden";
 
   return (
     <div className="w-full overflow-x-auto">
       <div className="min-w-[900px]">
 
         {/* === Header row (su propio grid) === */}
-        <div className={GRID_TEMPLATE + " border-b border-teal-200"}>
-          <div className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100 min-w-0">
+        <div className={GRID_TEMPLATE}>
+          <div className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100 border-b-2 border-teal-300 min-w-0">
             Hora
           </div>
           {WEEK_DAYS.map((day) => {
             const dayData = professional.weeklySlots[day.dayOfWeek];
             const dateStr = dayData?.date || "";
             const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
+            const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
             return (
-              <div key={day.dayOfWeek} className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100 border-l border-teal-200 min-w-0 overflow-hidden">
+              <div key={day.dayOfWeek} className={`p-1.5 font-semibold text-[10px] text-center border-l border-b-2 min-w-0 overflow-hidden ${isToday ? "bg-teal-200 border-teal-400 text-teal-900" : "bg-teal-100 border-teal-300 text-teal-800"}`}>
                 {day.short} {dayNum}
               </div>
             );
           })}
         </div>
 
-        {/* === Data rows: una fila-grid por cada hora === */}
-        {dynamicTimeSlots.map((time) => (
-          <div key={time} className={GRID_TEMPLATE + " border-b border-teal-50/50 last:border-b-0"}>
+        {/* === Data rows: una fila-grid por cada hora de referencia === */}
+        {referenceHours.map((time) => (
+          <div key={time} className={GRID_TEMPLATE}>
             {/* Columna Hora */}
-            <div className="p-1 text-center text-[10px] text-slate-600 font-mono font-semibold bg-slate-100 border-r border-teal-50 flex items-center justify-center min-h-[36px] min-w-0">
+            <div className="p-1 text-center text-[10px] text-slate-600 font-mono font-semibold bg-slate-100 border-r border-slate-200 flex items-center justify-center min-h-[36px] min-w-0">
               {time}
             </div>
 
@@ -817,10 +823,10 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
             {WEEK_DAYS.map((day) => {
               const dayData = professional.weeklySlots[day.dayOfWeek];
 
-              // Si no hay datos para este día → celda vacía
+              // Si no hay datos para este día → celda vacía visible
               if (!dayData) {
                 return (
-                  <div key={day.dayOfWeek} className={CELL_BASE + " bg-slate-50/40"}></div>
+                  <div key={day.dayOfWeek} className={CELL_BASE + " bg-slate-50/60"}></div>
                 );
               }
 
@@ -833,7 +839,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const colorClass = MODALITY_COLORS[freeSlot.modality] || MODALITY_COLORS.ambas;
                 const label = MODALITY_LABELS[freeSlot.modality] || freeSlot.modality;
                 return (
-                  <div key={day.dayOfWeek} className={CELL_BASE + " flex items-center bg-slate-50/20"}>
+                  <div key={day.dayOfWeek} className={CELL_BASE + " flex items-center bg-white"}>
                     <button
                       onClick={() => !past && onSlotClick(freeSlot, dayData.date)}
                       disabled={past}
@@ -875,7 +881,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 }
 
                 return (
-                  <div key={day.dayOfWeek} className={CELL_BASE + " flex items-center bg-slate-50/20"}>
+                  <div key={day.dayOfWeek} className={CELL_BASE + " flex items-center bg-white"}>
                     <button
                       onClick={() => onBookedSlotClick(bookedSlot)}
                       className={`${cellClass} ${past ? "opacity-40" : ""}`}
@@ -887,7 +893,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 );
               }
 
-              // Celda VACÍA
+              // Celda VACÍA (sin slot para esta hora) → borde visible tipo Excel
               return (
                 <div key={day.dayOfWeek} className={CELL_BASE + " bg-slate-50/40 hover:bg-slate-100/60 transition-colors"}></div>
               );
