@@ -398,7 +398,7 @@ export function AdminAgendaCentral() {
       if (!res.ok) { toast.error(data.error || "Error al asignar el turno"); return; }
 
       const patientVerb = data.created ? "creado" : "actualizado";
-      const emailFlags = [];
+      const emailFlags: string[] = [];
       if (data.emailSent?.patient) emailFlags.push("paciente notificado");
       if (data.emailSent?.professional) emailFlags.push("profesional notificado");
       const emailMsg = emailFlags.length > 0
@@ -770,36 +770,43 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
     );
   }
 
+  // === Patrón de grilla igual al del profesional (que funciona) ===
+  // Cada fila es su propio <div className="grid grid-cols-[...]"> independiente.
+  // NO usar un único grid gigante con React.Fragment (causa drifting).
+  // NO usar position:sticky (interfiere con el track layout del grid).
+  // NO usar minmax() (permite resize independiente por fila).
+  // 1fr puro garantiza que TODAS las filas tengan las mismas anchuras.
+  const GRID_TEMPLATE = "grid grid-cols-[55px_repeat(7,1fr)]";
+
   return (
     <div className="w-full overflow-x-auto">
-      {/* === CSS Grid en vez de <table> === */}
-      {/* Grid de 8 columnas: 1 hora + 7 días. El grid garantiza que cada
-          celda se coloque en su columna exacta, sin importar si tiene
-          contenido o está vacía. Elimina el drifting del <table>. */}
-      <div className="min-w-[900px] grid grid-cols-[55px_repeat(7,minmax(110px,1fr))] gap-0">
+      <div className="min-w-[900px]">
 
-        {/* === Header row === */}
-        <div className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] text-center sticky left-0 z-20">
-          Hora
+        {/* === Header row (su propio grid) === */}
+        <div className={GRID_TEMPLATE + " border-b border-teal-200"}>
+          <div className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100">
+            Hora
+          </div>
+          {WEEK_DAYS.map((day) => {
+            const dayData = professional.weeklySlots[day.dayOfWeek];
+            const dateStr = dayData?.date || "";
+            const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
+            return (
+              <div key={day.dayOfWeek} className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100 border-l border-teal-200">
+                {day.short} {dayNum}
+              </div>
+            );
+          })}
         </div>
-        {WEEK_DAYS.map((day) => {
-          const dayData = professional.weeklySlots[day.dayOfWeek];
-          const dateStr = dayData?.date || "";
-          const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
-          return (
-            <div key={day.dayOfWeek} className="border border-teal-200 bg-teal-100 p-1.5 text-teal-800 font-semibold text-[10px] text-center">
-              {day.short} {dayNum}
-            </div>
-          );
-        })}
 
-        {/* === Data rows: una por cada hora dinámica === */}
+        {/* === Data rows: una fila-grid por cada hora === */}
         {dynamicTimeSlots.map((time) => (
-          <React.Fragment key={time}>
+          <div key={time} className={GRID_TEMPLATE + " border-b border-teal-50/50 last:border-b-0"}>
             {/* Columna Hora */}
-            <div className="border border-teal-100 bg-slate-100 p-1 text-center text-[10px] text-slate-600 font-mono font-semibold sticky left-0 z-10">
+            <div className="p-1 text-center text-[10px] text-slate-600 font-mono font-semibold bg-slate-100 border-r border-teal-50 flex items-center justify-center min-h-[36px]">
               {time}
             </div>
+
             {/* === 7 celdas por fila (una por día) — SIEMPRE 7 === */}
             {WEEK_DAYS.map((day) => {
               const dayData = professional.weeklySlots[day.dayOfWeek];
@@ -807,7 +814,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
               // Si no hay datos para este día → celda vacía
               if (!dayData) {
                 return (
-                  <div key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-1 min-h-[36px]"></div>
+                  <div key={day.dayOfWeek} className="bg-slate-50/40 border-l border-teal-50/50 p-1 min-h-[36px]"></div>
                 );
               }
 
@@ -820,7 +827,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const colorClass = MODALITY_COLORS[freeSlot.modality] || MODALITY_COLORS.ambas;
                 const label = MODALITY_LABELS[freeSlot.modality] || freeSlot.modality;
                 return (
-                  <div key={day.dayOfWeek} className="border border-teal-50 p-1 min-h-[36px] flex items-center">
+                  <div key={day.dayOfWeek} className="border-l border-teal-50/50 p-1 min-h-[36px] flex items-center bg-slate-50/20">
                     <button
                       onClick={() => !past && onSlotClick(freeSlot, dayData.date)}
                       disabled={past}
@@ -862,7 +869,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 }
 
                 return (
-                  <div key={day.dayOfWeek} className="border border-teal-50 p-1 min-h-[36px] flex items-center">
+                  <div key={day.dayOfWeek} className="border-l border-teal-50/50 p-1 min-h-[36px] flex items-center bg-slate-50/20">
                     <button
                       onClick={() => onBookedSlotClick(bookedSlot)}
                       className={`${cellClass} ${past ? "opacity-40" : ""}`}
@@ -876,10 +883,10 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
               // Celda VACÍA
               return (
-                <div key={day.dayOfWeek} className="border border-teal-50 bg-slate-50/40 p-1 min-h-[36px] hover:bg-slate-100/60 transition-colors"></div>
+                <div key={day.dayOfWeek} className="bg-slate-50/40 border-l border-teal-50/50 p-1 min-h-[36px] hover:bg-slate-100/60 transition-colors"></div>
               );
             })}
-          </React.Fragment>
+          </div>
         ))}
       </div>
 
