@@ -839,7 +839,7 @@ export function ProfessionalWeeklyAgenda({
                   <div
                     key={`${dateStr}-${time}`}
                     className={cellClass}
-                    onClick={state === "available" ? () => {
+                    onClick={(state === "available" || state === "blocked") ? () => {
                       const dur = schedules.find((s) => s.dayOfWeek === dayOfWeek)?.slotDuration || 45;
                       const [h, m] = time.split(":").map(Number);
                       const total = h * 60 + m + dur;
@@ -847,7 +847,7 @@ export function ProfessionalWeeklyAgenda({
                       const dayLabel = format(parseISO(dateStr), "EEEE d 'de' MMMM", { locale: es });
                       openSlotBlockDialog(dateStr, time, endTime, dayLabel);
                     } : undefined}
-                    style={state === "available" ? { cursor: "pointer" } : undefined}
+                    style={(state === "available" || state === "blocked") ? { cursor: "pointer" } : undefined}
                   >
                     {state === "booked" && apt && renderAppointment(apt)}
                     {state === "available" && renderModalityIndicator(modality)}
@@ -930,7 +930,7 @@ export function ProfessionalWeeklyAgenda({
                   {state === "booked" && apt && (
                     <div className="ml-2">{renderAppointment(apt)}</div>
                   )}
-                  {state === "available" && (
+                  {(state === "available" || state === "blocked") && (
                     <div className="ml-2 flex-1">
                       <button
                         onClick={() => openSlotBlockDialog(dateStr, time, (() => {
@@ -940,9 +940,13 @@ export function ProfessionalWeeklyAgenda({
                           const total = h * 60 + m + dur;
                           return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
                         })(), format(parseISO(dateStr), "EEEE d 'de' MMMM", { locale: es }))}
-                        className={`flex items-center justify-center w-full ${modalityDisplay?.colorClass || "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium"}`}
+                        className={`flex items-center justify-center w-full ${
+                          state === "blocked"
+                            ? "bg-slate-100 border border-slate-300 text-slate-500 rounded-lg py-2 text-xs font-medium"
+                            : modalityDisplay?.colorClass || "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium"
+                        }`}
                       >
-                        {modalityDisplay?.label || "Disponible"}
+                        {state === "blocked" ? "🔒 Bloqueado" : (modalityDisplay?.label || "Disponible")}
                       </button>
                     </div>
                   )}
