@@ -178,8 +178,8 @@ const MODALITY_BADGE: Record<
 // del profesional. Si no hay schedules, usa 45 min por defecto.
 function generateTimeSlotsDynamic(slotDuration: number): string[] {
   const slots: string[] = [];
-  let h = 7, m = 0; // empezar 07:00
-  const endH = 22; // hasta 22:00
+  let h = 6, m = 0; // empezar 06:00
+  const endH = 24; // hasta 24:00 (medianoche)
   while (h < endH) {
     slots.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
     m += slotDuration;
