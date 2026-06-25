@@ -18,12 +18,16 @@ import {
   Mail,
   Phone,
   MessageCircle,
+  MapPin,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -1009,6 +1013,14 @@ export function ProfessionalProfile() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
+  // === Direcciones de atención presencial ===
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [newAddrLabel, setNewAddrLabel] = useState("");
+  const [newAddrAddress, setNewAddrAddress] = useState("");
+  const [addingAddress, setAddingAddress] = useState(false);
+  const [togglingAddrId, setTogglingAddrId] = useState<string | null>(null);
+
   useEffect(() => {
     if (session?.user) {
       const userId = (session.user as { id: string }).id;
@@ -1024,12 +1036,116 @@ export function ProfessionalProfile() {
             if (prof.user) {
               setPhone(prof.user.phone || "");
             }
+            // Cargar direcciones del profesional
+            fetch(`/api/professionals/${prof.id}/addresses`)
+              .then((r) => r.json())
+              .then((addrs) => {
+                if (Array.isArray(addrs)) setAddresses(addrs);
+              })
+              .catch((err) => console.error("Error cargando direcciones:", err));
           }
           setLoading(false);
         })
         .catch(() => setLoading(false));
     }
   }, [session]);
+
+  // === Agregar nueva dirección ===
+  const handleAddAddress = async () => {
+    if (!professionalId) {
+      toast.error("Primero guardá tu perfil profesional");
+      return;
+    }
+    if (!newAddrLabel.trim() || !newAddrAddress.trim()) {
+      toast.error("Completá etiqueta y dirección");
+      return;
+    }
+    setAddingAddress(true);
+    try {
+      const res = await fetch(`/api/professionals/${professionalId}/addresses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: newAddrLabel.trim(),
+          address: newAddrAddress.trim(),
+          isActive: addresses.length === 0, // Primera dirección → activar automáticamente
+        }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setAddresses((prev) => [...prev, created]);
+        setNewAddrLabel("");
+        setNewAddrAddress("");
+        toast.success("Dirección agregada");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al agregar dirección");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setAddingAddress(false);
+    }
+  };
+
+  // === Toggle isActive (instantáneo) ===
+  // Si se activa una dirección, el backend desactiva las demás automáticamente
+  // (transaccional). Si se desactiva, simplemente queda inactiva.
+  const handleToggleAddress = async (addressId: string, currentIsActive: boolean) => {
+    setTogglingAddrId(addressId);
+    try {
+      const res = await fetch(
+        `/api/professionals/${professionalId}/addresses/${addressId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: !currentIsActive }),
+        }
+      );
+      if (res.ok) {
+        const updated = await res.json();
+        // Update local state: si se activó esta, desactivar las demás
+        setAddresses((prev) =>
+          prev.map((a) => {
+            if (a.id === addressId) return updated;
+            if (updated.isActive && a.isActive) return { ...a, isActive: false };
+            return a;
+          })
+        );
+        toast.success(
+          updated.isActive
+            ? "Dirección activada como dirección de atención actual"
+            : "Dirección desactivada"
+        );
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Error al cambiar estado");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setTogglingAddrId(null);
+    }
+  };
+
+  // === Eliminar dirección ===
+  const handleDeleteAddress = async (addressId: string) => {
+    if (!confirm("¿Eliminar esta dirección de atención?")) return;
+    try {
+      const res = await fetch(
+        `/api/professionals/${professionalId}/addresses/${addressId}`,
+        { method: "DELETE" }
+      );
+      if (res.ok) {
+        setAddresses((prev) => prev.filter((a) => a.id !== addressId));
+        toast.success("Dirección eliminada");
+      } else {
+        toast.error("Error al eliminar dirección");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    }
+  };
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -1181,6 +1297,122 @@ export function ProfessionalProfile() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* ============================================== */}
+      {/* Dirección de Atención Presencial (múltiples) */}
+      {/* ============================================== */}
+      <Card className="border-teal-100">
+        <CardHeader>
+          <CardTitle className="text-teal-900 flex items-center gap-2 text-base">
+            <MapPin className="w-4 h-4" />
+            Dirección de Atención Presencial
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-teal-600">
+            Agregá una o más direcciones de consultorio. Activá la dirección donde
+            estás atendiendo actualmente con el interruptor — solo una puede estar
+            activa a la vez y el cambio es inmediato.
+          </p>
+
+          {/* === Lista de direcciones existentes === */}
+          {addresses.length === 0 ? (
+            <div className="text-center py-6 border border-dashed border-teal-200 rounded-lg bg-teal-50/30">
+              <MapPin className="w-6 h-6 text-teal-400 mx-auto mb-2" />
+              <p className="text-xs text-teal-600">
+                Todavía no agregaste ninguna dirección de atención presencial.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {addresses.map((addr) => (
+                <div
+                  key={addr.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    addr.isActive
+                      ? "border-teal-500 bg-teal-50 ring-1 ring-teal-300"
+                      : "border-slate-200 bg-slate-50/50"
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-semibold text-teal-900 truncate">
+                        {addr.label}
+                      </p>
+                      {addr.isActive && (
+                        <Badge variant="outline" className="text-[9px] bg-teal-100 border-teal-300 text-teal-700 px-1.5 py-0">
+                          ● Activa
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 truncate">{addr.address}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Label htmlFor={`switch-${addr.id}`} className="text-[10px] text-slate-500 cursor-pointer">
+                      {addr.isActive ? "Activa" : "Inactiva"}
+                    </Label>
+                    <Switch
+                      id={`switch-${addr.id}`}
+                      checked={addr.isActive}
+                      disabled={togglingAddrId === addr.id}
+                      onCheckedChange={() => handleToggleAddress(addr.id, addr.isActive)}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteAddress(addr.id)}
+                      className="h-7 w-7 p-0 text-red-400 hover:bg-red-50 hover:text-red-600"
+                      title="Eliminar dirección"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* === Formulario para agregar nueva dirección === */}
+          <div className="border border-teal-200 rounded-lg p-3 bg-teal-50/30 space-y-2">
+            <p className="text-xs font-medium text-teal-700">Agregar nueva dirección</p>
+            <div className="grid sm:grid-cols-3 gap-2">
+              <div className="sm:col-span-1">
+                <Input
+                  value={newAddrLabel}
+                  onChange={(e) => setNewAddrLabel(e.target.value)}
+                  placeholder="Etiqueta (ej: Consultorio Principal)"
+                  className="border-teal-200 h-9 text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Input
+                  value={newAddrAddress}
+                  onChange={(e) => setNewAddrAddress(e.target.value)}
+                  placeholder="Dirección completa (ej: Av. Cabildo 1234, Piso 3, Belgrano, CABA)"
+                  className="border-teal-200 h-9 text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !addingAddress) {
+                      e.preventDefault();
+                      handleAddAddress();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <Button
+              onClick={handleAddAddress}
+              disabled={addingAddress}
+              variant="outline"
+              size="sm"
+              className="border-teal-300 text-teal-600 hover:bg-teal-50"
+            >
+              <Plus className="mr-1 w-3.5 h-3.5" />
+              {addingAddress ? "Agregando..." : "Agregar Dirección"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border-teal-100">
         <CardHeader>
           <CardTitle className="text-teal-900 flex items-center gap-2 text-base">

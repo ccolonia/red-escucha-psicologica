@@ -75,6 +75,26 @@ model Professional {
   schedules           ProfessionalSchedule[]
   scheduleOverrides   ScheduleOverride[]
   patientRequests     PatientRequest[]
+  addresses           ProfessionalAddress[]
+}
+
+// === Direcciones de atención presencial del profesional ===
+// Un profesional puede tener múltiples direcciones de consultorio
+// (ej: su consultorio principal + una sala prestada en otra zona).
+// Solo UNA dirección puede estar "activa" a la vez (la que se muestra
+// a los pacientes como dirección de atención actual). El profesional
+// puede activar/desactivar instantáneamente desde su perfil.
+model ProfessionalAddress {
+  id            String     @id @default(cuid())
+  professionalId String
+  label         String     // Etiqueta corta: "Consultorio Principal", "Sala Belgrano", etc.
+  address       String     // Dirección completa: "Av. Cabildo 1234, Piso 3, Belgrano, CABA"
+  isActive      Boolean    @default(false) // Solo una puede estar activa a la vez
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  professional  Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId])
 }
 
 model Patient {
