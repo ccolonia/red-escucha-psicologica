@@ -302,19 +302,18 @@ export function ProfessionalWeeklyAgenda({
   };
 
   // === Bloquear/desbloquear slot individual ===
-  // Restricción: NO se puede bloquear un slot pasado (acciones retroactivas
-  // prohibidas). SÍ se puede DESBLOQUEAR un slot pasado (si el profesional
-  // lo bloqueó por error y quiere revertir, aunque sea pasado).
+  // Restricción: NO se puede bloquear NI desbloquear un slot pasado
+  // (acciones retroactivas totalmente prohibidas). Si el slot ya pasó,
+  // no tiene sentido modificar su estado de bloqueo — queda como quedó.
   const openSlotBlockDialog = (date: string, time: string, endTime: string, dayLabel: string) => {
     // Verificar si ya existe un override de bloqueo para este slot
     const existing = overrides.find((o) =>
       o.date === date && o.type === "block" && o.startTime === time && o.endTime === endTime
     );
 
-    // Si es pasado Y NO está bloqueado → no permitir abrir el dialog
-    // (no tiene sentido bloquear algo que ya pasó)
-    if (!existing && isSlotInPast(date, time)) {
-      toast.error("No se puede bloquear un slot que ya pasó");
+    // Si el slot es pasado → no permitir abrir el dialog (ni bloquear ni desbloquear)
+    if (isSlotInPast(date, time)) {
+      toast.error("No se puede modificar un slot que ya pasó");
       return;
     }
 
@@ -369,6 +368,12 @@ export function ProfessionalWeeklyAgenda({
 
   const handleUnblockSlot = async () => {
     if (!professionalId || !slotBlockDialog.overrideId) return;
+    // Defensa en profundidad: NO permitir desbloquear slots pasados
+    // (openSlotBlockDialog ya lo verifica, pero esto evita cualquier bypass)
+    if (isSlotInPast(slotBlockDialog.date, slotBlockDialog.time)) {
+      toast.error("No se puede desbloquear un slot que ya pasó");
+      return;
+    }
     setSlotBlocking(true);
     try {
       const res = await fetch(
