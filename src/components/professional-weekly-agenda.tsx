@@ -861,6 +861,8 @@ export function ProfessionalWeeklyAgenda({
                 const state = getCellState(dateStr, time, dayOfWeek);
                 const apt = getAppointmentForCell(dateStr, time);
                 const isCurrentDay = isToday(day);
+                // Verificar si el slot está en el pasado (timezone Argentina)
+                const slotIsPast = isSlotInPast(dateStr, time);
 
                 let cellClass =
                   "border-l border-teal-50/50 p-0.5 min-h-[32px] transition-colors ";
@@ -872,6 +874,14 @@ export function ProfessionalWeeklyAgenda({
                   cellClass += "bg-emerald-50/60 ";
                 } else if (state === "booked") {
                   cellClass += "bg-white ";
+                }
+
+                // === Slots pasados: opacidad reducida (estilo Agenda Central) ===
+                // Esto aplica a TODOS los estados (available, booked, blocked, outside)
+                // para dar feedback visual inmediato de que el slot ya pasó y no es
+                // modificable. Igual que en la Agenda Central del admin.
+                if (slotIsPast) {
+                  cellClass += "opacity-50 ";
                 }
 
                 if (isCurrentDay) {
@@ -903,7 +913,7 @@ export function ProfessionalWeeklyAgenda({
                     {state === "blocked" && (
                       <div
                         className="flex items-center justify-center w-full bg-slate-200 border border-slate-400 text-slate-700 rounded-md py-1.5 text-[10px] font-bold select-none"
-                        title="Slot bloqueado por el profesional (click para desbloquear)"
+                        title={slotIsPast ? "Slot bloqueado (pasado — no modificable)" : "Slot bloqueado por el profesional (click para desbloquear)"}
                       >
                         🔒 Ocupado
                       </div>
