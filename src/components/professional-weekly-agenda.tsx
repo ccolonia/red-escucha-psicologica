@@ -171,6 +171,33 @@ const MODALITY_BADGE: Record<
   H: { icon: MapPin, label: "H", color: "bg-violet-50 text-violet-600 border-violet-200" },
 };
 
+// === Timezone Argentina constante ===
+const ARG_TZ = "America/Argentina/Buenos_Aires";
+
+// === Verificar si un slot está en el pasado ===
+// PROBLEMA: el profesional podía cancelar turnos atendidos, bloquear días
+// pasados y marcar turnos futuros como atendidos/ausentes. Todo eso es
+// un error de lógica de negocio: las acciones retroactivas NO deben
+// permitirse.
+//
+// FIX: función helper que compara fecha y hora del slot contra la fecha
+// y hora actual en timezone Argentina (mismo patrón que la Agenda Central
+// del admin, commit 0db5161).
+//
+// USA comparación de strings (no new Date()) para evitar bugs de timezone
+// del servidor Vercel que está en UTC.
+function isSlotInPast(date: string, time: string): boolean {
+  try {
+    const todayArg = new Date().toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+    const nowTimeArg = new Date().toLocaleTimeString("en-GB", { timeZone: ARG_TZ, hour: "2-digit", minute: "2-digit" });
+    if (date < todayArg) return true;
+    if (date > todayArg) return false;
+    return time <= nowTimeArg;
+  } catch {
+    return false;
+  }
+}
+
 // Generate time slots dynamically based on the professional's slotDuration.
 // ANTES: array fijo de 30 min (07:00, 07:30, 08:00...). Esto causaba
 // desfasaje visual cuando el profesional configuraba bloques de 45 min.
@@ -275,11 +302,22 @@ export function ProfessionalWeeklyAgenda({
   };
 
   // === Bloquear/desbloquear slot individual ===
+  // Restricción: NO se puede bloquear un slot pasado (acciones retroactivas
+  // prohibidas). SÍ se puede DESBLOQUEAR un slot pasado (si el profesional
+  // lo bloqueó por error y quiere revertir, aunque sea pasado).
   const openSlotBlockDialog = (date: string, time: string, endTime: string, dayLabel: string) => {
     // Verificar si ya existe un override de bloqueo para este slot
     const existing = overrides.find((o) =>
       o.date === date && o.type === "block" && o.startTime === time && o.endTime === endTime
     );
+
+    // Si es pasado Y NO está bloqueado → no permitir abrir el dialog
+    // (no tiene sentido bloquear algo que ya pasó)
+    if (!existing && isSlotInPast(date, time)) {
+      toast.error("No se puede bloquear un slot que ya pasó");
+      return;
+    }
+
     setSlotBlockDialog({
       open: true,
       date,
@@ -292,6 +330,12 @@ export function ProfessionalWeeklyAgenda({
 
   const handleBlockSlot = async () => {
     if (!professionalId || !slotBlockDialog.date) return;
+    // Defensa en profundidad: doble check de que el slot no sea pasado
+    // (aunque openSlotBlockDialog ya lo verifica, esto evita cualquier bypass)
+    if (isSlotInPast(slotBlockDialog.date, slotBlockDialog.time)) {
+      toast.error("No se puede bloquear un slot que ya pasó");
+      return;
+    }
     setSlotBlocking(true);
     try {
       const res = await fetch(`/api/professionals/${professionalId}/overrides`, {
@@ -730,7 +774,7 @@ export function ProfessionalWeeklyAgenda({
             </span>
           )}
         </div>
-        {apt.status === "confirmed" && apt.date <= new Date().toLocaleDateString("sv-SE") && (
+        {apt.status === "confirmed" && isSlotInPast(apt.date, apt.time) && (
           <div className="flex gap-1 mt-1">
             <button
               onClick={(e) => {
@@ -1300,7 +1344,15 @@ export function ProfessionalWeeklyAgenda({
                   )}
                 </div>
                 <DialogFooter className="flex justify-between gap-2 sm:justify-between">
-                  {fichaAppointment && fichaAppointment.status !== "cancelled" && fichaAppointment.status !== "cancelled_by_professional" && (
+                  {/* === Restricción: NO cancelar turnos completados/ausentes/cancelados
+                      NI turnos pasados (acciones retroactivas prohibidas) ===
+                      Solo se puede cancelar un turno confirmed/pendiente/rescheduled
+                      que sea FUTURO (no haya pasado la hora).
+                      Misma lógica que el admin en commit 03cd5e8. */}
+                  {fichaAppointment
+                    && !["completed", "absent", "cancelled", "cancelled_by_professional"].includes(fichaAppointment.status)
+                    && !isSlotInPast(fichaAppointment.date, fichaAppointment.time)
+                    && (
                     <Button
                       variant="destructive"
                       size="sm"
@@ -1310,6 +1362,23 @@ export function ProfessionalWeeklyAgenda({
                     >
                       {cancelling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Cancelando...</> : <><XCircle className="w-3 h-3 mr-1" /> Cancelar Turno</>}
                     </Button>
+                  )}
+                  {fichaAppointment
+                    && !["completed", "absent", "cancelled", "cancelled_by_professional"].includes(fichaAppointment.status)
+                    && isSlotInPast(fichaAppointment.date, fichaAppointment.time)
+                    && (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Turno pasado — no se puede cancelar</span>
+                    </div>
+                  )}
+                  {fichaAppointment
+                    && ["completed", "absent"].includes(fichaAppointment.status)
+                    && (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Turno {fichaAppointment.status === "completed" ? "atendido" : "con ausencia"} — no se puede cancelar</span>
+                    </div>
                   )}
                   <Button variant="outline" onClick={() => setFichaDialogOpen(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
                 </DialogFooter>
