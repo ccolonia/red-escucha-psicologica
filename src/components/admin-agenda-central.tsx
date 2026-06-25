@@ -955,6 +955,25 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 // Buscar freeSlot exacto (availableSlots del backend, solo futuros)
                 const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
 
+                // Verificar si el slot está en el pasado (usando timezone Argentina)
+                const slotIsPast = dayData ? isSlotInPast(dayData.date, time) : false;
+
+                // Si no hay freeSlot del backend pero está en el schedule Y es futuro,
+                // construir freeSlot a partir del schedule (el backend puede haberlo
+                // filtrado por un bug de timezone, pero el frontend sabe que es futuro)
+                let effectiveFreeSlot = freeSlot;
+                if (!effectiveFreeSlot && !slotIsPast) {
+                  const scheduleInfo = getScheduleForCell(day.dayOfWeek, time);
+                  if (scheduleInfo) {
+                    effectiveFreeSlot = {
+                      time: time,
+                      endTime: scheduleInfo.endTime,
+                      modality: scheduleInfo.modality,
+                      duration: scheduleInfo.slotDuration,
+                    };
+                  }
+                }
+
                 // Determinar estado usando la MISMA lógica que el profesional
                 let state: "available" | "booked" | "outside" | "blocked" | "past" = "outside";
 
@@ -966,12 +985,11 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   state = "blocked";
                 } else if (bookedSlot) {
                   state = "booked";
-                } else if (freeSlot) {
+                } else if (effectiveFreeSlot && !slotIsPast) {
                   // Slot futuro disponible (clickeable para asignar)
                   state = "available";
                 } else if (isSlotInSchedule(day.dayOfWeek, time)) {
-                  // Está dentro del rango del schedule pero no en availableSlots
-                  // → es un slot pasado (ya pasó la hora) o está booked
+                  // Está dentro del rango del schedule pero es pasado
                   // Mostrar modalidad pero NO clickeable
                   state = "past";
                 } else {
@@ -982,7 +1000,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     return time >= o.startTime && time < o.endTime;
                   });
                   if (extraSlot) {
-                    state = "past";
+                    state = slotIsPast ? "past" : "available";
                   } else {
                     state = "outside";
                   }
@@ -1005,7 +1023,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   cellClass += "border-l-2 border-l-teal-300 ";
                 }
 
-                const past = dayData ? isSlotInPast(dayData.date, time) : false;
+                const past = slotIsPast;
 
                 // Obtener modalidad para slots available/past
                 const modality = (state === "available" || state === "past")
@@ -1019,12 +1037,12 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   <div
                     key={`${day.dayOfWeek}-${time}`}
                     className={cellClass}
-                    onClick={(state === "available" && freeSlot && !past) ? () => onSlotClick(freeSlot, dayData!.date) : (state === "booked" && bookedSlot) ? () => onBookedSlotClick(bookedSlot) : undefined}
+                    onClick={(state === "available" && effectiveFreeSlot && !past) ? () => onSlotClick(effectiveFreeSlot, dayData!.date) : (state === "booked" && bookedSlot) ? () => onBookedSlotClick(bookedSlot) : undefined}
                     style={(state === "available" || state === "booked") ? { cursor: "pointer" } : undefined}
                   >
                     {/* === Slot LIBRE (clickeable, futuro) === */}
-                    {state === "available" && freeSlot && (
-                      <ModalityIndicator slot={freeSlot} past={past} />
+                    {state === "available" && effectiveFreeSlot && (
+                      <ModalityIndicator slot={effectiveFreeSlot} past={past} />
                     )}
 
                     {/* === Slot PASADO o en schedule (muestra modalidad, no clickeable) === */}
