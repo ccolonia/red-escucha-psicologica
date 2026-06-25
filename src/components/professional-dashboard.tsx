@@ -1036,13 +1036,31 @@ export function ProfessionalProfile() {
             if (prof.user) {
               setPhone(prof.user.phone || "");
             }
-            // Cargar direcciones del profesional
+            // Cargar direcciones del profesional (con manejo robusto de errores)
             fetch(`/api/professionals/${prof.id}/addresses`)
-              .then((r) => r.json())
-              .then((addrs) => {
-                if (Array.isArray(addrs)) setAddresses(addrs);
+              .then((r) => {
+                if (!r.ok) {
+                  console.error("API addresses devolvió status:", r.status);
+                  return [];
+                }
+                // Si la respuesta está vacía (204 o sin body), devolver []
+                const text = r.text();
+                return text.then((t) => {
+                  if (!t || t.trim() === "") return [];
+                  try {
+                    const parsed = JSON.parse(t);
+                    return Array.isArray(parsed) ? parsed : [];
+                  } catch {
+                    console.error("Respuesta no es JSON válido");
+                    return [];
+                  }
+                });
               })
-              .catch((err) => console.error("Error cargando direcciones:", err));
+              .then((addrs) => setAddresses(addrs))
+              .catch((err) => {
+                console.error("Error cargando direcciones:", err);
+                setAddresses([]);
+              });
           }
           setLoading(false);
         })
@@ -1078,11 +1096,25 @@ export function ProfessionalProfile() {
         setNewAddrAddress("");
         toast.success("Dirección agregada");
       } else {
-        const data = await res.json();
-        toast.error(data.error || "Error al agregar dirección");
+        // Manejo robusto de errores: si el body está vacío o no es JSON,
+        // mostrar mensaje genérico con el status code
+        let errorMsg = "Error al agregar dirección";
+        try {
+          const text = await res.text();
+          if (text && text.trim() !== "") {
+            const data = JSON.parse(text);
+            errorMsg = data.error || `Error ${res.status}`;
+          } else {
+            errorMsg = `Error ${res.status} (respuesta vacía del servidor)`;
+          }
+        } catch {
+          errorMsg = `Error ${res.status} (respuesta no válida)`;
+        }
+        toast.error(errorMsg);
+        console.error("POST addresses error:", res.status, errorMsg);
       }
     } catch {
-      toast.error("Error de conexión");
+      toast.error("Error de conexión. Verificá tu conexión a internet.");
     } finally {
       setAddingAddress(false);
     }
