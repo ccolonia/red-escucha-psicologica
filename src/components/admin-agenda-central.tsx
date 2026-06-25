@@ -855,23 +855,38 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const dateStr = dayData?.date || "";
                 const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
 
-                // === SNAP-DOWN para bookedSlots ===
+                // === SNAP-DOWN para todos los tipos de slot ===
                 // Replica exacta de la lógica de professional-weekly-agenda.tsx
                 // getAppointmentForCell (líneas 597-609):
                 // Los turnos pueden empezar en minutos no múltiplos de slotDuration
                 // (ej: 08:15 con slotDuration=45). Para que aparezcan en la grilla,
                 // hacemos snap-down: el appointment se muestra en el slot más cercano
                 // ANTERIOR a su hora real. Ej: 08:15 → slot 08:00.
-                const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
+                //
+                // Esto se aplica a availableSlots, allScheduleSlots Y bookedSlots
+                // para que TODOS los slots aparezcan en la grilla, sin importar
+                // si su hora real coincide con un múltiplo exacto del slotDuration
+                // más común usado para generar las filas.
+                const findWithSnapDown = (
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  slots: any[] | undefined,
+                  time: string
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ): any | undefined => {
+                  if (!slots || slots.length === 0) return undefined;
+                  return slots.find((s) => {
+                    if (s.time === time) return true;
+                    // Snap-down: buscar slots anteriores al start real
+                    const slotsBefore = timeSlots.filter((t) => t <= s.time);
+                    const snappedSlot = slotsBefore[slotsBefore.length - 1];
+                    return snappedSlot === time;
+                  });
+                };
+
+                const freeSlot = findWithSnapDown(dayData?.availableSlots, time);
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const scheduleSlot = (dayData as any)?.allScheduleSlots?.find((s: any) => s.time === time);
-                const bookedSlot = dayData?.bookedSlots.find((s) => {
-                  if (s.time === time) return true;
-                  // Snap-down: buscar slots anteriores al start real
-                  const slotsBefore = timeSlots.filter((t) => t <= s.time);
-                  const snappedSlot = slotsBefore[slotsBefore.length - 1];
-                  return snappedSlot === time;
-                });
+                const scheduleSlot = findWithSnapDown((dayData as any)?.allScheduleSlots, time);
+                const bookedSlot = findWithSnapDown(dayData?.bookedSlots, time);
 
                 // Determinar estado de la celda (misma lógica que el profesional)
                 // ORDEN de prioridad: booked > available (clickeable) > past-available (no clickeable) > outside
