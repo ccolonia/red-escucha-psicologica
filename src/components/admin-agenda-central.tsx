@@ -212,12 +212,28 @@ interface AssignFormData {
 const ARG_TZ = "America/Argentina/Buenos_Aires";
 
 function isSlotInPast(date: string, time: string): boolean {
+  // === Comparación usando strings formateados en timezone Argentina ===
+  // PROBLEMA anterior: usar new Date() con toLocaleString causaba bugs de
+  // timezone porque el servidor Vercel está en UTC. Si en Argentina son las
+  // 01:02 AM del Jueves 25, el servidor UTC marca 04:02 AM → todos los slots
+  // de 04:00 para abajo aparecían como "pasados" cuando eran FUTUROS en
+  // hora Argentina.
+  //
+  // SOLUCIÓN: formatear fecha y hora actual en timezone Argentina usando
+  // toLocaleDateString (igual que hace el backend) y comparar strings.
+  // Esto es 100% consistente con el backend que usa ARG_TZ.
   try {
-    const nowInArgentina = new Date(new Date().toLocaleString("en-US", { timeZone: ARG_TZ }));
-    const slotDateTimeStr = `${date}T${time}:00`;
-    const slotDateRaw = new Date(slotDateTimeStr);
-    const slotInArgentina = new Date(slotDateRaw.toLocaleString("en-US", { timeZone: ARG_TZ }));
-    return slotInArgentina < nowInArgentina;
+    // Fecha actual en Argentina (formato YYYY-MM-DD)
+    const todayArg = new Date().toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+    // Hora actual en Argentina (formato HH:MM)
+    const nowTimeArg = new Date().toLocaleTimeString("en-GB", { timeZone: ARG_TZ, hour: "2-digit", minute: "2-digit" });
+
+    // Comparar fechas primero
+    if (date < todayArg) return true;  // fecha anterior a hoy → pasado
+    if (date > todayArg) return false; // fecha posterior a hoy → futuro
+
+    // Misma fecha: comparar horas
+    return time <= nowTimeArg;
   } catch {
     return false;
   }
