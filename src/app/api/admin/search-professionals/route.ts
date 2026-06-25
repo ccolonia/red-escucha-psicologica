@@ -144,6 +144,79 @@ function computeAvailableSlots(
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
+// === Helper NUEVO: computar TODOS los slots del schedule (sin filtrar) ===
+// Devuelve todos los slots que el profesional tiene configurados para ese día,
+// SIN importar si están booked, si son pasados, o si están bloqueados.
+// Esto permite al frontend mostrar la grilla completa con modalidades, igual
+// que la agenda del profesional (que usa isSlotInSchedule).
+//
+// Cada slot incluye un flag 'past' para que el frontend sepa si es clickeable.
+function computeAllScheduleSlots(
+  schedules: { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number }[],
+  overrides: { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null }[],
+  dateStr: string,
+  todayStr: string,
+  targetDayOfWeek: number
+): { time: string; endTime: string; modality: string; duration: number; past: boolean }[] {
+  const daySchedules = schedules.filter((s) => s.dayOfWeek === targetDayOfWeek);
+  const blockOverrides = overrides.filter((o) => o.type === "block");
+  const extraOverrides = overrides.filter((o) => o.type === "extra");
+
+  const fullDayBlock = blockOverrides.some((o) => !o.startTime && !o.endTime);
+  if (fullDayBlock) return [];
+
+  const allSlots: { time: string; endTime: string; modality: string; duration: number }[] = [];
+  for (const schedule of daySchedules) {
+    const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
+    for (const time of slots) {
+      const slotStartMin = timeToMinutes(time);
+      const slotEndMin = slotStartMin + schedule.slotDuration;
+      const endMin = timeToMinutes(schedule.endTime);
+      if (slotStartMin >= endMin || slotEndMin > endMin) continue;
+
+      const isBlocked = blockOverrides.some((block) => {
+        if (block.startTime && block.endTime) {
+          return time >= block.startTime && time < block.endTime;
+        }
+        return false;
+      });
+      if (!isBlocked) {
+        allSlots.push({ time, endTime: minutesToTime(slotEndMin), modality: schedule.modality, duration: schedule.slotDuration });
+      }
+    }
+  }
+
+  for (const extra of extraOverrides) {
+    if (extra.startTime && extra.endTime) {
+      const duration = extra.slotDuration || 45;
+      const slots = generateSlots(extra.startTime, extra.endTime, duration);
+      for (const time of slots) {
+        const slotStartMin = timeToMinutes(time);
+        const slotEndMin = slotStartMin + duration;
+        const endMin = timeToMinutes(extra.endTime);
+        if (slotStartMin >= endMin || slotEndMin > endMin) continue;
+        if (!allSlots.find((s) => s.time === time)) {
+          allSlots.push({ time, endTime: minutesToTime(slotEndMin), modality: extra.modality || "ambas", duration });
+        }
+      }
+    }
+  }
+
+  // Determinar si el slot es pasado
+  const isToday = dateStr === todayStr;
+  const isPastDay = dateStr < todayStr;
+  const nowArgTime = isToday
+    ? new Date().toLocaleTimeString("en-GB", { timeZone: ARG_TZ, hour: "2-digit", minute: "2-digit" })
+    : null;
+
+  return allSlots
+    .map((slot) => ({
+      ...slot,
+      past: isPastDay || (isToday && nowArgTime !== null && slot.time <= nowArgTime),
+    }))
+    .sort((a, b) => a.time.localeCompare(b.time));
+}
+
 // === Helper NUEVO: computar slots bloqueados por el profesional ===
 // Devuelve los slots que el profesional bloqueó manualmente (type="block" con
 // startTime/endTime) para que el admin los vea como "Ocupado" en la grilla.
@@ -384,6 +457,17 @@ export async function GET(request: NextRequest) {
           ? availableSlotsRaw.filter((s) => isModalityCompatible(s.modality, modality))
           : availableSlotsRaw;
 
+        // === TODOS los slots del schedule (sin filtrar por booked/past) ===
+        // Esto permite al frontend mostrar la grilla completa con modalidades,
+        // igual que la agenda del profesional. Cada slot tiene flag 'past'.
+        const allScheduleSlots = computeAllScheduleSlots(
+          prof.schedules as { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number }[],
+          dayOverrides as { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null }[],
+          dateStr,
+          todayStr,
+          dayOfWeek
+        );
+
         const bookedSlots = dayAppointments.map((a) => ({
           id: a.id,
           time: a.time,
@@ -424,6 +508,7 @@ export async function GET(request: NextRequest) {
           date: dateStr,
           availableSlots,
           bookedSlots: allBookedSlots,
+          allScheduleSlots,
         };
 
         totalFreeSlots += availableSlots.length;

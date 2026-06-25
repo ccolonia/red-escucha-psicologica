@@ -863,6 +863,8 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 // hacemos snap-down: el appointment se muestra en el slot más cercano
                 // ANTERIOR a su hora real. Ej: 08:15 → slot 08:00.
                 const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const scheduleSlot = (dayData as any)?.allScheduleSlots?.find((s: any) => s.time === time);
                 const bookedSlot = dayData?.bookedSlots.find((s) => {
                   if (s.time === time) return true;
                   // Snap-down: buscar slots anteriores al start real
@@ -872,7 +874,8 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 });
 
                 // Determinar estado de la celda (misma lógica que el profesional)
-                let state: "available" | "booked" | "outside" | "blocked" = "outside";
+                // ORDEN de prioridad: booked > available (clickeable) > past-available (no clickeable) > outside
+                let state: "available" | "booked" | "outside" | "blocked" | "past" = "outside";
 
                 if (dayData) {
                   if (bookedSlot && bookedSlot.status === "blocked") {
@@ -881,10 +884,14 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     state = "booked";
                   } else if (freeSlot) {
                     state = "available";
+                  } else if (scheduleSlot) {
+                    // Slot que estaba en el schedule pero ya pasó o está booked
+                    // Mostrar modalidad pero NO clickeable
+                    state = "past";
                   }
                 }
 
-                // Clases CSS (IDÉNTICAS al profesional)
+                // Clases CSS (IDÉNTICAS al profesional, +past)
                 let cellClass = "border-l border-teal-50/50 p-0.5 min-h-[32px] transition-colors ";
 
                 if (state === "outside" || state === "blocked") {
@@ -893,6 +900,9 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   cellClass += "bg-emerald-50/60 ";
                 } else if (state === "booked") {
                   cellClass += "bg-white ";
+                } else if (state === "past") {
+                  // Slot pasado: fondo gris claro pero muestra modalidad
+                  cellClass += "bg-gray-50/30 ";
                 }
 
                 if (isToday) {
@@ -908,9 +918,18 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     onClick={(state === "available" && freeSlot && !past) ? () => onSlotClick(freeSlot, dayData!.date) : (state === "booked" && bookedSlot) ? () => onBookedSlotClick(bookedSlot) : undefined}
                     style={(state === "available" || state === "booked") ? { cursor: "pointer" } : undefined}
                   >
-                    {/* === Slot LIBRE === */}
+                    {/* === Slot LIBRE (clickeable) === */}
                     {state === "available" && freeSlot && (
                       <ModalityIndicator slot={freeSlot} past={past} />
+                    )}
+
+                    {/* === Slot PASADO (muestra modalidad pero no clickeable) === */}
+                    {state === "past" && scheduleSlot && (
+                      <ModalityIndicator
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        slot={scheduleSlot as any}
+                        past={true}
+                      />
                     )}
 
                     {/* === Slot BLOQUEADO por el profesional === */}
