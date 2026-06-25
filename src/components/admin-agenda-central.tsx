@@ -261,6 +261,11 @@ export function AdminAgendaCentral() {
   // === Columna de filtros colapsable ===
   const [filtersOpen, setFiltersOpen] = useState(true);
 
+  // === Profesionales colapsable (igual que Filtros) ===
+  // Permite ocultar la lista de profesionales para ganar espacio en pantalla
+  // y volver a expandir (estado inicial = expandido).
+  const [professionalsOpen, setProfessionalsOpen] = useState(true);
+
   // === Estado de resultados ===
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(null);
@@ -525,10 +530,20 @@ export function AdminAgendaCentral() {
       <MetricsDashboard metrics={metrics} loading={loadingMetrics} />
 
       {/* === Split View de 3 columnas (colapsable) === */}
+      {/* Grid template dinámico según qué columnas están abiertas/cerradas:
+          - Ambas abiertas: 260px + 230px + 1fr
+          - Solo Filtros cerrado: 40px + 230px + 1fr
+          - Solo Profesionales cerrado: 260px + 40px + 1fr
+          - Ambas cerradas: 40px + 40px + 1fr (máximo espacio para la grilla)
+      */}
       <div className={`grid gap-4 transition-all duration-300 ${
-        filtersOpen
+        filtersOpen && professionalsOpen
           ? "lg:grid-cols-[260px_230px_1fr]"
-          : "lg:grid-cols-[40px_230px_1fr]"
+          : filtersOpen && !professionalsOpen
+            ? "lg:grid-cols-[260px_40px_1fr]"
+            : !filtersOpen && professionalsOpen
+              ? "lg:grid-cols-[40px_230px_1fr]"
+              : "lg:grid-cols-[40px_40px_1fr]"
       }`}>
 
         {/* ============================================== */}
@@ -641,47 +656,64 @@ export function AdminAgendaCentral() {
         )}
 
         {/* ============================================== */}
-        {/* COLUMNA 2: Lista de profesionales */}
+        {/* COLUMNA 2: Lista de profesionales (colapsable) */}
         {/* ============================================== */}
-        <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
-          <CardHeader className="pb-2 sticky top-0 bg-white z-10">
-            <CardTitle className="text-sm text-teal-900">
-              Profesionales {searchResults && `(${searchResults.summary.totalProfessionalsMatched})`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 pt-2">
-            {searching ? (
-              <div className="py-8 text-center"><RefreshCw className="w-6 h-6 text-teal-400 mx-auto animate-spin" /></div>
-            ) : !searchResults ? (
-              <div className="py-8 text-center"><Search className="w-6 h-6 text-teal-300 mx-auto" /><p className="text-teal-500 mt-2 text-xs">Hacé clic en "Buscar"</p></div>
-            ) : searchResults.professionals.length === 0 ? (
-              <div className="py-8 text-center"><AlertCircle className="w-6 h-6 text-amber-400 mx-auto" /><p className="text-teal-600 mt-2 text-xs">Sin resultados</p></div>
-            ) : (
-              searchResults.professionals.map((prof) => (
-                <button
-                  key={prof.id}
-                  onClick={() => setActiveProfessionalId(prof.id)}
-                  className={`w-full text-left p-2 rounded-lg border transition-all ${
-                    activeProfessionalId === prof.id
-                      ? "border-teal-500 bg-teal-50 shadow-sm ring-1 ring-teal-300"
-                      : "border-teal-100 hover:border-teal-300 hover:bg-teal-50/50"
-                  }`}
-                >
-                  <p className="text-xs font-medium text-teal-900 truncate">{prof.name}</p>
-                  <p className="text-[10px] text-teal-500 truncate">{prof.specialty}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1 py-0">
-                      {prof.totalFreeSlots} lib
-                    </Badge>
-                    <Badge variant="outline" className="text-[9px] bg-slate-50 border-slate-200 text-slate-600 px-1.5 py-0">
-                      {prof.totalBookedSlots} ocup
-                    </Badge>
-                  </div>
-                </button>
-              ))
-            )}
-          </CardContent>
-        </Card>
+        {professionalsOpen ? (
+          <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+            <CardHeader className="pb-2 sticky top-0 bg-white z-10">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm text-teal-900">
+                  Profesionales {searchResults && `(${searchResults.summary.totalProfessionalsMatched})`}
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setProfessionalsOpen(false)} className="h-6 w-6 p-0 text-teal-400 hover:bg-teal-50" title="Colapsar lista de profesionales">
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2 pt-2">
+              {searching ? (
+                <div className="py-8 text-center"><RefreshCw className="w-6 h-6 text-teal-400 mx-auto animate-spin" /></div>
+              ) : !searchResults ? (
+                <div className="py-8 text-center"><Search className="w-6 h-6 text-teal-300 mx-auto" /><p className="text-teal-500 mt-2 text-xs">Hacé clic en "Buscar"</p></div>
+              ) : searchResults.professionals.length === 0 ? (
+                <div className="py-8 text-center"><AlertCircle className="w-6 h-6 text-amber-400 mx-auto" /><p className="text-teal-600 mt-2 text-xs">Sin resultados</p></div>
+              ) : (
+                searchResults.professionals.map((prof) => (
+                  <button
+                    key={prof.id}
+                    onClick={() => setActiveProfessionalId(prof.id)}
+                    className={`w-full text-left p-2 rounded-lg border transition-all ${
+                      activeProfessionalId === prof.id
+                        ? "border-teal-500 bg-teal-50 shadow-sm ring-1 ring-teal-300"
+                        : "border-teal-100 hover:border-teal-300 hover:bg-teal-50/50"
+                    }`}
+                  >
+                    <p className="text-xs font-medium text-teal-900 truncate">{prof.name}</p>
+                    <p className="text-[10px] text-teal-500 truncate">{prof.specialty}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1 py-0">
+                        {prof.totalFreeSlots} lib
+                      </Badge>
+                      <Badge variant="outline" className="text-[9px] bg-slate-50 border-slate-200 text-slate-600 px-1.5 py-0">
+                        {prof.totalBookedSlots} ocup
+                      </Badge>
+                    </div>
+                  </button>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-teal-100 flex flex-col items-center py-2 gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setProfessionalsOpen(true)} className="h-8 w-8 p-0 text-teal-600 hover:bg-teal-50" title="Expandir lista de profesionales">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <Users className="w-4 h-4 text-teal-400" />
+            <span className="text-[9px] text-teal-500 text-center font-medium">
+              {searchResults ? searchResults.summary.totalProfessionalsMatched : 0}
+            </span>
+          </Card>
+        )}
 
         {/* ============================================== */}
         {/* COLUMNA 3: Matriz Excel del profesional activo */}
