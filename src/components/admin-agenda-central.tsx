@@ -829,6 +829,28 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
     });
   }, [rawOverrides]);
 
+  // === Helper: buscar el schedule que contiene un slot y calcular endTime ===
+  // Para slots "past" necesitamos el endTime real (time + slotDuration del schedule)
+  // para mostrarlo en el tooltip. Antes el endTime aparecía vacío.
+  const getScheduleForCell = useCallback((dayOfWeek: number, time: string): { modality: string; slotDuration: number; endTime: string } | null => {
+    const daySchedules = rawSchedules.filter((s: { dayOfWeek: number }) => s.dayOfWeek === dayOfWeek);
+    const scheduleMatch = daySchedules.find((s: { startTime: string; endTime: string }) =>
+      time >= s.startTime && time < s.endTime
+    );
+    if (scheduleMatch) {
+      // Calcular endTime del slot = time + slotDuration
+      const [h, m] = time.split(":").map(Number);
+      const total = h * 60 + m + scheduleMatch.slotDuration;
+      const endTime = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+      return {
+        modality: scheduleMatch.modality,
+        slotDuration: scheduleMatch.slotDuration,
+        endTime,
+      };
+    }
+    return null;
+  }, [rawSchedules]);
+
   // Verificar si el profesional tiene AL MENOS un slot en toda la semana
   const hasAnySlot = Object.values(professional.weeklySlots).some(
     (dayData) => dayData && (dayData.availableSlots.length > 0 || dayData.bookedSlots.length > 0)
@@ -974,6 +996,9 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   ? getModalityForCell(day.dayOfWeek, time)
                   : null;
 
+                // Para slots past, obtener schedule completo (con endTime real para el tooltip)
+                const scheduleInfo = state === "past" ? getScheduleForCell(day.dayOfWeek, time) : null;
+
                 return (
                   <div
                     key={`${day.dayOfWeek}-${time}`}
@@ -987,16 +1012,13 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     )}
 
                     {/* === Slot PASADO o en schedule (muestra modalidad, no clickeable) === */}
-                    {state === "past" && modality && (
-                      <ModalityIndicator
-                        slot={{
-                          time: time,
-                          endTime: "",
-                          modality: modality,
-                          duration: 45,
-                        }}
-                        past={true}
-                      />
+                    {state === "past" && modality && scheduleInfo && (
+                      <div
+                        className={`flex items-center justify-center w-full rounded py-1.5 text-[10px] font-medium opacity-50 ${MODALITY_COLORS[modality] || MODALITY_COLORS.ambas}`}
+                        title={`Pasado — ${MODALITY_LABELS[modality] || modality} ${time} a ${scheduleInfo.endTime} hs (no disponible para asignar)`}
+                      >
+                        {MODALITY_LABELS[modality] || modality}
+                      </div>
                     )}
 
                     {/* === Slot BLOQUEADO por el profesional === */}
