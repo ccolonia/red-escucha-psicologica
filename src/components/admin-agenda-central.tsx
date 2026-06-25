@@ -862,11 +862,15 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const isCancelledByProf = bookedSlot.status === "cancelled_by_professional";
                 const isCompleted = bookedSlot.status === "completed";
                 const isAbsent = bookedSlot.status === "absent";
+                const isBlocked = bookedSlot.status === "blocked";
 
                 let cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
                 let cellText = bookedSlot.patientName.split(" ").slice(0, 2).join(" ");
 
-                if (isRescheduled) {
+                if (isBlocked) {
+                  cellClass = "w-full text-center rounded-lg py-2 text-xs font-bold bg-slate-200 border-2 border-slate-400 text-slate-700 hover:bg-slate-300 transition-colors truncate select-none";
+                  cellText = "🔒 Ocupado";
+                } else if (isRescheduled) {
                   cellClass = "w-full text-center rounded-lg py-2 text-xs font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate";
                   cellText = "⚠️ Reprogramado";
                 } else if (isCancelledByProf) {

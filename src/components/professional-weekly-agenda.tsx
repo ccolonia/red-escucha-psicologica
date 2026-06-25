@@ -851,6 +851,14 @@ export function ProfessionalWeeklyAgenda({
                   >
                     {state === "booked" && apt && renderAppointment(apt)}
                     {state === "available" && renderModalityIndicator(modality)}
+                    {state === "blocked" && (
+                      <div
+                        className="flex items-center justify-center w-full bg-slate-200 border border-slate-400 text-slate-700 rounded-md py-1.5 text-[10px] font-bold select-none"
+                        title="Slot bloqueado por el profesional (click para desbloquear)"
+                      >
+                        🔒 Ocupado
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -946,7 +954,7 @@ export function ProfessionalWeeklyAgenda({
                             : modalityDisplay?.colorClass || "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium"
                         }`}
                       >
-                        {state === "blocked" ? "🔒 Bloqueado" : (modalityDisplay?.label || "Disponible")}
+                        {state === "blocked" ? "🔒 Ocupado" : (modalityDisplay?.label || "Disponible")}
                       </button>
                     </div>
                   )}

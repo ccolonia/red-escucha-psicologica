@@ -144,6 +144,52 @@ function computeAvailableSlots(
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
+// === Helper NUEVO: computar slots bloqueados por el profesional ===
+// Devuelve los slots que el profesional bloqueó manualmente (type="block" con
+// startTime/endTime) para que el admin los vea como "Ocupado" en la grilla.
+// Estos slots NO están en availableSlots (los filtra computeAvailableSlots),
+// pero sí queremos mostrarlos visualmente en la grilla del admin con el
+// estado "blocked" para que el admin sepa que ese horario no está libre.
+function computeBlockedSlots(
+  schedules: { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number }[],
+  overrides: { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null }[],
+  bookedTimes: Set<string>,
+  targetDayOfWeek: number
+): { time: string; endTime: string; modality: string; duration: number }[] {
+  const daySchedules = schedules.filter((s) => s.dayOfWeek === targetDayOfWeek);
+  const blockOverrides = overrides.filter((o) => o.type === "block" && o.startTime && o.endTime);
+
+  const blockedSlots: { time: string; endTime: string; modality: string; duration: number }[] = [];
+
+  for (const schedule of daySchedules) {
+    const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
+    for (const time of slots) {
+      // Si ya hay un appointment en este horario, no duplicar como bloqueado
+      if (bookedTimes.has(time)) continue;
+
+      const isBlocked = blockOverrides.some((block) => {
+        return time >= block.startTime! && time < block.endTime!;
+      });
+
+      if (isBlocked) {
+        const slotStartMin = timeToMinutes(time);
+        const slotEndMin = slotStartMin + schedule.slotDuration;
+        // Evitar duplicados
+        if (!blockedSlots.find((s) => s.time === time)) {
+          blockedSlots.push({
+            time,
+            endTime: minutesToTime(slotEndMin),
+            modality: schedule.modality,
+            duration: schedule.slotDuration,
+          });
+        }
+      }
+    }
+  }
+
+  return blockedSlots.sort((a, b) => a.time.localeCompare(b.time));
+}
+
 // === Helper: calcular el lunes de una semana (weekStartsOn: 1) ===
 function getMondayOfWeek(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -350,14 +396,38 @@ export async function GET(request: NextRequest) {
           patientPhone: a.patient?.user?.phone || null,
         }));
 
+        // === Agregar slots bloqueados por el profesional como "blocked" ===
+        // Esto permite que el admin vea visualmente qué slots están bloqueados
+        // (mostrarán "🔒 Ocupado" en la grilla) en vez de desaparecer sin más.
+        const blockedSlotsRaw = computeBlockedSlots(
+          prof.schedules as { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number }[],
+          dayOverrides as { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null }[],
+          bookedTimes,
+          dayOfWeek
+        );
+        const blockedSlots = blockedSlotsRaw.map((s) => ({
+          id: `blocked-${dateStr}-${s.time}`,
+          time: s.time,
+          date: dateStr,
+          modality: s.modality,
+          status: "blocked" as const,
+          notes: "Bloqueado por el profesional",
+          patientName: "🔒 Ocupado",
+          patientEmail: null,
+          patientPhone: null,
+        }));
+
+        // Combinar appointments reales + slots bloqueados (sin duplicar horarios)
+        const allBookedSlots = [...bookedSlots, ...blockedSlots];
+
         weeklySlots[dayOfWeek] = {
           date: dateStr,
           availableSlots,
-          bookedSlots,
+          bookedSlots: allBookedSlots,
         };
 
         totalFreeSlots += availableSlots.length;
-        totalBookedSlots += bookedSlots.length;
+        totalBookedSlots += allBookedSlots.length;
       }
 
       const modalityBadges: string[] = [];
