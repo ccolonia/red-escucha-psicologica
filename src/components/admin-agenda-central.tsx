@@ -855,13 +855,26 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const dateStr = dayData?.date || "";
                 const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
 
+                // === SNAP-DOWN para bookedSlots ===
+                // Replica exacta de la lógica de professional-weekly-agenda.tsx
+                // getAppointmentForCell (líneas 597-609):
+                // Los turnos pueden empezar en minutos no múltiplos de slotDuration
+                // (ej: 08:15 con slotDuration=45). Para que aparezcan en la grilla,
+                // hacemos snap-down: el appointment se muestra en el slot más cercano
+                // ANTERIOR a su hora real. Ej: 08:15 → slot 08:00.
+                const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
+                const bookedSlot = dayData?.bookedSlots.find((s) => {
+                  if (s.time === time) return true;
+                  // Snap-down: buscar slots anteriores al start real
+                  const slotsBefore = timeSlots.filter((t) => t <= s.time);
+                  const snappedSlot = slotsBefore[slotsBefore.length - 1];
+                  return snappedSlot === time;
+                });
+
                 // Determinar estado de la celda (misma lógica que el profesional)
                 let state: "available" | "booked" | "outside" | "blocked" = "outside";
 
                 if (dayData) {
-                  const freeSlot = dayData.availableSlots.find((s) => s.time === time);
-                  const bookedSlot = dayData.bookedSlots.find((s) => s.time === time);
-
                   if (bookedSlot && bookedSlot.status === "blocked") {
                     state = "blocked";
                   } else if (bookedSlot) {
@@ -886,9 +899,6 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   cellClass += "border-l-2 border-l-teal-300 ";
                 }
 
-                // Obtener datos del slot si corresponde
-                const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
-                const bookedSlot = dayData?.bookedSlots.find((s) => s.time === time);
                 const past = dayData ? isSlotInPast(dayData.date, time) : false;
 
                 return (
@@ -1234,7 +1244,19 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
           )}
         </div>
         <DialogFooter className="flex justify-between gap-2 sm:justify-between">
-          {onCancel && slot.status !== "cancelled" && (
+          {/* === Solo permitir cancelar turnos FUTUROS o PENDIENTES ===
+              NO se puede cancelar:
+              - completed (ya atendido)
+              - absent (paciente ausente)
+              - cancelled (ya cancelado)
+              - cancelled_by_professional (cancelado por el profesional)
+              - blocked (slot bloqueado, no es un appointment real)
+              SÍ se puede cancelar:
+              - confirmed (confirmado, futuro)
+              - pending (pendiente de confirmación)
+              - rescheduled (reprogramado por el profesional, esperando nueva fecha)
+          */}
+          {onCancel && ["confirmed", "pending", "rescheduled"].includes(slot.status) && (
             <Button
               variant="destructive"
               size="sm"
@@ -1244,6 +1266,13 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
             >
               {cancelling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Cancelando...</> : <><XCircle className="w-3 h-3 mr-1" /> Cancelar Turno</>}
             </Button>
+          )}
+          {/* === Mensaje informativo para turnos NO cancelables === */}
+          {onCancel && ["completed", "absent", "cancelled", "cancelled_by_professional", "blocked"].includes(slot.status) && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">
+              <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+              <span>Turno no cancelable (estado: {slot.status === "completed" ? "atendido" : slot.status === "absent" ? "ausente" : slot.status === "blocked" ? "bloqueado" : "cancelado"})</span>
+            </div>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
         </DialogFooter>
