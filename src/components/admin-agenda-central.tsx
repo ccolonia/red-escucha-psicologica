@@ -270,6 +270,15 @@ export function AdminAgendaCentral() {
   // === Profesional activo (seleccionado en la columna 2) ===
   const [activeProfessionalId, setActiveProfessionalId] = useState<string | null>(null);
 
+  // === Ref para leer activeProfessionalId dentro de handleSearch sin meterlo
+  // en las deps del useCallback. Esto evita que handleSearch se recree cada
+  // vez que el admin cambia de profesional, lo cual dispararía un loop infinito
+  // con el useEffect que llama a handleSearch.
+  const activeProfessionalIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeProfessionalIdRef.current = activeProfessionalId;
+  }, [activeProfessionalId]);
+
   // === Estado de dialogs ===
   const [assignDialog, setAssignDialog] = useState<{
     open: boolean;
@@ -336,9 +345,31 @@ export function AdminAgendaCentral() {
       const data: SearchResponse = await res.json();
       setSearchResults(data);
 
-      // Auto-seleccionar el primer profesional con slots
-      if (data.professionals.length > 0 && data.professionals[0].hasAvailability) {
-        setActiveProfessionalId(data.professionals[0].id);
+      // === Preservar selección del profesional al cambiar de semana ===
+      // ANTES (bug): siempre se pisaba activeProfessionalId con el primer
+      // profesional de la nueva búsqueda. Eso causaba que al navegar entre
+      // semanas (ej: semana 3 → semana 4) se perdiera la selección del
+      // profesional activo y el admin tuviera que hacer click de nuevo.
+      //
+      // AHORA:
+      // - Si hay un profesional activo Y sigue en los resultados → mantenerlo
+      // - Si no, auto-seleccionar el primer profesional con slots
+      // - Si no hay ningún profesional → null
+      //
+      // Usamos activeProfessionalIdRef.current para leer el valor actual SIN
+      // meter activeProfessionalId en las deps del useCallback (lo cual
+      // causaría un loop infinito con el useEffect que llama a handleSearch).
+      const currentActiveId = activeProfessionalIdRef.current;
+      if (data.professionals.length > 0) {
+        const stillExists = currentActiveId
+          ? data.professionals.some((p) => p.id === currentActiveId)
+          : false;
+        if (!stillExists) {
+          // Auto-seleccionar el primer profesional con slots disponibles
+          const firstWithSlots = data.professionals.find((p) => p.hasAvailability);
+          setActiveProfessionalId(firstWithSlots?.id || data.professionals[0].id);
+        }
+        // Si stillExists es true → NO tocar activeProfessionalId (preservar selección)
       } else {
         setActiveProfessionalId(null);
       }
