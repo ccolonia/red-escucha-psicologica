@@ -753,9 +753,6 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
   // - Click en booked → onBookedSlotClick (ver ficha, no editar)
 
   // === generateTimeSlotsDynamic: replicado de professional-weekly-agenda.tsx ===
-  // Genera slots de 06:00 a 24:00 según el slotDuration del profesional.
-  // Esto da uniformidad visual: si el profesional usa 45 min, las filas son
-  // 06:00, 06:45, 07:30, 08:15... (NO 06:00, 06:30, 07:00 como antes).
   const generateTimeSlotsDynamic = (slotDuration: number): string[] => {
     const slots: string[] = [];
     let h = 6, m = 0;
@@ -768,40 +765,69 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
     return slots;
   };
 
-  // === Calcular slotDuration del grid usando MCD (GCD) ===
-  // PROBLEMA anterior: usábamos el slotDuration MÁS COMÚN. Si el profesional
-  // tenía 2 schedules con slotDuration distintos (ej: 45 y 30), los slots del
-  // schedule menos común NO caían en filas exactas y se veían vacíos o mal
-  // posicionados por el snap-down.
-  //
-  // SOLUCIÓN: usar el MCD (máximo común divisor) de TODOS los slotDurations.
-  // Esto garantiza que TODOS los slots caigan en filas exactas del grid.
-  // Ej: MCD(45, 30) = 15 → filas cada 15 min: 06:00, 06:15, 06:30, ..., 23:45.
-  // Mínimo 15 min para no generar grids demasiado densos.
-  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
-  const gcdArray = (arr: number[]): number => arr.reduce((acc, n) => gcd(acc, n));
-
+  // === Calcular slotDuration más común (igual que el profesional) ===
+  // El profesional usa el slotDuration MÁS COMÚN de sus schedules.
+  // NO usar MCD (causaba grids demasiado densos).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawSchedules = (professional as any)?.schedules || [];
   const timeSlots = useMemo(() => {
-    // Recolectar todos los slotDuration disponibles (de availableSlots y allScheduleSlots)
-    const durations: number[] = [];
-    for (const day of WEEK_DAYS) {
-      const dayData = professional.weeklySlots[day.dayOfWeek];
-      if (dayData) {
-        dayData.availableSlots.forEach((s) => durations.push(s.duration || 45));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (dayData as any)?.allScheduleSlots?.forEach((s: any) => durations.push(s.duration || 45));
-      }
+    if (rawSchedules.length === 0) return generateTimeSlotsDynamic(45);
+    const counts: Record<number, number> = {};
+    for (const s of rawSchedules) {
+      counts[s.slotDuration] = (counts[s.slotDuration] || 0) + 1;
     }
-    if (durations.length === 0) return generateTimeSlotsDynamic(45);
-    // Calcular MCD de todos los slotDurations
-    const uniqueDurations = [...new Set(durations)];
-    let gridSlotDuration = uniqueDurations.length === 1
-      ? uniqueDurations[0]
-      : gcdArray(uniqueDurations);
-    // Mínimo 15 min para no generar grids demasiado densos
-    if (gridSlotDuration < 15) gridSlotDuration = 15;
-    return generateTimeSlotsDynamic(gridSlotDuration);
-  }, [professional]);
+    const mostCommon = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    const slotDuration = mostCommon ? parseInt(mostCommon[0], 10) : 45;
+    return generateTimeSlotsDynamic(slotDuration);
+  }, [rawSchedules]);
+
+  // === isSlotInSchedule: RÉPLICA EXACTA del profesional ===
+  // El profesional NO verifica si time coincide con un slot generado.
+  // Verifica si time está DENTRO DEL RANGO del schedule:
+  //   daySchedules.some(s => time >= s.startTime && time < s.endTime)
+  // Esto significa que TODAS las filas del grid que caen dentro del
+  // rango de atención se muestran como "available", sin importar si
+  // time coincide con un múltiplo exacto de slotDuration.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawOverrides = (professional as any)?.scheduleOverrides || [];
+
+  const isSlotInSchedule = useCallback((dayOfWeek: number, time: string): boolean => {
+    const daySchedules = rawSchedules.filter((s: { dayOfWeek: number }) => s.dayOfWeek === dayOfWeek);
+    if (daySchedules.length === 0) return false;
+    return daySchedules.some((s: { startTime: string; endTime: string }) => {
+      return time >= s.startTime && time < s.endTime;
+    });
+  }, [rawSchedules]);
+
+  const getModalityForCell = useCallback((dayOfWeek: number, time: string): string | null => {
+    const daySchedules = rawSchedules.filter((s: { dayOfWeek: number }) => s.dayOfWeek === dayOfWeek);
+    const scheduleMatch = daySchedules.find((s: { startTime: string; endTime: string; modality: string }) =>
+      time >= s.startTime && time < s.endTime
+    );
+    if (scheduleMatch) return scheduleMatch.modality;
+    // Check extra overrides
+    const dateStr = professional.weeklySlots[dayOfWeek]?.date || "";
+    const extraMatch = rawOverrides.find((o: { date: string; type: string; startTime: string | null; endTime: string | null; modality: string | null }) => {
+      if (o.date !== dateStr || o.type !== "extra") return false;
+      if (!o.startTime || !o.endTime) return false;
+      return time >= o.startTime && time < o.endTime;
+    });
+    return extraMatch?.modality || null;
+  }, [rawSchedules, rawOverrides, professional.weeklySlots]);
+
+  const isDateBlocked = useCallback((dateStr: string): boolean => {
+    return rawOverrides.some((o: { date: string; type: string; startTime: string | null; endTime: string | null }) =>
+      o.date === dateStr && o.type === "block" && !o.startTime && !o.endTime
+    );
+  }, [rawOverrides]);
+
+  const isTimeSlotBlocked = useCallback((dateStr: string, time: string): boolean => {
+    return rawOverrides.some((o: { date: string; type: string; startTime: string | null; endTime: string | null }) => {
+      if (o.date !== dateStr || o.type !== "block") return false;
+      if (!o.startTime || !o.endTime) return false;
+      return time >= o.startTime && time < o.endTime;
+    });
+  }, [rawOverrides]);
 
   // Verificar si el profesional tiene AL MENOS un slot en toda la semana
   const hasAnySlot = Object.values(professional.weeklySlots).some(
@@ -867,39 +893,60 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const dateStr = dayData?.date || "";
                 const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
 
-                // === Búsqueda EXACTA para availableSlots y allScheduleSlots ===
-                // Como el grid usa MCD de todos los slotDurations, TODOS los slots
-                // caen en filas exactas. NO se necesita snap-down.
+                // === STATE MACHINE RÉPLICA EXACTA del profesional ===
+                // El profesional usa getCellState() que llama a:
+                // 1. isDateBlocked(dateStr) → "blocked"
+                // 2. isTimeSlotBlocked(dateStr, time) → "blocked"
+                // 3. getAppointmentForCell(dateStr, time) → "booked"
+                // 4. isSlotInSchedule(dayOfWeek, time) → "available"
+                // 5. check extra overrides → "available"
+                // 6. else → "outside"
                 //
-                // SNAP-DOWN solo para bookedSlots: los appointments pueden tener
-                // horarios no múltiplos del MCD (ej: appointment a las 18:42 si el
-                // profesional lo creó manualmente con duración personalizada).
-                const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const scheduleSlot = (dayData as any)?.allScheduleSlots?.find((s: any) => s.time === time);
+                // isSlotInSchedule usa RANGO (time >= startTime && time < endTime),
+                // NO match exacto. Esto significa que TODAS las filas del grid que
+                // caen dentro del rango de atención se muestran como "available".
+
+                // Buscar bookedSlot con snap-down (para appointments con horarios no alineados)
                 const bookedSlot = dayData?.bookedSlots.find((s) => {
                   if (s.time === time) return true;
-                  // Snap-down: buscar slots anteriores al start real
                   const slotsBefore = timeSlots.filter((t) => t <= s.time);
                   const snappedSlot = slotsBefore[slotsBefore.length - 1];
                   return snappedSlot === time;
                 });
 
-                // Determinar estado de la celda (misma lógica que el profesional)
-                // ORDEN de prioridad: booked > available (clickeable) > past-available (no clickeable) > outside
+                // Buscar freeSlot exacto (availableSlots del backend, solo futuros)
+                const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
+
+                // Determinar estado usando la MISMA lógica que el profesional
                 let state: "available" | "booked" | "outside" | "blocked" | "past" = "outside";
 
-                if (dayData) {
-                  if (bookedSlot && bookedSlot.status === "blocked") {
-                    state = "blocked";
-                  } else if (bookedSlot) {
-                    state = "booked";
-                  } else if (freeSlot) {
-                    state = "available";
-                  } else if (scheduleSlot) {
-                    // Slot que estaba en el schedule pero ya pasó o está booked
-                    // Mostrar modalidad pero NO clickeable
+                if (isDateBlocked(dateStr)) {
+                  state = "blocked";
+                } else if (isTimeSlotBlocked(dateStr, time)) {
+                  state = "blocked";
+                } else if (bookedSlot && bookedSlot.status === "blocked") {
+                  state = "blocked";
+                } else if (bookedSlot) {
+                  state = "booked";
+                } else if (freeSlot) {
+                  // Slot futuro disponible (clickeable para asignar)
+                  state = "available";
+                } else if (isSlotInSchedule(day.dayOfWeek, time)) {
+                  // Está dentro del rango del schedule pero no en availableSlots
+                  // → es un slot pasado (ya pasó la hora) o está booked
+                  // Mostrar modalidad pero NO clickeable
+                  state = "past";
+                } else {
+                  // Verificar extra overrides (igual que el profesional)
+                  const extraSlot = rawOverrides.find((o: { date: string; type: string; startTime: string | null; endTime: string | null }) => {
+                    if (o.date !== dateStr || o.type !== "extra") return false;
+                    if (!o.startTime || !o.endTime) return false;
+                    return time >= o.startTime && time < o.endTime;
+                  });
+                  if (extraSlot) {
                     state = "past";
+                  } else {
+                    state = "outside";
                   }
                 }
 
@@ -913,8 +960,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 } else if (state === "booked") {
                   cellClass += "bg-white ";
                 } else if (state === "past") {
-                  // Slot pasado: fondo gris claro pero muestra modalidad
-                  cellClass += "bg-gray-50/30 ";
+                  cellClass += "bg-emerald-50/30 ";
                 }
 
                 if (isToday) {
@@ -923,6 +969,11 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
                 const past = dayData ? isSlotInPast(dayData.date, time) : false;
 
+                // Obtener modalidad para slots available/past
+                const modality = (state === "available" || state === "past")
+                  ? getModalityForCell(day.dayOfWeek, time)
+                  : null;
+
                 return (
                   <div
                     key={`${day.dayOfWeek}-${time}`}
@@ -930,16 +981,20 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     onClick={(state === "available" && freeSlot && !past) ? () => onSlotClick(freeSlot, dayData!.date) : (state === "booked" && bookedSlot) ? () => onBookedSlotClick(bookedSlot) : undefined}
                     style={(state === "available" || state === "booked") ? { cursor: "pointer" } : undefined}
                   >
-                    {/* === Slot LIBRE (clickeable) === */}
+                    {/* === Slot LIBRE (clickeable, futuro) === */}
                     {state === "available" && freeSlot && (
                       <ModalityIndicator slot={freeSlot} past={past} />
                     )}
 
-                    {/* === Slot PASADO (muestra modalidad pero no clickeable) === */}
-                    {state === "past" && scheduleSlot && (
+                    {/* === Slot PASADO o en schedule (muestra modalidad, no clickeable) === */}
+                    {state === "past" && modality && (
                       <ModalityIndicator
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        slot={scheduleSlot as any}
+                        slot={{
+                          time: time,
+                          endTime: "",
+                          modality: modality,
+                          duration: 45,
+                        }}
                         past={true}
                       />
                     )}

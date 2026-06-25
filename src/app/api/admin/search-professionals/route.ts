@@ -529,6 +529,28 @@ export async function GET(request: NextRequest) {
         profession: prof.profession,
         modalityBadges,
         weeklySlots,
+        // === Schedules crudos para que el frontend use isSlotInSchedule ===
+        // El frontend necesita los schedules originales (startTime, endTime,
+        // slotDuration, modality, dayOfWeek) para determinar si una celda está
+        // dentro del rango de atención del profesional, igual que hace la
+        // agenda del profesional con isSlotInSchedule():
+        //   daySchedules.some(s => time >= s.startTime && time < s.endTime)
+        schedules: prof.schedules.map((s) => ({
+          startTime: s.startTime,
+          endTime: s.endTime,
+          slotDuration: s.slotDuration,
+          modality: s.modality,
+          dayOfWeek: s.dayOfWeek,
+        })),
+        // === Overrides crudos para que el frontend detecte slots bloqueados ===
+        scheduleOverrides: prof.scheduleOverrides.map((o) => ({
+          date: o.date,
+          type: o.type,
+          startTime: o.startTime,
+          endTime: o.endTime,
+          slotDuration: o.slotDuration,
+          modality: o.modality,
+        })),
         totalFreeSlots,
         totalBookedSlots,
         hasAvailability: totalFreeSlots > 0,
