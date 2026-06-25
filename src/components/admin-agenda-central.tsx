@@ -768,27 +768,39 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
     return slots;
   };
 
-  // === Calcular slotDuration más común del profesional ===
-  // (mismo algoritmo que professional-weekly-agenda.tsx línea 358-367)
+  // === Calcular slotDuration del grid usando MCD (GCD) ===
+  // PROBLEMA anterior: usábamos el slotDuration MÁS COMÚN. Si el profesional
+  // tenía 2 schedules con slotDuration distintos (ej: 45 y 30), los slots del
+  // schedule menos común NO caían en filas exactas y se veían vacíos o mal
+  // posicionados por el snap-down.
+  //
+  // SOLUCIÓN: usar el MCD (máximo común divisor) de TODOS los slotDurations.
+  // Esto garantiza que TODOS los slots caigan en filas exactas del grid.
+  // Ej: MCD(45, 30) = 15 → filas cada 15 min: 06:00, 06:15, 06:30, ..., 23:45.
+  // Mínimo 15 min para no generar grids demasiado densos.
+  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+  const gcdArray = (arr: number[]): number => arr.reduce((acc, n) => gcd(acc, n));
+
   const timeSlots = useMemo(() => {
-    // Recolectar todos los slotDuration disponibles
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Recolectar todos los slotDuration disponibles (de availableSlots y allScheduleSlots)
     const durations: number[] = [];
     for (const day of WEEK_DAYS) {
       const dayData = professional.weeklySlots[day.dayOfWeek];
       if (dayData) {
         dayData.availableSlots.forEach((s) => durations.push(s.duration || 45));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (dayData as any)?.allScheduleSlots?.forEach((s: any) => durations.push(s.duration || 45));
       }
     }
     if (durations.length === 0) return generateTimeSlotsDynamic(45);
-    // Encontrar el slotDuration más frecuente
-    const counts: Record<number, number> = {};
-    for (const d of durations) {
-      counts[d] = (counts[d] || 0) + 1;
-    }
-    const mostCommon = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-    const slotDuration = mostCommon ? parseInt(mostCommon[0], 10) : 45;
-    return generateTimeSlotsDynamic(slotDuration);
+    // Calcular MCD de todos los slotDurations
+    const uniqueDurations = [...new Set(durations)];
+    let gridSlotDuration = uniqueDurations.length === 1
+      ? uniqueDurations[0]
+      : gcdArray(uniqueDurations);
+    // Mínimo 15 min para no generar grids demasiado densos
+    if (gridSlotDuration < 15) gridSlotDuration = 15;
+    return generateTimeSlotsDynamic(gridSlotDuration);
   }, [professional]);
 
   // Verificar si el profesional tiene AL MENOS un slot en toda la semana
@@ -855,38 +867,23 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const dateStr = dayData?.date || "";
                 const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
 
-                // === SNAP-DOWN para todos los tipos de slot ===
-                // Replica exacta de la lógica de professional-weekly-agenda.tsx
-                // getAppointmentForCell (líneas 597-609):
-                // Los turnos pueden empezar en minutos no múltiplos de slotDuration
-                // (ej: 08:15 con slotDuration=45). Para que aparezcan en la grilla,
-                // hacemos snap-down: el appointment se muestra en el slot más cercano
-                // ANTERIOR a su hora real. Ej: 08:15 → slot 08:00.
+                // === Búsqueda EXACTA para availableSlots y allScheduleSlots ===
+                // Como el grid usa MCD de todos los slotDurations, TODOS los slots
+                // caen en filas exactas. NO se necesita snap-down.
                 //
-                // Esto se aplica a availableSlots, allScheduleSlots Y bookedSlots
-                // para que TODOS los slots aparezcan en la grilla, sin importar
-                // si su hora real coincide con un múltiplo exacto del slotDuration
-                // más común usado para generar las filas.
-                const findWithSnapDown = (
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  slots: any[] | undefined,
-                  time: string
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                ): any | undefined => {
-                  if (!slots || slots.length === 0) return undefined;
-                  return slots.find((s) => {
-                    if (s.time === time) return true;
-                    // Snap-down: buscar slots anteriores al start real
-                    const slotsBefore = timeSlots.filter((t) => t <= s.time);
-                    const snappedSlot = slotsBefore[slotsBefore.length - 1];
-                    return snappedSlot === time;
-                  });
-                };
-
-                const freeSlot = findWithSnapDown(dayData?.availableSlots, time);
+                // SNAP-DOWN solo para bookedSlots: los appointments pueden tener
+                // horarios no múltiplos del MCD (ej: appointment a las 18:42 si el
+                // profesional lo creó manualmente con duración personalizada).
+                const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const scheduleSlot = findWithSnapDown((dayData as any)?.allScheduleSlots, time);
-                const bookedSlot = findWithSnapDown(dayData?.bookedSlots, time);
+                const scheduleSlot = (dayData as any)?.allScheduleSlots?.find((s: any) => s.time === time);
+                const bookedSlot = dayData?.bookedSlots.find((s) => {
+                  if (s.time === time) return true;
+                  // Snap-down: buscar slots anteriores al start real
+                  const slotsBefore = timeSlots.filter((t) => t <= s.time);
+                  const snappedSlot = slotsBefore[slotsBefore.length - 1];
+                  return snappedSlot === time;
+                });
 
                 // Determinar estado de la celda (misma lógica que el profesional)
                 // ORDEN de prioridad: booked > available (clickeable) > past-available (no clickeable) > outside
