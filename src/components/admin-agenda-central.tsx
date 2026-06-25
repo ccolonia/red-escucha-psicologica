@@ -741,45 +741,60 @@ interface ExcelMatrixProps {
 }
 
 function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }: ExcelMatrixProps) {
-  // === Estrategia DEFINITIVA: columnas verticales independientes ===
-  // PROBLEMA anterior: referenceHours hacía UNION de horas de TODOS los días.
-  // Si Miércoles tenía 6:00, 6:30, 7:00... y Jueves tenía 12:00, 12:30, 13:00...,
-  // se generaban filas para TODAS esas horas y los días que no tenían slot en
-  // esa hora exacta mostraban celdas vacías → "efecto serrucho" con huecos.
+  // === REPLICA EXACTA de la grilla del profesional ===
+  // El usuario pidió que la Agenda Central del admin se vea IGUAL que la
+  // agenda del profesional. Por eso este componente ahora usa el mismo
+  // patrón: generateTimeSlotsDynamic(slotDuration) para filas homogéneas
+  // + grid grid-cols-[60px_repeat(7,1fr)] para las columnas.
   //
-  // SOLUCIÓN: cada día es una columna vertical rígida que renderiza SOLO sus
-  // propios slots (available + booked) ordenados cronológicamente, apilados
-  // uno abajo del otro sin huecos. Cada slot muestra su hora arriba del botón.
-  // Esto elimina el serrucho porque NINGÚN día impone sus horarios a otro.
-  //
-  // Inspiración: vista "Agenda" de Google Calendar, donde cada día es una
-  // columna con su lista de eventos apilados.
+  // La ÚNICA diferencia con el profesional:
+  // - 7 días (Lun-Dom) en vez de 6 (el profesional excluye domingo)
+  // - Click en available → onSlotClick (asignar turno, no bloquear)
+  // - Click en booked → onBookedSlotClick (ver ficha, no editar)
 
-  // Pre-computar slots combinados (available + booked) por día, ordenados por hora
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const slotsByDay = useMemo(() => {
+  // === generateTimeSlotsDynamic: replicado de professional-weekly-agenda.tsx ===
+  // Genera slots de 06:00 a 24:00 según el slotDuration del profesional.
+  // Esto da uniformidad visual: si el profesional usa 45 min, las filas son
+  // 06:00, 06:45, 07:30, 08:15... (NO 06:00, 06:30, 07:00 como antes).
+  const generateTimeSlotsDynamic = (slotDuration: number): string[] => {
+    const slots: string[] = [];
+    let h = 6, m = 0;
+    const endH = 24;
+    while (h < endH) {
+      slots.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
+      m += slotDuration;
+      while (m >= 60) { h += 1; m -= 60; }
+    }
+    return slots;
+  };
+
+  // === Calcular slotDuration más común del profesional ===
+  // (mismo algoritmo que professional-weekly-agenda.tsx línea 358-367)
+  const timeSlots = useMemo(() => {
+    // Recolectar todos los slotDuration disponibles
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const map: Record<number, any[]> = {};
+    const durations: number[] = [];
     for (const day of WEEK_DAYS) {
       const dayData = professional.weeklySlots[day.dayOfWeek];
-      if (!dayData) {
-        map[day.dayOfWeek] = [];
-        continue;
+      if (dayData) {
+        dayData.availableSlots.forEach((s) => durations.push(s.duration || 45));
       }
-      // Combinar available + booked en un solo array
-      const combined = [
-        ...dayData.availableSlots.map((s) => ({ ...s, kind: "available" as const, date: dayData.date })),
-        ...dayData.bookedSlots.map((s) => ({ ...s, kind: "booked" as const, date: dayData.date })),
-      ];
-      // Ordenar por hora
-      combined.sort((a, b) => a.time.localeCompare(b.time));
-      map[day.dayOfWeek] = combined;
     }
-    return map;
+    if (durations.length === 0) return generateTimeSlotsDynamic(45);
+    // Encontrar el slotDuration más frecuente
+    const counts: Record<number, number> = {};
+    for (const d of durations) {
+      counts[d] = (counts[d] || 0) + 1;
+    }
+    const mostCommon = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    const slotDuration = mostCommon ? parseInt(mostCommon[0], 10) : 45;
+    return generateTimeSlotsDynamic(slotDuration);
   }, [professional]);
 
   // Verificar si el profesional tiene AL MENOS un slot en toda la semana
-  const hasAnySlot = Object.values(slotsByDay).some((slots) => slots.length > 0);
+  const hasAnySlot = Object.values(professional.weeklySlots).some(
+    (dayData) => dayData && (dayData.availableSlots.length > 0 || dayData.bookedSlots.length > 0)
+  );
 
   if (!hasAnySlot) {
     return (
@@ -790,136 +805,124 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
     );
   }
 
+  // === Grid template IDÉNTICO al profesional ===
+  // 60px hora + 7 × 1fr días = uniforme, mismo patrón que funciona en profesional
+  const GRID_TEMPLATE = "grid grid-cols-[60px_repeat(7,1fr)]";
+
   return (
     <div className="w-full overflow-x-auto">
-      {/* === Grid de 8 columnas: 1 hora-label + 7 días === */}
-      {/* Cada día es una columna vertical independiente con flex-col */}
-      <div className="min-w-[900px] grid grid-cols-[60px_repeat(7,1fr)] border-b-2 border-teal-300">
+      <div className="min-w-[900px]">
 
-        {/* === Header row === */}
-        <div className="p-1.5 text-teal-800 font-semibold text-[10px] text-center bg-teal-100 min-w-0">
-          Hora
+        {/* === Header: day names and dates (IDÉNTICO al profesional) === */}
+        <div className={GRID_TEMPLATE + " border-b border-teal-100"}>
+          <div className="p-2 text-xs text-teal-400 text-center" />
+          {WEEK_DAYS.map((day) => {
+            const dayData = professional.weeklySlots[day.dayOfWeek];
+            const dateStr = dayData?.date || "";
+            const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
+            const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+            return (
+              <div
+                key={day.dayOfWeek}
+                className={`p-2 text-center border-l border-teal-50 ${isToday ? "bg-teal-50" : ""}`}
+              >
+                <p className={`text-xs font-medium ${isToday ? "text-teal-700" : "text-teal-500"}`}>
+                  {day.short}
+                </p>
+                <p className={`text-sm font-bold ${isToday ? "w-7 h-7 rounded-full flex items-center justify-center mx-auto bg-teal-600 text-white" : "text-teal-800"}`}>
+                  {dayNum}
+                </p>
+              </div>
+            );
+          })}
         </div>
-        {WEEK_DAYS.map((day) => {
-          const dayData = professional.weeklySlots[day.dayOfWeek];
-          const dateStr = dayData?.date || "";
-          const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
-          const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
-          return (
-            <div key={day.dayOfWeek} className={`p-1.5 font-semibold text-[10px] text-center border-l border-teal-200 min-w-0 overflow-hidden ${isToday ? "bg-teal-200 text-teal-900" : "bg-teal-100 text-teal-800"}`}>
-              {day.short} {dayNum}
-            </div>
-          );
-        })}
-      </div>
 
-      {/* === Body: 7 columnas verticales independientes === */}
-      <div className="min-w-[900px] grid grid-cols-[60px_repeat(7,1fr)]">
-
-        {/* === Columna Hora (izquierda) — vacía, solo separador visual === */}
-        <div className="bg-slate-50 border-r border-slate-200 min-h-[200px]"></div>
-
-        {/* === 7 columnas verticales, una por día === */}
-        {WEEK_DAYS.map((day) => {
-          const dayData = professional.weeklySlots[day.dayOfWeek];
-          const dateStr = dayData?.date || "";
-          const slots = slotsByDay[day.dayOfWeek] || [];
-          const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
-
-          return (
+        {/* === Time rows (IDÉNTICO al profesional) === */}
+        <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+          {timeSlots.map((time) => (
             <div
-              key={day.dayOfWeek}
-              className={`border-l border-slate-200 flex flex-col gap-0.5 p-1 min-h-[200px] ${isToday ? "bg-teal-50/40" : "bg-white"}`}
+              key={time}
+              className={GRID_TEMPLATE + " border-b border-teal-50/50 last:border-b-0"}
             >
-              {slots.length === 0 ? (
-                <div className="flex items-center justify-center flex-1 text-[10px] text-slate-400 italic py-4">
-                  Sin slots
-                </div>
-              ) : (
-                slots.map((slot) => {
-                  const past = isSlotInPast(slot.date, slot.time);
+              {/* Time label */}
+              <div className="p-1 text-[11px] text-teal-400 text-right pr-2 border-r border-teal-50 flex items-start justify-end pt-1.5">
+                {time}
+              </div>
 
-                  // === Slot LIBRE ===
-                  if (slot.kind === "available") {
-                    const colorClass = MODALITY_COLORS[slot.modality] || MODALITY_COLORS.ambas;
-                    const label = MODALITY_LABELS[slot.modality] || slot.modality;
-                    return (
+              {/* Day cells */}
+              {WEEK_DAYS.map((day) => {
+                const dayData = professional.weeklySlots[day.dayOfWeek];
+                const dateStr = dayData?.date || "";
+                const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+
+                // Determinar estado de la celda (misma lógica que el profesional)
+                let state: "available" | "booked" | "outside" | "blocked" = "outside";
+
+                if (dayData) {
+                  const freeSlot = dayData.availableSlots.find((s) => s.time === time);
+                  const bookedSlot = dayData.bookedSlots.find((s) => s.time === time);
+
+                  if (bookedSlot && bookedSlot.status === "blocked") {
+                    state = "blocked";
+                  } else if (bookedSlot) {
+                    state = "booked";
+                  } else if (freeSlot) {
+                    state = "available";
+                  }
+                }
+
+                // Clases CSS (IDÉNTICAS al profesional)
+                let cellClass = "border-l border-teal-50/50 p-0.5 min-h-[32px] transition-colors ";
+
+                if (state === "outside" || state === "blocked") {
+                  cellClass += "bg-gray-50/50 ";
+                } else if (state === "available") {
+                  cellClass += "bg-emerald-50/60 ";
+                } else if (state === "booked") {
+                  cellClass += "bg-white ";
+                }
+
+                if (isToday) {
+                  cellClass += "border-l-2 border-l-teal-300 ";
+                }
+
+                // Obtener datos del slot si corresponde
+                const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
+                const bookedSlot = dayData?.bookedSlots.find((s) => s.time === time);
+                const past = dayData ? isSlotInPast(dayData.date, time) : false;
+
+                return (
+                  <div
+                    key={`${day.dayOfWeek}-${time}`}
+                    className={cellClass}
+                    onClick={(state === "available" && freeSlot && !past) ? () => onSlotClick(freeSlot, dayData!.date) : (state === "booked" && bookedSlot) ? () => onBookedSlotClick(bookedSlot) : undefined}
+                    style={(state === "available" || state === "booked") ? { cursor: "pointer" } : undefined}
+                  >
+                    {/* === Slot LIBRE === */}
+                    {state === "available" && freeSlot && (
+                      <ModalityIndicator slot={freeSlot} past={past} />
+                    )}
+
+                    {/* === Slot BLOQUEADO por el profesional === */}
+                    {state === "blocked" && (
                       <div
-                        key={`free-${slot.time}`}
-                        className="border border-slate-200 rounded-md overflow-hidden bg-white"
+                        className="flex items-center justify-center w-full bg-slate-200 border border-slate-400 text-slate-700 rounded-md py-1.5 text-[10px] font-bold select-none"
+                        title="Slot bloqueado por el profesional"
                       >
-                        <div className="px-1.5 py-0.5 text-[9px] text-slate-500 font-mono font-semibold border-b border-slate-100 bg-slate-50 text-center">
-                          {slot.time}
-                        </div>
-                        <div className="p-1">
-                          <button
-                            onClick={() => !past && onSlotClick(slot, slot.date)}
-                            disabled={past}
-                            className={`w-full text-center transition-colors truncate text-[10px] font-medium rounded py-1.5 ${
-                              past
-                                ? "opacity-40 cursor-not-allowed pointer-events-none bg-slate-50 border border-slate-200 text-slate-400"
-                                : colorClass
-                            }`}
-                            title={past ? `Pasado — ${slot.time} hs` : `${label} — ${slot.time} a ${slot.endTime} hs (click para asignar)`}
-                          >
-                            {label}
-                          </button>
-                        </div>
+                        🔒 Ocupado
                       </div>
-                    );
-                  }
+                    )}
 
-                  // === Slot OCUPADO ===
-                  const isRescheduled = slot.status === "rescheduled";
-                  const isCancelledByProf = slot.status === "cancelled_by_professional";
-                  const isCompleted = slot.status === "completed";
-                  const isAbsent = slot.status === "absent";
-                  const isBlocked = slot.status === "blocked";
-
-                  let cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
-                  let cellText = slot.patientName.split(" ").slice(0, 2).join(" ");
-
-                  if (isBlocked) {
-                    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-slate-200 border-2 border-slate-400 text-slate-700 hover:bg-slate-300 transition-colors truncate select-none";
-                    cellText = "🔒 Ocupado";
-                  } else if (isRescheduled) {
-                    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate";
-                    cellText = "⚠️ Reprogramado";
-                  } else if (isCancelledByProf) {
-                    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-red-50 border border-red-300 text-red-600 hover:bg-red-100 transition-colors truncate line-through";
-                    cellText = slot.patientName.split(" ").slice(0, 2).join(" ");
-                  } else if (isCompleted) {
-                    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-gray-100 border border-gray-300 text-gray-500 hover:bg-gray-200 transition-colors truncate";
-                    cellText = `✓ ${slot.patientName.split(" ").slice(0, 2).join(" ")}`;
-                  } else if (isAbsent) {
-                    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors truncate";
-                    cellText = `⊘ ${slot.patientName.split(" ").slice(0, 2).join(" ")}`;
-                  }
-
-                  return (
-                    <div
-                      key={`booked-${slot.time}`}
-                      className={`border border-slate-200 rounded-md overflow-hidden ${past ? "opacity-60" : ""} ${isBlocked ? "bg-slate-100" : "bg-white"}`}
-                    >
-                      <div className={`px-1.5 py-0.5 text-[9px] font-mono font-semibold border-b border-slate-100 text-center ${isBlocked ? "bg-slate-200 text-slate-600" : "bg-slate-50 text-slate-500"}`}>
-                        {slot.time}
-                      </div>
-                      <div className="p-1">
-                        <button
-                          onClick={() => onBookedSlotClick(slot)}
-                          className={cellClass}
-                          title={`${slot.patientName} — ${slot.status}${slot.notes ? ` — ${slot.notes}` : ""} (click para ver ficha)`}
-                        >
-                          {cellText}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+                    {/* === Slot OCUPADO (appointment) === */}
+                    {state === "booked" && bookedSlot && (
+                      <BookedSlotCard slot={bookedSlot} past={past} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
       {/* Leyenda */}
@@ -931,6 +934,60 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-100 border border-slate-300"></span>Ocupado</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-200 border-2 border-slate-400"></span>Bloqueado</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-50 border border-slate-200 opacity-40"></span>Pasado</span>
+      </div>
+    </div>
+  );
+}
+
+// === Sub-componentes para mantener el código limpio ===
+// (replican el renderModalityIndicator y renderAppointment del profesional)
+
+function ModalityIndicator({ slot, past }: { slot: AvailableSlot; past: boolean }) {
+  const display = MODALITY_LABELS[slot.modality] || slot.modality;
+  const colorClass = MODALITY_COLORS[slot.modality] || MODALITY_COLORS.ambas;
+  return (
+    <div
+      className={`flex items-center justify-center w-full rounded py-1.5 text-[10px] font-medium ${past ? "opacity-40" : ""} ${colorClass}`}
+      title={`${display} — ${slot.time} a ${slot.endTime} hs (click para asignar)`}
+    >
+      {display}
+    </div>
+  );
+}
+
+function BookedSlotCard({ slot, past }: { slot: BookedSlot; past: boolean }) {
+  const isRescheduled = slot.status === "rescheduled";
+  const isCancelledByProf = slot.status === "cancelled_by_professional";
+  const isCompleted = slot.status === "completed";
+  const isAbsent = slot.status === "absent";
+
+  let cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
+  let cellText = slot.patientName.split(" ").slice(0, 2).join(" ");
+
+  if (isRescheduled) {
+    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate";
+    cellText = "⚠️ Reprogramado";
+  } else if (isCancelledByProf) {
+    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-red-50 border border-red-300 text-red-600 hover:bg-red-100 transition-colors truncate line-through";
+    cellText = slot.patientName.split(" ").slice(0, 2).join(" ");
+  } else if (isCompleted) {
+    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-gray-100 border border-gray-300 text-gray-500 hover:bg-gray-200 transition-colors truncate";
+    cellText = `✓ ${slot.patientName.split(" ").slice(0, 2).join(" ")}`;
+  } else if (isAbsent) {
+    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors truncate";
+    cellText = `⊘ ${slot.patientName.split(" ").slice(0, 2).join(" ")}`;
+  }
+
+  return (
+    <div
+      className={`w-full px-1 ${past ? "opacity-60" : ""}`}
+      title={`${slot.patientName} — ${slot.status}${slot.notes ? ` — ${slot.notes}` : ""} (click para ver ficha)`}
+    >
+      <div className={cellClass}>
+        {cellText}
+      </div>
+      <div className="text-[9px] text-teal-500 text-center mt-0.5 font-mono">
+        {slot.time}
       </div>
     </div>
   );
