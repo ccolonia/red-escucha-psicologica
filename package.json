@@ -14,6 +14,7 @@
     "db:reset": "prisma migrate reset",
     "clean:test": "npx tsx scripts/clean-test-data.ts",
     "clean:test:confirm": "npx tsx scripts/clean-test-data.ts --confirm",
+    "clean:triage": "npx tsx scripts/clean-triage-test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
