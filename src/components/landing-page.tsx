@@ -433,6 +433,9 @@ export function LandingPage() {
           phone: contactForm.phone,
           message: contactForm.message,
           reason: contactForm.reason,
+          // Enviar modality cuando es solicitar_turno (para que el admin
+          // la vea en el panel de Consultas de Contacto)
+          modality: contactForm.reason === "solicitar_turno" ? (contactForm.modality || "presencial") : null,
         }),
       });
       if (res.ok) {

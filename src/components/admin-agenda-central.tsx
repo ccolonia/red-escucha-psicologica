@@ -1272,6 +1272,20 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const selectPatient = (patient: any) => {
     const cleanName = patient.isLead ? patient.name.replace(" (Solicitud Online)", "") : patient.name;
+    // === Mapear modalidad del lead al formato del form ===
+    // El lead puede tener leadModality: "online" | "presencial" | "híbrida"
+    // El form usa: "OL" (online) | "P" (presencial) | "H" (híbrida)
+    let mappedModality = form.modality; // default: mantener la actual
+    if (patient.isLead && patient.leadModality) {
+      const mod = patient.leadModality.toLowerCase();
+      if (mod === "online") mappedModality = "OL";
+      else if (mod === "presencial") mappedModality = "P";
+      else if (mod === "híbrida" || mod === "hibrida") mappedModality = "H";
+    }
+    // === Autocompletar notes con el mensaje del lead si existe ===
+    // Si el lead viene de ContactRequest, leadNotes tiene el mensaje del form.
+    // Si viene de PatientRequest, no hay leadNotes (los notes van aparte).
+    const autoNotes = patient.isLead && patient.leadNotes ? patient.leadNotes : form.notes;
     onFormChange({
       ...form,
       patientName: cleanName,
@@ -1280,9 +1294,16 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
       isLead: patient.isLead || false,
       leadId: patient.isLead ? patient.id : null,
       leadSource: patient.isLead ? (patient.leadSource || "patient_request") : null,
+      modality: mappedModality,
+      notes: autoNotes,
     });
-    setPatientSearch(patient.name);
+    // Setear patientSearch al cleanName (sin "(Solicitud Online)")
+    // para que no dispare otra búsqueda con ese sufijo.
+    setPatientSearch(cleanName);
+    // Ocultar sugerencias inmediatamente para que no aparezca el mensaje
+    // "No se encontraron pacientes" después de seleccionar.
     setShowSuggestions(false);
+    setSearchResults([]);
   };
 
   // Cuando el admin escribe en el input de búsqueda, también actualiza patientName
@@ -1338,7 +1359,16 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
                 ))}
               </div>
             )}
-            {showSuggestions && patientSearch.length >= 2 && !searching && searchResults.length === 0 && (
+            {/* === Mensaje "No se encontraron pacientes" ===
+                SOLO se muestra cuando:
+                - showSuggestions es true
+                - patientSearch tiene >= 2 caracteres
+                - NO estamos buscando (searching=false)
+                - NO hay resultados (searchResults.length === 0)
+                - El admin NO tiene ya un paciente seleccionado con ese nombre
+                  (para evitar que aparezca después de seleccionar uno)
+            */}
+            {showSuggestions && patientSearch.length >= 2 && !searching && searchResults.length === 0 && form.patientName !== patientSearch && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-teal-200 rounded-lg shadow-lg p-3">
                 <p className="text-xs text-teal-500">No se encontraron pacientes. Completá los campos abajo para crear uno nuevo.</p>
               </div>

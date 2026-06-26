@@ -201,6 +201,11 @@ model ContactRequest {
   phone     String?
   message   String
   reason    String? // "consulta_general", "solicitar_turno", "informacion"
+  // === Modalidad de atención (solo cuando reason="solicitar_turno") ===
+  // Guarda la modalidad seleccionada por el usuario en el form de contacto:
+  // "online", "presencial", "híbrida". Se muestra en el panel admin para
+  // que el equipo sepa qué modalidad prefiere el consultante.
+  modality  String?
   status    String   @default("nuevo") // "nuevo", "leido", "respondido", "resuelto"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

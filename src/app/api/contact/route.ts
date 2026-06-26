@@ -7,7 +7,7 @@ import { sendContactNotification } from "@/lib/email";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, phone, message, reason } = body;
+    const { name, email, phone, message, reason, modality } = body;
 
     if (!name || !email || !message) {
       return NextResponse.json(
@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
       phone: phone?.trim() || null,
       message: message.trim(),
       reason: reason || null,
+      // Guardar modality cuando viene (solo para solicitar_turno)
+      modality: modality || null,
     };
 
     const contact = await db.contactRequest.create({

@@ -89,60 +89,77 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // === Unificar resultados ===
+    // === Unificar resultados, deduplicando por email ===
+    // PROBLEMA: cuando un usuario manda el form /#contacto con reason="solicitar_turno",
+    // se crean DOS registros: una PatientRequest (con modality, age, etc.) Y una
+    // ContactRequest (con el mensaje). Ambos tienen el mismo email.
+    // Sin deduplicación, el admin ve el mismo paciente 2 veces en la búsqueda.
+    //
+    // SOLUCIÓN: usar un Map por email (lowercase). Si ya existe un resultado
+    // con ese email, no agregar otro. Prioridad: Patient formal > PatientRequest
+    // > ContactRequest (porque PatientRequest tiene más datos: modality, age, etc.)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const results: any[] = [];
+    const resultsMap = new Map<string, any>();
 
-    // Pacientes formales (isLead: false)
+    // Pacientes formales (isLead: false) — máxima prioridad
     for (const p of patients) {
-      results.push({
-        id: p.id,
-        userId: p.userId,
-        name: p.user.name,
-        email: p.user.email,
-        phone: p.user.phone || "",
-        isLead: false,
-      });
+      const emailKey = p.user.email.toLowerCase();
+      if (!resultsMap.has(emailKey)) {
+        resultsMap.set(emailKey, {
+          id: p.id,
+          userId: p.userId,
+          name: p.user.name,
+          email: p.user.email,
+          phone: p.user.phone || "",
+          isLead: false,
+        });
+      }
     }
 
     // Solicitudes pendientes de PatientRequest (isLead: true, source: "patient_request")
+    // Prioridad media (tiene modality, age, guardianName)
     for (const r of leadRequests) {
-      results.push({
-        id: r.id,
-        name: `${r.name} (Solicitud Online)`,
-        email: r.email,
-        phone: r.phone || "",
-        isLead: true,
-        leadReason: r.reason,
-        leadModality: r.modality,
-        leadPatientAge: r.patientAge,
-        leadGuardianName: r.guardianName,
-        leadSource: "patient_request",
-      });
+      const emailKey = r.email.toLowerCase();
+      if (!resultsMap.has(emailKey)) {
+        resultsMap.set(emailKey, {
+          id: r.id,
+          name: `${r.name} (Solicitud Online)`,
+          email: r.email,
+          phone: r.phone || "",
+          isLead: true,
+          leadReason: r.reason,
+          leadModality: r.modality,
+          leadPatientAge: r.patientAge,
+          leadGuardianName: r.guardianName,
+          leadSource: "patient_request",
+        });
+      }
     }
 
     // Solicitudes de turno desde ContactRequest (isLead: true, source: "contact_request")
-    // Estas vienen del form /contacto con reason "solicitar_turno".
-    // Se muestran igual que las PatientRequest para que el admin pueda
-    // asignarlas desde la Agenda Central.
+    // Prioridad baja (solo tiene name, email, phone, message)
     for (const c of contactTurnoRequests) {
-      results.push({
-        id: c.id,
-        name: `${c.name} (Solicitud Online)`,
-        email: c.email,
-        phone: c.phone || "",
-        isLead: true,
-        leadReason: c.reason, // "solicitar_turno"
-        leadModality: null, // ContactRequest no tiene campo modality
-        leadPatientAge: null,
-        leadGuardianName: null,
-        leadNotes: c.message, // El mensaje del form de contacto
-        leadSource: "contact_request",
-      });
+      const emailKey = c.email.toLowerCase();
+      if (!resultsMap.has(emailKey)) {
+        resultsMap.set(emailKey, {
+          id: c.id,
+          name: `${c.name} (Solicitud Online)`,
+          email: c.email,
+          phone: c.phone || "",
+          isLead: true,
+          leadReason: c.reason, // "solicitar_turno"
+          leadModality: c.modality, // Ahora ContactRequest también tiene modality
+          leadPatientAge: null,
+          leadGuardianName: null,
+          leadNotes: c.message, // El mensaje del form de contacto
+          leadSource: "contact_request",
+        });
+      }
     }
 
-    // Limitar a 10 resultados totales
-    return NextResponse.json(results.slice(0, 10));
+    // Convertir Map a array y limitar a 10 resultados
+    const results = Array.from(resultsMap.values()).slice(0, 10);
+    return NextResponse.json(results);
   } catch (error) {
     console.error("Error in search-patients:", error);
     return NextResponse.json(

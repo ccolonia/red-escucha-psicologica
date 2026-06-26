@@ -167,6 +167,7 @@ interface ContactRequest {
   phone: string | null;
   message: string;
   reason: string | null;
+  modality?: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -2309,6 +2310,16 @@ export function AdminContacts() {
     informacion: "Información",
   };
 
+  // === Map de modalidades de atención ===
+  // Se muestra solo cuando la consulta tiene modality seteada
+  // (viene del form de contacto con reason="solicitar_turno").
+  const MODALITY_LABEL_MAP: Record<string, { label: string; bgColor: string; color: string }> = {
+    online: { label: "Online", bgColor: "bg-blue-50", color: "text-blue-700" },
+    presencial: { label: "Presencial", bgColor: "bg-emerald-50", color: "text-emerald-700" },
+    "híbrida": { label: "Híbrida", bgColor: "bg-violet-50", color: "text-violet-700" },
+    hibrida: { label: "Híbrida", bgColor: "bg-violet-50", color: "text-violet-700" },
+  };
+
   const handleStatusUpdate = async (id: string, newStatus: string) => {
     try {
       const res = await fetch(`/api/contact/${id}`, {
@@ -2394,6 +2405,7 @@ export function AdminContacts() {
           {filtered.map((contact) => {
             const statusInfo = CONTACT_STATUS_MAP[contact.status] || CONTACT_STATUS_MAP.nuevo;
             const nextStatus = NEXT_STATUS[contact.status];
+            const modalityInfo = contact.modality ? MODALITY_LABEL_MAP[contact.modality] : null;
             return (
               <Card key={contact.id} className="border-teal-100">
                 <CardContent className="p-4">
@@ -2407,6 +2419,11 @@ export function AdminContacts() {
                         {contact.reason && (
                           <Badge variant="outline" className="text-xs">
                             {REASON_MAP[contact.reason] || contact.reason}
+                          </Badge>
+                        )}
+                        {modalityInfo && (
+                          <Badge variant="outline" className={`text-xs ${modalityInfo.bgColor} ${modalityInfo.color} border`}>
+                            {modalityInfo.label}
                           </Badge>
                         )}
                       </div>
