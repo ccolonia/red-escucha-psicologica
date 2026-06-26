@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       notes,
       isLead,
       leadId,
+      leadSource,
     } = body;
 
     // === Validación de campos obligatorios ===
@@ -280,20 +281,36 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 6. Si viene de un PatientRequest (isLead), marcarlo como "assigned"
-      // para sacarlo de la bandeja de pendientes del Triage.
+      // 6. Si viene de un lead (PatientRequest o ContactRequest), marcarlo
+      // como asignado/resuelto para sacarlo de la bandeja de pendientes.
+      // - PatientRequest (leadSource="patient_request" o sin leadSource):
+      //   marcar status="assigned" + assignedToId + appointmentId
+      // - ContactRequest (leadSource="contact_request"):
+      //   marcar status="resuelto" (los ContactRequest usan "resuelto")
       if (isLead && leadId) {
-        await tx.patientRequest.update({
-          where: { id: leadId },
-          data: {
-            status: "assigned",
-            assignedToId: professionalId,
-            appointmentId: appointment.id,
-          },
-        }).catch(() => {
-          // Si el PatientRequest no existe o ya fue asignado, no romper
-          // el flujo — el appointment ya está creado.
-        });
+        if (leadSource === "contact_request") {
+          // Lead vino del form /contacto con reason "solicitar_turno"
+          await tx.contactRequest.update({
+            where: { id: leadId },
+            data: { status: "resuelto" },
+          }).catch(() => {
+            // Si el ContactRequest no existe o ya fue resuelto, no romper
+            // el flujo — el appointment ya está creado.
+          });
+        } else {
+          // Lead vino del form /patient-requests (default)
+          await tx.patientRequest.update({
+            where: { id: leadId },
+            data: {
+              status: "assigned",
+              assignedToId: professionalId,
+              appointmentId: appointment.id,
+            },
+          }).catch(() => {
+            // Si el PatientRequest no existe o ya fue asignado, no romper
+            // el flujo — el appointment ya está creado.
+          });
+        }
       }
 
       return {

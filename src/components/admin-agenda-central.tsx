@@ -203,6 +203,7 @@ interface AssignFormData {
   modality: string; // "P" | "OL" | "H" — selector del dialog
   isLead: boolean;
   leadId: string | null;
+  leadSource?: string | null; // "patient_request" | "contact_request"
 }
 
 // ====================================================================
@@ -444,6 +445,7 @@ export function AdminAgendaCentral() {
           notes: assignForm.notes.trim() || null,
           isLead: assignForm.isLead,
           leadId: assignForm.leadId,
+          leadSource: assignForm.leadSource,
         }),
       });
       const data = await res.json();
@@ -1277,6 +1279,7 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
       patientPhone: patient.phone,
       isLead: patient.isLead || false,
       leadId: patient.isLead ? patient.id : null,
+      leadSource: patient.isLead ? (patient.leadSource || "patient_request") : null,
     });
     setPatientSearch(patient.name);
     setShowSuggestions(false);
@@ -1286,7 +1289,7 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
   // para que si no selecciona ningún suggestion, se use lo que escribió
   const handleSearchInputChange = (value: string) => {
     setPatientSearch(value);
-    onFormChange({ ...form, patientName: value, isLead: false, leadId: null });
+    onFormChange({ ...form, patientName: value, isLead: false, leadId: null, leadSource: null });
   };
 
   if (!professional || !slot) return null;
