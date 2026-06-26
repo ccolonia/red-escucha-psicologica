@@ -215,6 +215,34 @@ function generateTimeSlotsDynamic(slotDuration: number): string[] {
   return slots;
 }
 
+// === Generar slots alineados al startTime de un schedule específico ===
+// PROBLEMA: generateTimeSlotsDynamic empieza siempre desde 06:00. Si el
+// schedule empieza a las 08:15 con slotDuration=45, los slots generados
+// desde 06:00 son: 06:00, 06:45, 07:30, 08:15, 09:00, 09:45...
+// Coinciden porque 08:15 cae en 06:00 + 2*45.
+// PERO si el schedule empieza a las 08:30 con slotDuration=45, los slots
+// generados desde 06:00 son: 06:00, 06:45, 07:30, 08:15, 09:00... y
+// 08:30 NO coincide con ninguna fila → el schedule no se ve.
+//
+// SOLUCIÓN: generar slots alineados al startTime del schedule:
+// 08:30, 09:15, 10:00, 10:45... garantizando que TODOS los slots del
+// schedule aparezcan como filas en la grilla.
+function generateTimeSlotsForSchedule(startTime: string, endTime: string, slotDuration: number): string[] {
+  const slots: string[] = [];
+  const [startH, startM] = startTime.split(":").map(Number);
+  const [endH, endM] = endTime.split(":").map(Number);
+  const startMin = startH * 60 + startM;
+  const endMin = endH * 60 + endM;
+  let current = startMin;
+  while (current < endMin) {
+    const h = Math.floor(current / 60);
+    const m = current % 60;
+    slots.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
+    current += slotDuration;
+  }
+  return slots;
+}
+
 // ===== Component =====
 interface ProfessionalWeeklyAgendaProps {
   professionalId?: string;
@@ -401,19 +429,38 @@ export function ProfessionalWeeklyAgenda({
   // Use prop professionalId if provided, otherwise use fetched one
   const professionalId = propProfessionalId || fetchedProfessionalId;
 
-  // === TIME_SLOTS dinámico según slotDuration del profesional ===
-  // Calcula el slotDuration más común de los schedules cargados.
-  // Si no hay schedules, usa 45 min por defecto.
+  // === TIME_SLOTS: unión de slots generados por CADA schedule ===
+  // PROBLEMA anterior: usábamos solo el slotDuration MÁS COMÚN. Si el
+  // profesional tenía schedules con slotDuration distintos (ej: 15 y 45),
+  // el más común (15) generaba una grilla con filas cada 15 min. Los
+  // turnos de 45 min del otro schedule NO coincidian con esas filas
+  // exactas → se veían como huecos pequeños intercalados.
+  //
+  // SOLUCIÓN: para CADA schedule, generar sus slots alineados a su propio
+  // startTime (ej: schedule 08:15-15:45 con slotDuration=45 genera:
+  // 08:15, 09:00, 09:45, 10:30, 11:15, 12:00, 12:45, 13:30, 14:15, 15:00).
+  // Luego tomar la UNIÓN ordenada de todos esos slots.
+  // Así cada schedule aporta SUS slots como filas, sin importar si
+  // coinciden con múltiplos de un slotDuration global.
   const timeSlots = useMemo(() => {
     if (schedules.length === 0) return generateTimeSlotsDynamic(45);
-    // Encontrar el slotDuration más frecuente
-    const counts: Record<number, number> = {};
+
+    // Para cada schedule, generar sus slots alineados
+    const allSlotsSet = new Set<string>();
     for (const s of schedules) {
-      counts[s.slotDuration] = (counts[s.slotDuration] || 0) + 1;
+      const slotsForThisSchedule = generateTimeSlotsForSchedule(
+        s.startTime,
+        s.endTime,
+        s.slotDuration
+      );
+      slotsForThisSchedule.forEach((slot) => allSlotsSet.add(slot));
     }
-    const mostCommon = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-    const slotDuration = mostCommon ? parseInt(mostCommon[0], 10) : 45;
-    return generateTimeSlotsDynamic(slotDuration);
+
+    // Si por algún motivo no se generaron slots (schedules vacíos?), fallback
+    if (allSlotsSet.size === 0) return generateTimeSlotsDynamic(45);
+
+    // Ordenar los slots cronológicamente
+    return Array.from(allSlotsSet).sort((a, b) => a.localeCompare(b));
   }, [schedules]);
 
   // Detect mobile screen
