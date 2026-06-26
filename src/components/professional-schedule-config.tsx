@@ -192,6 +192,24 @@ export function ProfessionalScheduleConfig() {
       return;
     }
 
+    // === Validar que el bloque sea lo suficientemente largo para el slotDuration ===
+    // Si el bloque dura 30 min pero el slotDuration es 45, ningún slot va a caber
+    // y el backend lo va a filtrar → el schedule se guarda pero no se muestra en la grilla.
+    // Para evitar confusiones, validamos acá y le damos feedback claro al profesional.
+    const [sh, sm] = newStart.split(":").map(Number);
+    const [eh, em] = newEnd.split(":").map(Number);
+    const blockDurationMin = (eh * 60 + em) - (sh * 60 + sm);
+    if (blockDurationMin < newDuration) {
+      toast.error(
+        `El bloque dura ${blockDurationMin} min pero el turno es de ${newDuration} min.\n` +
+        `Ningún turno va a caber en este bloque.\n\n` +
+        `Soluciones:\n` +
+        `• Ampliá el bloque (ej: 11:30 a 12:30 = 60 min)\n` +
+        `• Reducí la duración del turno (mínimo 40 min)`
+      );
+      return;
+    }
+
     // Check for overlap on same day (excluding the entry being edited)
     const overlap = schedules.find(
       (s, i) => i !== editingScheduleIdx && s.dayOfWeek === newDay && newStart < s.endTime && newEnd > s.startTime
@@ -604,6 +622,33 @@ export function ProfessionalScheduleConfig() {
                     </Select>
                   </div>
                 )}
+                {/* === Helper visual: cuántos slots se van a generar === */}
+                {(() => {
+                  const [sh, sm] = newStart.split(":").map(Number);
+                  const [eh, em] = newEnd.split(":").map(Number);
+                  const blockMin = (eh * 60 + em) - (sh * 60 + sm);
+                  const slotsCount = Math.floor(blockMin / newDuration);
+                  const isBlockTooShort = blockMin < newDuration;
+                  return (
+                    <div className={`text-xs rounded-md px-3 py-2 ${
+                      isBlockTooShort
+                        ? "bg-red-50 border border-red-200 text-red-700"
+                        : "bg-teal-50 border border-teal-200 text-teal-700"
+                    }`}>
+                      {isBlockTooShort ? (
+                        <>
+                          ⚠️ <strong>El bloque dura {blockMin} min</strong> pero el turno es de {newDuration} min.
+                          <br />
+                          Ningún turno va a caber. Ampliá el bloque o reducí la duración.
+                        </>
+                      ) : (
+                        <>
+                          ✓ Bloque de <strong>{blockMin} min</strong> → se generarán <strong>{slotsCount} slot{slotsCount !== 1 ? "s" : ""}</strong> de {newDuration} min cada uno.
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>
