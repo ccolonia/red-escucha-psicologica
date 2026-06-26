@@ -227,14 +227,33 @@ export async function PATCH(
             include: {
               schedules: {
                 where: { dayOfWeek: new Date(date + "T12:00:00").getDay() || 7 },
-                select: { slotDuration: true },
-                take: 1,
+                select: { slotDuration: true, startTime: true, endTime: true, direccionId: true },
               },
+              addresses: { select: { id: true, label: true, address: true } },
             },
           });
           const slotDuration = professionalWithSchedule?.schedules?.[0]?.slotDuration || 45;
           timeEnd = `${String(hours + Math.floor((minutes + slotDuration) / 60)).padStart(2, "0")}:${String((minutes + slotDuration) % 60).padStart(2, "0")}`;
-          officeAddress = professionalWithSchedule?.officeAddress || null;
+
+          // === Resolver officeAddress desde ProfessionalAddress ===
+          // 1. Buscar el schedule que contiene la hora del appointment
+          // 2. Si tiene direccionId, resolver la dirección
+          // 3. Si no, fallback a officeAddress legacy
+          const matchingSchedule = professionalWithSchedule?.schedules?.find(
+            (s) => time! >= s.startTime && time! < s.endTime
+          );
+          if (matchingSchedule?.direccionId) {
+            const foundAddr = professionalWithSchedule?.addresses?.find((a) => a.id === matchingSchedule.direccionId);
+            officeAddress = foundAddr ? `${foundAddr.label}: ${foundAddr.address}` : null;
+          } else {
+            officeAddress = professionalWithSchedule?.officeAddress || null;
+          }
+
+          // === SANITIZAR: quitar emails del profesional del officeAddress ===
+          // El paciente NO debe ver el email del profesional en su notificación.
+          if (officeAddress) {
+            officeAddress = officeAddress.replace(/[^\s:]+@[^\s:]+\.[^\s:]+/g, "").trim().replace(/:\s*$/g, "").trim() || null;
+          }
         }
 
         try {

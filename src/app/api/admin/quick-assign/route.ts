@@ -4,6 +4,20 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendTriagePatientNotification, sendTriageProfessionalNotification } from "@/lib/email";
 
+// === Sanitizar officeAddress para quitar emails del profesional ===
+// El paciente NO debe ver el email del profesional en su notificación.
+// Si por algún motivo officeAddress contiene un email (ej: viene del campo
+// legacy Professional.officeAddress que podría tener formato "dir: email"),
+// lo removemos antes de pasarlo al template del email.
+function sanitizeOfficeAddress(addr: string | null): string | null {
+  if (!addr) return null;
+  // Remover cualquier email que aparezca (formato xxx@yyy.zzz)
+  const sanitized = addr.replace(/[^\s:]+@[^\s:]+\.[^\s:]+/g, "").trim();
+  // Si quedó "Gana 648, Versalles, CABA:" con dos puntos al final, limpiar
+  const cleaned = sanitized.replace(/:\s*$/g, "").trim();
+  return cleaned || null;
+}
+
 // POST /api/admin/quick-assign
 //
 // Asignación rápida de turno desde la Agenda Centralizada del admin.
@@ -332,6 +346,7 @@ export async function POST(request: NextRequest) {
         // 2. Si no, usar el officeAddress legacy del Professional (compatibilidad)
         if (matchingSchedule?.direccionId) {
           const foundAddr = profWithSchedule?.addresses?.find((a) => a.id === matchingSchedule.direccionId);
+          // Construir como "LABEL: ADDRESS" (ej: "Consultorio Principal: Av Cabildo 1234")
           officeAddress = foundAddr ? `${foundAddr.label}: ${foundAddr.address}` : null;
         } else {
           // Fallback: usar officeAddress legacy del Professional
@@ -341,6 +356,12 @@ export async function POST(request: NextRequest) {
           });
           officeAddress = profLegacy?.officeAddress || null;
         }
+
+        // === SANITIZAR: quitar emails del profesional del officeAddress ===
+        // El paciente NO debe ver el email del profesional. Si officeAddress
+        // contiene un email (caso edge: el profesional lo cargó con formato
+        // "dir: email"), lo removemos antes de pasarlo al template.
+        officeAddress = sanitizeOfficeAddress(officeAddress);
       }
 
       // 1. Email al paciente
