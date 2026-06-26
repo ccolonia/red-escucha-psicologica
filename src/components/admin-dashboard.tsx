@@ -35,6 +35,7 @@ import {
   ChevronRight,
   Filter,
   BadgeCheck,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,6 +85,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useAppStore } from "@/lib/store";
+import { formatPhoneForWhatsApp } from "@/lib/email";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { NewAppointmentDialog } from "@/components/new-appointment-dialog";
@@ -2410,7 +2412,29 @@ export function AdminContacts() {
                       </div>
                       <p className="text-sm text-teal-600">{contact.email}</p>
                       {contact.phone && (
-                        <p className="text-sm text-teal-500">{contact.phone}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <p className="text-sm text-teal-500">{contact.phone}</p>
+                          {(() => {
+                            const waPhone = formatPhoneForWhatsApp(contact.phone);
+                            if (!waPhone) return null;
+                            // Mensaje pre-cargado con el nombre del consultante
+                            const waMessage = encodeURIComponent(
+                              `Hola ${contact.name}, te contactamos desde Red Escucha Psicológica respecto a tu consulta. 😊`
+                            );
+                            return (
+                              <a
+                                href={`https://wa.me/${waPhone}?text=${waMessage}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#25D366] hover:bg-[#1da851] text-white text-xs font-medium rounded-md transition-colors"
+                                title={`Enviar WhatsApp a ${contact.name}`}
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                Enviar WhatsApp
+                              </a>
+                            );
+                          })()}
+                        </div>
                       )}
                       <p className="text-sm text-teal-700 mt-2 bg-teal-50 p-2 rounded">
                         {contact.message}

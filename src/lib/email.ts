@@ -1050,7 +1050,7 @@ const MODALITY_EMAIL_MAP: Record<string, string> = {
 // Ej: "+54 11 6866-7898" → "5491168667898"
 //     "1168667898" → "5491168667898"
 //     "5491168667898" → "5491168667898" (sin cambios)
-function formatPhoneForWhatsApp(phone: string | null): string | null {
+export function formatPhoneForWhatsApp(phone: string | null): string | null {
   if (!phone) return null;
   // Quitar todo lo que no sea dígito
   let cleaned = phone.replace(/[^0-9]/g, "");
