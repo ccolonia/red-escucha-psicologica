@@ -48,7 +48,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { dayOfWeek, startTime, endTime, slotDuration, modality } = body;
+    const { dayOfWeek, startTime, endTime, slotDuration, modality, direccionId } = body;
 
     if (!dayOfWeek || !startTime || !endTime) {
       return NextResponse.json(
@@ -79,6 +79,8 @@ export async function POST(
         endTime,
         slotDuration: slotDuration || 45,
         modality: modality || "ambas",
+        // direccionId opcional (solo para modalidad presencial)
+        direccionId: direccionId || null,
       },
     });
 
@@ -121,6 +123,7 @@ export async function PUT(
         endTime: string;
         slotDuration: number;
         modality: string;
+        direccionId?: string | null;
       }>;
     };
 
@@ -162,6 +165,7 @@ export async function PUT(
             endTime: s.endTime,
             slotDuration: s.slotDuration || 45,
             modality: s.modality || "ambas",
+            direccionId: s.direccionId || null,
           },
         })
       ),

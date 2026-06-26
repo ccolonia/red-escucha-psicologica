@@ -41,6 +41,10 @@ interface ScheduleEntry {
   endTime: string;
   slotDuration: number;
   modality: string;
+  // === direccionId: enlace a ProfessionalAddress ===
+  // Opcional. Solo se setea cuando la modalidad es presencial ("P" o "ambas").
+  // Permite al profesional asignar una dirección específica a cada bloque horario.
+  direccionId?: string | null;
 }
 
 interface OverrideEntry {
@@ -51,7 +55,15 @@ interface OverrideEntry {
   endTime?: string | null;
   slotDuration?: number | null;
   modality?: string | null;
+  direccionId?: string | null;
   reason?: string | null;
+}
+
+// === Dirección del profesional (para el selector) ===
+interface ProfessionalAddressOption {
+  id: string;
+  label: string;
+  address: string;
 }
 
 const DAYS_MAP: Record<number, string> = {
@@ -110,6 +122,9 @@ export function ProfessionalScheduleConfig() {
   const [newEnd, setNewEnd] = useState("18:00");
   const [newDuration, setNewDuration] = useState(45);
   const [newModality, setNewModality] = useState("ambas");
+  // === direccionId para el bloque de schedule que se está creando/editando ===
+  // Solo se habilita cuando newModality es "P" o "ambas" (presencial).
+  const [newDireccionId, setNewDireccionId] = useState<string>("");
   const [editingScheduleIdx, setEditingScheduleIdx] = useState<number | null>(null);
 
   // New override form
@@ -119,9 +134,16 @@ export function ProfessionalScheduleConfig() {
   const [overrideEnd, setOverrideEnd] = useState("13:00");
   const [overrideDuration, setOverrideDuration] = useState(45);
   const [overrideModality, setOverrideModality] = useState("ambas");
+  const [overrideDireccionId, setOverrideDireccionId] = useState<string>("");
   const [overrideReason, setOverrideReason] = useState("");
   const [editingOverrideId, setEditingOverrideId] = useState<string | null>(null);
   const [overrideDatePickerOpen, setOverrideDatePickerOpen] = useState(false);
+
+  // === Direcciones del profesional (para el selector) ===
+  // Se cargan al montar el componente. Si no hay direcciones cargadas,
+  // el selector aparece vacío y el profesional puede guardar el schedule
+  // sin dirección (el sistema le avisará que falta).
+  const [addresses, setAddresses] = useState<ProfessionalAddressOption[]>([]);
 
   // Load professional ID and data
   useEffect(() => {
@@ -145,14 +167,17 @@ export function ProfessionalScheduleConfig() {
 
   const loadData = async (profId: string) => {
     try {
-      const [scheduleRes, overridesRes] = await Promise.all([
+      const [scheduleRes, overridesRes, addressesRes] = await Promise.all([
         fetch(`/api/professionals/${profId}/schedule`),
         fetch(`/api/professionals/${profId}/overrides`),
+        fetch(`/api/professionals/${profId}/addresses`),
       ]);
       const scheduleData = await scheduleRes.json();
       const overridesData = await overridesRes.json();
+      const addressesData = await addressesRes.json();
       setSchedules(Array.isArray(scheduleData) ? scheduleData : []);
       setOverrides(Array.isArray(overridesData) ? overridesData : []);
+      setAddresses(Array.isArray(addressesData) ? addressesData : []);
     } catch {
       toast.error("Error al cargar agenda");
     } finally {
@@ -176,12 +201,26 @@ export function ProfessionalScheduleConfig() {
       return;
     }
 
+    // === Validar que si la modalidad es presencial, tenga dirección ===
+    // Solo si el profesional tiene direcciones cargadas. Si no tiene ninguna,
+    // le permitimos guardar sin dirección pero le avisamos.
+    const isPresencial = newModality === "P" || newModality === "ambas";
+    if (isPresencial && addresses.length > 0 && !newDireccionId) {
+      const confirmar = confirm(
+        "Estás creando un bloque presencial sin asignar una dirección.\n\n" +
+        "El paciente NO recibirá la dirección en el email de confirmación.\n\n" +
+        "¿Querés continuar de todas formas?"
+      );
+      if (!confirmar) return;
+    }
+
     const newEntry: ScheduleEntry = {
       dayOfWeek: newDay,
       startTime: newStart,
       endTime: newEnd,
       slotDuration: newDuration,
       modality: newModality,
+      direccionId: newDireccionId || null,
     };
 
     if (editingScheduleIdx !== null) {
@@ -219,6 +258,7 @@ export function ProfessionalScheduleConfig() {
     setNewEnd(entry.endTime);
     setNewDuration(entry.slotDuration);
     setNewModality(entry.modality);
+    setNewDireccionId(entry.direccionId || "");
     setEditingScheduleIdx(index);
   };
 
@@ -229,6 +269,7 @@ export function ProfessionalScheduleConfig() {
     setNewEnd("18:00");
     setNewDuration(45);
     setNewModality("ambas");
+    setNewDireccionId("");
     setEditingScheduleIdx(null);
   };
 
@@ -278,6 +319,7 @@ export function ProfessionalScheduleConfig() {
         body.endTime = overrideEnd;
         body.slotDuration = overrideDuration;
         body.modality = overrideModality;
+        body.direccionId = overrideDireccionId || null;
       }
 
       const isEditing = editingOverrideId !== null;
@@ -331,6 +373,7 @@ export function ProfessionalScheduleConfig() {
       setOverrideEnd(override.endTime || "13:00");
       setOverrideDuration(override.slotDuration || 45);
       setOverrideModality(override.modality || "ambas");
+      setOverrideDireccionId(override.direccionId || "");
     }
   };
 
@@ -342,6 +385,7 @@ export function ProfessionalScheduleConfig() {
     setOverrideEnd("13:00");
     setOverrideDuration(45);
     setOverrideModality("ambas");
+    setOverrideDireccionId("");
     setOverrideReason("");
     setEditingOverrideId(null);
     setOverrideDatePickerOpen(false);
@@ -499,7 +543,13 @@ export function ProfessionalScheduleConfig() {
                 <div className="flex gap-1 items-end">
                   <div className="space-y-1 flex-1">
                     <Label className="text-xs text-teal-600">Modalidad</Label>
-                    <Select value={newModality} onValueChange={setNewModality}>
+                    <Select value={newModality} onValueChange={(v) => {
+                      setNewModality(v);
+                      // Si cambia a Online, limpiar la dirección (no aplica)
+                      if (v === "OL") {
+                        setNewDireccionId("");
+                      }
+                    }}>
                       <SelectTrigger className="border-teal-200 h-9 text-sm">
                         <SelectValue />
                       </SelectTrigger>
@@ -531,6 +581,29 @@ export function ProfessionalScheduleConfig() {
                     </Button>
                   </div>
                 </div>
+                {/* === Selector de Dirección (solo si la modalidad es presencial) === */}
+                {(newModality === "P" || newModality === "ambas") && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-teal-600">
+                      Dirección de Atención Presencial
+                      {addresses.length === 0 && (
+                        <span className="text-amber-600 ml-1 italic">(sin direcciones cargadas — agregá una en tu Perfil)</span>
+                      )}
+                    </Label>
+                    <Select value={newDireccionId} onValueChange={setNewDireccionId}>
+                      <SelectTrigger className="border-teal-200 h-9 text-sm">
+                        <SelectValue placeholder={addresses.length === 0 ? "Sin direcciones disponibles" : "Seleccionar dirección..."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {addresses.map((addr) => (
+                          <SelectItem key={addr.id} value={addr.id}>
+                            {addr.label} — {addr.address}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

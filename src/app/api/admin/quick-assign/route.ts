@@ -304,20 +304,43 @@ export async function POST(request: NextRequest) {
       let officeAddress: string | null = null;
       if (result.appointment.time) {
         const [h, m] = result.appointment.time.split(":").map(Number);
+        // Buscar el schedule que contiene la hora del turno para extraer
+        // slotDuration Y direccionId (enlace a ProfessionalAddress).
+        // Usar el día de la semana de la fecha del appointment.
+        const appointmentDate = new Date(result.appointment.date + "T12:00:00");
+        const dayOfWeek = appointmentDate.getDay() || 7;
         const profWithSchedule = await db.professional.findUnique({
           where: { id: professionalId },
           include: {
             schedules: {
-              where: { dayOfWeek: new Date(result.appointment.date + "T12:00:00").getDay() || 7 },
-              select: { slotDuration: true },
-              take: 1,
+              where: { dayOfWeek },
+              select: { slotDuration: true, startTime: true, endTime: true, direccionId: true },
             },
+            addresses: { select: { id: true, label: true, address: true } },
           },
         });
-        const slotDuration = profWithSchedule?.schedules?.[0]?.slotDuration || 45;
+        // Encontrar el schedule que contiene la hora del appointment
+        const matchingSchedule = profWithSchedule?.schedules?.find(
+          (s) => result.appointment.time! >= s.startTime && result.appointment.time! < s.endTime
+        );
+        const slotDuration = matchingSchedule?.slotDuration || profWithSchedule?.schedules?.[0]?.slotDuration || 45;
         const totalMin = h * 60 + m + slotDuration;
         timeEnd = `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
-        officeAddress = profWithSchedule?.officeAddress || null;
+
+        // === Resolver officeAddress desde ProfessionalAddress ===
+        // 1. Si el schedule tiene direccionId, buscar esa dirección
+        // 2. Si no, usar el officeAddress legacy del Professional (compatibilidad)
+        if (matchingSchedule?.direccionId) {
+          const foundAddr = profWithSchedule?.addresses?.find((a) => a.id === matchingSchedule.direccionId);
+          officeAddress = foundAddr ? `${foundAddr.label}: ${foundAddr.address}` : null;
+        } else {
+          // Fallback: usar officeAddress legacy del Professional
+          const profLegacy = await db.professional.findUnique({
+            where: { id: professionalId },
+            select: { officeAddress: true },
+          });
+          officeAddress = profLegacy?.officeAddress || null;
+        }
       }
 
       // 1. Email al paciente
@@ -330,6 +353,7 @@ export async function POST(request: NextRequest) {
           date: result.appointment.date,
           time: result.appointment.time,
           timeEnd,
+          officeAddress,
         });
         emailSent.patient = !patientResult.error;
         if (patientResult.error) {

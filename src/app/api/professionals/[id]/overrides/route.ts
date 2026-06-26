@@ -57,7 +57,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { date, type, startTime, endTime, slotDuration, modality, reason } = body;
+    const { date, type, startTime, endTime, slotDuration, modality, direccionId, reason } = body;
 
     if (!date || !type) {
       return NextResponse.json(
@@ -93,6 +93,8 @@ export async function POST(
         endTime: endTime || null,
         slotDuration: type === "extra" ? (slotDuration || 45) : null,
         modality: type === "extra" ? (modality || "ambas") : null,
+        // direccionId solo aplica a type="extra" (horario adicional presencial)
+        direccionId: type === "extra" ? (direccionId || null) : null,
         reason: reason || null,
       },
     });
@@ -132,7 +134,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { date, type, startTime, endTime, slotDuration, modality, reason } = body;
+    const { date, type, startTime, endTime, slotDuration, modality, direccionId, reason } = body;
 
     // Verify the override belongs to this professional
     const existing = await db.scheduleOverride.findFirst({
@@ -171,6 +173,8 @@ export async function PATCH(
         endTime: updateType === "extra" ? (endTime ?? existing.endTime) : null,
         slotDuration: updateType === "extra" ? (slotDuration ?? existing.slotDuration ?? 45) : null,
         modality: updateType === "extra" ? (modality ?? existing.modality ?? "ambas") : null,
+        // direccionId solo aplica a type="extra"
+        direccionId: updateType === "extra" ? (direccionId !== undefined ? (direccionId || null) : existing.direccionId) : null,
         reason: reason !== undefined ? (reason || null) : existing.reason,
       },
     });

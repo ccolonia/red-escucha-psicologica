@@ -78,13 +78,13 @@ function isModalityCompatible(scheduleModality: string, requestedModality: strin
 
 // === Helper: computar slots disponibles para un professional en una fecha ===
 function computeAvailableSlots(
-  schedules: { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number }[],
-  overrides: { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null }[],
+  schedules: { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number; direccionId?: string | null }[],
+  overrides: { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null; direccionId?: string | null }[],
   bookedTimes: Set<string>,
   dateStr: string,
   todayStr: string,
   targetDayOfWeek: number
-): { time: string; endTime: string; modality: string; duration: number }[] {
+): { time: string; endTime: string; modality: string; duration: number; direccionId: string | null }[] {
   // Filtrar schedules del día específico
   const daySchedules = schedules.filter((s) => s.dayOfWeek === targetDayOfWeek);
   const blockOverrides = overrides.filter((o) => o.type === "block");
@@ -93,7 +93,7 @@ function computeAvailableSlots(
   const fullDayBlock = blockOverrides.some((o) => !o.startTime && !o.endTime);
   if (fullDayBlock) return [];
 
-  const allSlots: { time: string; endTime: string; modality: string; duration: number }[] = [];
+  const allSlots: { time: string; endTime: string; modality: string; duration: number; direccionId: string | null }[] = [];
   for (const schedule of daySchedules) {
     const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
     for (const time of slots) {
@@ -109,7 +109,13 @@ function computeAvailableSlots(
         return false;
       });
       if (!isBlocked) {
-        allSlots.push({ time, endTime: minutesToTime(slotEndMin), modality: schedule.modality, duration: schedule.slotDuration });
+        allSlots.push({
+          time,
+          endTime: minutesToTime(slotEndMin),
+          modality: schedule.modality,
+          duration: schedule.slotDuration,
+          direccionId: schedule.direccionId || null,
+        });
       }
     }
   }
@@ -124,7 +130,13 @@ function computeAvailableSlots(
         const endMin = timeToMinutes(extra.endTime);
         if (slotStartMin >= endMin || slotEndMin > endMin) continue;
         if (!allSlots.find((s) => s.time === time)) {
-          allSlots.push({ time, endTime: minutesToTime(slotEndMin), modality: extra.modality || "ambas", duration });
+          allSlots.push({
+            time,
+            endTime: minutesToTime(slotEndMin),
+            modality: extra.modality || "ambas",
+            duration,
+            direccionId: extra.direccionId || null,
+          });
         }
       }
     }
@@ -152,12 +164,12 @@ function computeAvailableSlots(
 //
 // Cada slot incluye un flag 'past' para que el frontend sepa si es clickeable.
 function computeAllScheduleSlots(
-  schedules: { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number }[],
-  overrides: { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null }[],
+  schedules: { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number; direccionId?: string | null }[],
+  overrides: { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null; direccionId?: string | null }[],
   dateStr: string,
   todayStr: string,
   targetDayOfWeek: number
-): { time: string; endTime: string; modality: string; duration: number; past: boolean }[] {
+): { time: string; endTime: string; modality: string; duration: number; past: boolean; direccionId: string | null }[] {
   const daySchedules = schedules.filter((s) => s.dayOfWeek === targetDayOfWeek);
   const blockOverrides = overrides.filter((o) => o.type === "block");
   const extraOverrides = overrides.filter((o) => o.type === "extra");
@@ -165,7 +177,7 @@ function computeAllScheduleSlots(
   const fullDayBlock = blockOverrides.some((o) => !o.startTime && !o.endTime);
   if (fullDayBlock) return [];
 
-  const allSlots: { time: string; endTime: string; modality: string; duration: number }[] = [];
+  const allSlots: { time: string; endTime: string; modality: string; duration: number; direccionId: string | null }[] = [];
   for (const schedule of daySchedules) {
     const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
     for (const time of slots) {
@@ -181,7 +193,13 @@ function computeAllScheduleSlots(
         return false;
       });
       if (!isBlocked) {
-        allSlots.push({ time, endTime: minutesToTime(slotEndMin), modality: schedule.modality, duration: schedule.slotDuration });
+        allSlots.push({
+          time,
+          endTime: minutesToTime(slotEndMin),
+          modality: schedule.modality,
+          duration: schedule.slotDuration,
+          direccionId: schedule.direccionId || null,
+        });
       }
     }
   }
@@ -196,7 +214,13 @@ function computeAllScheduleSlots(
         const endMin = timeToMinutes(extra.endTime);
         if (slotStartMin >= endMin || slotEndMin > endMin) continue;
         if (!allSlots.find((s) => s.time === time)) {
-          allSlots.push({ time, endTime: minutesToTime(slotEndMin), modality: extra.modality || "ambas", duration });
+          allSlots.push({
+            time,
+            endTime: minutesToTime(slotEndMin),
+            modality: extra.modality || "ambas",
+            duration,
+            direccionId: extra.direccionId || null,
+          });
         }
       }
     }

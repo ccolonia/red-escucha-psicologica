@@ -134,6 +134,13 @@ model ProfessionalSchedule {
   endTime        String       // "18:00"
   slotDuration   Int          @default(45) // Duracion del turno en minutos (40, 45, 60)
   modality       String       @default("ambas") // "P" presencial, "OL" online, "ambas"
+  // === direccionId: enlace a ProfessionalAddress ===
+  // Opcional: solo se setea cuando la modalidad es presencial ("P" o "ambas").
+  // Permite que cada bloque horario tenga su propia dirección física.
+  // Ej: Lunes 09-13 en consultorio de Merlo, Jueves 14-18 en consultorio de Palermo.
+  // Cuando el admin asigna un turno, el backend busca la dirección asociada
+  // a este schedule y la inyecta automáticamente en el email al paciente.
+  direccionId    String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
@@ -150,6 +157,11 @@ model ScheduleOverride {
   endTime        String?      // Requerido para "extra"
   slotDuration   Int?         // Para "extra", duracion de sesion
   modality       String?      // Para "extra"
+  // === direccionId: enlace a ProfessionalAddress (para overrides "extra") ===
+  // Si el profesional agrega un horario adicional presencial en una dirección
+  // específica, puede setear este campo. El backend lo usa para inyectar la
+  // dirección en el email al paciente.
+  direccionId    String?
   reason         String?      // "Vacaciones", "Feriado", "Guardia", etc.
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
