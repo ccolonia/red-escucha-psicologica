@@ -142,6 +142,7 @@ interface AvailableSlot {
 interface BookedSlot {
   id: string;
   time: string;
+  endTime?: string | null;
   date?: string;
   modality: string | null;
   status: string;
@@ -150,6 +151,39 @@ interface BookedSlot {
   patientEmail: string | null;
   patientPhone: string | null;
 }
+
+// === Status labels para mostrar en el card del BookedSlot ===
+// (mismas etiquetas que la agenda del profesional)
+const STATUS_LABELS_ADMIN: Record<string, string> = {
+  pending: "Pendiente",
+  confirmed: "Confirmado",
+  rescheduled: "Reprogramado",
+  cancelled: "Cancelado",
+  cancelled_by_professional: "Cancelado",
+  completed: "Atendido",
+  absent: "Ausente",
+  blocked: "Bloqueado",
+};
+
+// === Status colors para el card (mismo estilo que el profesional) ===
+const STATUS_COLORS_ADMIN: Record<string, { bg: string; text: string; border: string; badge: string }> = {
+  pending: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", badge: "bg-amber-100 text-amber-700 border-amber-200" },
+  confirmed: { bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-200", badge: "bg-teal-100 text-teal-700 border-teal-200" },
+  rescheduled: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", badge: "bg-orange-100 text-orange-700 border-orange-200" },
+  cancelled: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", badge: "bg-red-100 text-red-700 border-red-200" },
+  cancelled_by_professional: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", badge: "bg-red-100 text-red-700 border-red-200" },
+  completed: { bg: "bg-gray-50", text: "text-gray-600", border: "border-gray-200", badge: "bg-gray-100 text-gray-600 border-gray-200" },
+  absent: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", badge: "bg-amber-100 text-amber-700 border-amber-200" },
+  blocked: { bg: "bg-slate-100", text: "text-slate-600", border: "border-slate-300", badge: "bg-slate-200 text-slate-700 border-slate-300" },
+};
+
+// === Modality badge colors (versión compacta para el card) ===
+const MODALITY_BADGE_ADMIN: Record<string, { label: string; color: string }> = {
+  P: { label: "Presencial", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  OL: { label: "OL", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  H: { label: "Híbrido", color: "bg-purple-50 text-purple-700 border-purple-200" },
+  ambas: { label: "Ambas", color: "bg-amber-50 text-amber-700 border-amber-200" },
+};
 
 interface DaySlots {
   date: string;
@@ -1173,38 +1207,63 @@ function ModalityIndicator({ slot, past }: { slot: AvailableSlot; past: boolean 
 }
 
 function BookedSlotCard({ slot, past }: { slot: BookedSlot; past: boolean }) {
-  const isRescheduled = slot.status === "rescheduled";
-  const isCancelledByProf = slot.status === "cancelled_by_professional";
-  const isCompleted = slot.status === "completed";
-  const isAbsent = slot.status === "absent";
+  const isBlocked = slot.status === "blocked";
 
-  let cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 transition-colors truncate";
-  let cellText = slot.patientName.split(" ").slice(0, 2).join(" ");
-
-  if (isRescheduled) {
-    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-semibold bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 transition-colors truncate";
-    cellText = "⚠️ Reprogramado";
-  } else if (isCancelledByProf) {
-    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-red-50 border border-red-300 text-red-600 hover:bg-red-100 transition-colors truncate line-through";
-    cellText = slot.patientName.split(" ").slice(0, 2).join(" ");
-  } else if (isCompleted) {
-    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-gray-100 border border-gray-300 text-gray-500 hover:bg-gray-200 transition-colors truncate";
-    cellText = `✓ ${slot.patientName.split(" ").slice(0, 2).join(" ")}`;
-  } else if (isAbsent) {
-    cellClass = "w-full text-center rounded py-1.5 text-[10px] font-bold bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors truncate";
-    cellText = `⊘ ${slot.patientName.split(" ").slice(0, 2).join(" ")}`;
+  // === Slot BLOQUEADO por el profesional ===
+  // Se renderiza con estilo distinto (slate, sin nombre de paciente)
+  if (isBlocked) {
+    return (
+      <div
+        className={`w-full px-1 ${past ? "opacity-60" : ""}`}
+        title="Slot bloqueado por el profesional (click para ver ficha)"
+      >
+        <div className="w-full text-center rounded py-1.5 text-[10px] font-bold bg-slate-200 border-2 border-slate-400 text-slate-700 hover:bg-slate-300 transition-colors truncate select-none">
+          🔒 Ocupado
+        </div>
+        <div className="text-[9px] text-slate-500 text-center mt-0.5 font-mono">
+          {slot.endTime ? `${slot.time}–${slot.endTime}` : slot.time}
+        </div>
+      </div>
+    );
   }
+
+  // === Slot con appointment (mismo formato que la agenda del profesional) ===
+  // Estructura:
+  //   Línea 1: nombre del paciente (font-bold)
+  //   Línea 2: rango horario "21:00–21:45" (font-mono)
+  //   Línea 3: badges de status + modality
+  const colors = STATUS_COLORS_ADMIN[slot.status] || STATUS_COLORS_ADMIN.pending;
+  const statusLabel = STATUS_LABELS_ADMIN[slot.status] || slot.status;
+  const modalityInfo = slot.modality ? MODALITY_BADGE_ADMIN[slot.modality] : null;
+  const timeDisplay = slot.endTime ? `${slot.time}–${slot.endTime}` : slot.time;
 
   return (
     <div
-      className={`w-full px-1 ${past ? "opacity-60" : ""}`}
-      title={`${slot.patientName} — ${slot.status}${slot.notes ? ` — ${slot.notes}` : ""} (click para ver ficha)`}
+      className={`w-full ${past ? "opacity-60" : ""} ${colors.bg} ${colors.text} ${colors.border} border rounded-md px-1.5 py-1 text-[10px] cursor-pointer overflow-hidden hover:shadow-md transition-shadow`}
+      title={`${slot.patientName} — ${statusLabel}${slot.notes ? ` — ${slot.notes}` : ""} (click para ver ficha)`}
     >
-      <div className={cellClass}>
-        {cellText}
+      {/* Línea 1: nombre del paciente */}
+      <div className="font-bold truncate">
+        {slot.patientName}
       </div>
-      <div className="text-[9px] text-teal-500 text-center mt-0.5 font-mono">
-        {slot.time}
+      {/* Línea 2: rango horario */}
+      <div className="text-[9px] opacity-70 mt-0.5 font-mono font-bold">
+        {timeDisplay}
+      </div>
+      {/* Línea 3: badges de status + modality */}
+      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+        <span
+          className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${colors.badge} border`}
+        >
+          {statusLabel}
+        </span>
+        {modalityInfo && (
+          <span
+            className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium border ${modalityInfo.color}`}
+          >
+            {modalityInfo.label}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -1440,7 +1499,7 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
         <div className="space-y-3">
           <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1">
             <div className="flex items-center gap-2 text-sm text-teal-900 font-bold"><Calendar className="w-4 h-4 text-teal-600" /><span className="capitalize">{(() => { try { return format(parseISO(slot.date || ""), "EEEE d 'de' MMMM", { locale: es }); } catch { return slot.date || ""; } })()}</span></div>
-            <div className="flex items-center gap-2 text-sm text-teal-900 font-bold"><Clock className="w-4 h-4 text-teal-600" /><span>{slot.time} hs</span><Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{modalityLabel}</Badge></div>
+            <div className="flex items-center gap-2 text-sm text-teal-900 font-bold"><Clock className="w-4 h-4 text-teal-600" /><span>{slot.endTime ? `${slot.time}–${slot.endTime} hs` : `${slot.time} hs`}</span><Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{modalityLabel}</Badge></div>
             <div className="flex items-center gap-2 text-xs"><span className="text-teal-500">Estado:</span><Badge variant={isRescheduled ? "destructive" : slot.status === "confirmed" ? "default" : "outline"} className="text-xs">{statusLabel}</Badge></div>
           </div>
 

@@ -492,17 +492,37 @@ export async function GET(request: NextRequest) {
           dayOfWeek
         );
 
-        const bookedSlots = dayAppointments.map((a) => ({
-          id: a.id,
-          time: a.time,
-          date: dateStr,
-          modality: a.modality,
-          status: a.status,
-          notes: a.notes || null,
-          patientName: a.patient?.user?.name || "Paciente",
-          patientEmail: a.patient?.user?.email || null,
-          patientPhone: a.patient?.user?.phone || null,
-        }));
+        // === Calcular endTime para cada appointment basado en el slotDuration
+        // del schedule que lo contiene (mismo cálculo que quick-assign) ===
+        // Esto permite que el frontend muestre "21:00–21:45" en la grilla
+        // igual que la agenda del profesional.
+        const daySchedulesForDuration = (prof.schedules as { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number }[])
+          .filter((s) => s.dayOfWeek === dayOfWeek);
+
+        const bookedSlots = dayAppointments.map((a) => {
+          // Buscar el schedule que contiene la hora del appointment
+          const matchingSchedule = daySchedulesForDuration.find(
+            (s) => a.time >= s.startTime && a.time < s.endTime
+          );
+          const slotDuration = matchingSchedule?.slotDuration || 45;
+          // Calcular endTime = a.time + slotDuration
+          const [h, m] = a.time.split(":").map(Number);
+          const totalMin = h * 60 + m + slotDuration;
+          const endTime = `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
+
+          return {
+            id: a.id,
+            time: a.time,
+            endTime,
+            date: dateStr,
+            modality: a.modality,
+            status: a.status,
+            notes: a.notes || null,
+            patientName: a.patient?.user?.name || "Paciente",
+            patientEmail: a.patient?.user?.email || null,
+            patientPhone: a.patient?.user?.phone || null,
+          };
+        });
 
         // === Agregar slots bloqueados por el profesional como "blocked" ===
         // Esto permite que el admin vea visualmente qué slots están bloqueados
