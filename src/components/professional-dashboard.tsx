@@ -21,13 +21,13 @@ import {
   MapPin,
   Plus,
   Trash2,
+  Edit2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -1019,7 +1019,14 @@ export function ProfessionalProfile() {
   const [newAddrLabel, setNewAddrLabel] = useState("");
   const [newAddrAddress, setNewAddrAddress] = useState("");
   const [addingAddress, setAddingAddress] = useState(false);
-  const [togglingAddrId, setTogglingAddrId] = useState<string | null>(null);
+
+  // === Edición inline de direcciones ===
+  // El profesional puede editar etiqueta y dirección de cualquier dirección
+  // existente. No hay switch de activar/desactivar.
+  const [editingAddrId, setEditingAddrId] = useState<string | null>(null);
+  const [editAddrLabel, setEditAddrLabel] = useState("");
+  const [editAddrAddress, setEditAddrAddress] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     if (session?.user) {
@@ -1086,7 +1093,8 @@ export function ProfessionalProfile() {
         body: JSON.stringify({
           label: newAddrLabel.trim(),
           address: newAddrAddress.trim(),
-          isActive: addresses.length === 0, // Primera dirección → activar automáticamente
+          // Sin isActive: no hay switch de activar/desactivar.
+          // Todas las direcciones se pueden enlazar a slots presenciales.
         }),
       });
       if (res.ok) {
@@ -1120,43 +1128,68 @@ export function ProfessionalProfile() {
     }
   };
 
-  // === Toggle isActive (instantáneo) ===
-  // Si se activa una dirección, el backend desactiva las demás automáticamente
-  // (transaccional). Si se desactiva, simplemente queda inactiva.
-  const handleToggleAddress = async (addressId: string, currentIsActive: boolean) => {
-    setTogglingAddrId(addressId);
+  // === Editar dirección (modo inline) ===
+  // El profesional puede editar la etiqueta y la dirección de cualquier
+  // dirección existente. No hay switch de "activar/desactivar" — todas las
+  // direcciones son potencialmente activas y se enlazan a los slots
+  // disponibles del profesional cuando la modalidad es presencial.
+  const startEditAddress = (addr: { id: string; label: string; address: string }) => {
+    setEditingAddrId(addr.id);
+    setEditAddrLabel(addr.label);
+    setEditAddrAddress(addr.address);
+  };
+
+  const cancelEditAddress = () => {
+    setEditingAddrId(null);
+    setEditAddrLabel("");
+    setEditAddrAddress("");
+  };
+
+  const handleSaveEditAddress = async () => {
+    if (!editingAddrId) return;
+    if (!editAddrLabel.trim() || !editAddrAddress.trim()) {
+      toast.error("Completá etiqueta y dirección");
+      return;
+    }
+    setSavingEdit(true);
     try {
       const res = await fetch(
-        `/api/professionals/${professionalId}/addresses/${addressId}`,
+        `/api/professionals/${professionalId}/addresses/${editingAddrId}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: !currentIsActive }),
+          body: JSON.stringify({
+            label: editAddrLabel.trim(),
+            address: editAddrAddress.trim(),
+          }),
         }
       );
       if (res.ok) {
         const updated = await res.json();
-        // Update local state: si se activó esta, desactivar las demás
         setAddresses((prev) =>
-          prev.map((a) => {
-            if (a.id === addressId) return updated;
-            if (updated.isActive && a.isActive) return { ...a, isActive: false };
-            return a;
-          })
+          prev.map((a) => (a.id === editingAddrId ? updated : a))
         );
-        toast.success(
-          updated.isActive
-            ? "Dirección activada como dirección de atención actual"
-            : "Dirección desactivada"
-        );
+        toast.success("Dirección actualizada");
+        cancelEditAddress();
       } else {
-        const data = await res.json();
-        toast.error(data.error || "Error al cambiar estado");
+        let errorMsg = "Error al actualizar dirección";
+        try {
+          const text = await res.text();
+          if (text) {
+            const data = JSON.parse(text);
+            errorMsg = data.error || `Error ${res.status}`;
+          } else {
+            errorMsg = `Error ${res.status} (respuesta vacía)`;
+          }
+        } catch {
+          errorMsg = `Error ${res.status}`;
+        }
+        toast.error(errorMsg);
       }
     } catch {
       toast.error("Error de conexión");
     } finally {
-      setTogglingAddrId(null);
+      setSavingEdit(false);
     }
   };
 
@@ -1342,9 +1375,7 @@ export function ProfessionalProfile() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-xs text-teal-600">
-            Agregá una o más direcciones de consultorio. Activá la dirección donde
-            estás atendiendo actualmente con el interruptor — solo una puede estar
-            activa a la vez y el cambio es inmediato.
+            Agregá una o más direcciones de consultorio.
           </p>
 
           {/* === Lista de direcciones existentes === */}
@@ -1360,45 +1391,98 @@ export function ProfessionalProfile() {
               {addresses.map((addr) => (
                 <div
                   key={addr.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                    addr.isActive
+                  className={`p-3 rounded-lg border transition-all ${
+                    editingAddrId === addr.id
                       ? "border-teal-500 bg-teal-50 ring-1 ring-teal-300"
                       : "border-slate-200 bg-slate-50/50"
                   }`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-semibold text-teal-900 truncate">
-                        {addr.label}
-                      </p>
-                      {addr.isActive && (
-                        <Badge variant="outline" className="text-[9px] bg-teal-100 border-teal-300 text-teal-700 px-1.5 py-0">
-                          ● Activa
-                        </Badge>
-                      )}
+                  {/* === Modo vista (no editando) === */}
+                  {editingAddrId !== addr.id ? (
+                    <>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                            <p className="text-sm font-semibold text-teal-900 truncate">
+                              {addr.label}
+                            </p>
+                            <Badge variant="outline" className="text-[9px] bg-slate-50 border-slate-200 text-slate-500 px-1.5 py-0 font-mono" title={`ID completo: ${addr.id}`}>
+                              ID: {addr.id.slice(-8)}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-slate-600 truncate">{addr.address}</p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditAddress(addr)}
+                            className="h-7 w-7 p-0 text-teal-500 hover:bg-teal-50 hover:text-teal-700"
+                            title="Editar dirección"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteAddress(addr.id)}
+                            className="h-7 w-7 p-0 text-red-400 hover:bg-red-50 hover:text-red-600"
+                            title="Eliminar dirección"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* === Modo edición === */
+                    <div className="space-y-2">
+                      <div className="grid sm:grid-cols-3 gap-2">
+                        <div className="sm:col-span-1">
+                          <Input
+                            value={editAddrLabel}
+                            onChange={(e) => setEditAddrLabel(e.target.value)}
+                            placeholder="Etiqueta"
+                            className="border-teal-200 h-9 text-sm"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Input
+                            value={editAddrAddress}
+                            onChange={(e) => setEditAddrAddress(e.target.value)}
+                            placeholder="Dirección completa"
+                            className="border-teal-200 h-9 text-sm"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !savingEdit) {
+                                e.preventDefault();
+                                handleSaveEditAddress();
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSaveEditAddress}
+                          disabled={savingEdit}
+                          size="sm"
+                          className="bg-teal-600 hover:bg-teal-700 text-white h-7"
+                        >
+                          <Save className="mr-1 w-3 h-3" />
+                          {savingEdit ? "Guardando..." : "Guardar"}
+                        </Button>
+                        <Button
+                          onClick={cancelEditAddress}
+                          disabled={savingEdit}
+                          variant="outline"
+                          size="sm"
+                          className="border-slate-300 text-slate-600 hover:bg-slate-50 h-7"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-600 truncate">{addr.address}</p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Label htmlFor={`switch-${addr.id}`} className="text-[10px] text-slate-500 cursor-pointer">
-                      {addr.isActive ? "Activa" : "Inactiva"}
-                    </Label>
-                    <Switch
-                      id={`switch-${addr.id}`}
-                      checked={addr.isActive}
-                      disabled={togglingAddrId === addr.id}
-                      onCheckedChange={() => handleToggleAddress(addr.id, addr.isActive)}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteAddress(addr.id)}
-                      className="h-7 w-7 p-0 text-red-400 hover:bg-red-50 hover:text-red-600"
-                      title="Eliminar dirección"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
