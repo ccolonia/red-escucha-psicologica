@@ -112,27 +112,29 @@ export async function POST(request: NextRequest) {
     const appointmentModality = modality || "P";
 
     // === Bloqueo de asignaciones retroactivas (pasado) ===
-    // Combinar date ("2026-06-19") + time ("21:00") en un objeto Date
-    // ajustado a timezone Argentina. Si la fecha/hora del turno es
-    // anterior al momento actual, abortar con 400.
+    // PROBLEMA anterior: usábamos new Date() con toLocaleString('en-US', { timeZone: ARG_TZ })
+    // y luego comparábamos objetos Date. Eso causaba un bug de timezone:
+    // - En Argentina: Viernes 26, 18:00 hs
+    // - En servidor Vercel (UTC): Viernes 26, 21:00 hs
+    // El servidor veía 21:00 UTC → un turno a las 21:00 Argentina (que son las
+    // 00:00 UTC del sábado) aparecía como pasado cuando en realidad era futuro.
     //
-    // El formato "2026-06-19T21:00:00" sin Z al final es interpretado
-    // como hora local por el motor JS, pero como el servidor de Vercel
-    // puede estar en otra timezone, forzamos la interpretación como
-    // America/Argentina/Buenos_Aires usando en-US con timeZone option.
+    // SOLUCIÓN: comparar STRINGS formateados en timezone Argentina (mismo
+    // patrón que isSlotInPast del frontend en admin-agenda-central.tsx).
+    // Esto es 100% consistente con el frontend y evita bugs de timezone.
     const ARG_TZ = "America/Argentina/Buenos_Aires";
-    const nowInArgentina = new Date(new Date().toLocaleString("en-US", { timeZone: ARG_TZ }));
+    const todayArg = new Date().toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+    const nowTimeArg = new Date().toLocaleTimeString("en-GB", { timeZone: ARG_TZ, hour: "2-digit", minute: "2-digit" });
 
-    // Construir la fecha/hora del turno en Argentina: combinamos date + time
-    // en formato "YYYY-MM-DDTHH:MM:00" y lo parseamos como hora local de Argentina.
-    // Usamos el mismo truco: crear la fecha y luego reinterpretar.
-    const slotDateTimeStr = `${date}T${time}:00`;
-    const slotDateRaw = new Date(slotDateTimeStr);
-    // Ajustar la fecha del slot a la timezone de Argentina para comparar
-    // correctamente con nowInArgentina (ambos en la misma referencia temporal).
-    const slotInArgentina = new Date(slotDateRaw.toLocaleString("en-US", { timeZone: ARG_TZ }));
+    // date viene como "2026-06-26" y time como "21:00"
+    // Comparar: si date < todayArg → pasado
+    //           si date > todayArg → futuro
+    //           si date === todayArg → comparar time con nowTimeArg
+    const isPast =
+      date < todayArg ||
+      (date === todayArg && time <= nowTimeArg);
 
-    if (slotInArgentina < nowInArgentina) {
+    if (isPast) {
       return NextResponse.json(
         { error: "No es posible asignar turnos en fechas u horarios pasados." },
         { status: 400 }
