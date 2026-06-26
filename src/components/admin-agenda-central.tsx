@@ -530,6 +530,39 @@ export function AdminAgendaCentral() {
     }
   };
 
+  // === Reprogramar turno desde la ficha rápida (admin) ===
+  // Cambia el status a "rescheduled" y guarda el motivo en notes.
+  // El turno NO se cancela, queda en estado intermedio esperando que el
+  // profesional coordine nueva fecha con el paciente.
+  const [rescheduling, setRescheduling] = useState(false);
+  const handleReschedule = async (slot: BookedSlot, reason: string) => {
+    if (!slot || !reason.trim()) return;
+    setRescheduling(true);
+    try {
+      const res = await fetch(`/api/appointments/${slot.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "rescheduled",
+          notes: `[Reprogramado por admin] ${reason.trim()}`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Error al reprogramar el turno");
+        return;
+      }
+      toast.success(`Turno de ${slot.patientName} marcado como "Reprogramado". El profesional debe coordinar nueva fecha.`);
+      setFichaDialog((prev) => ({ ...prev, open: false }));
+      handleSearch(); // re-fetch automático de la grilla
+    } catch (err) {
+      console.error("Error rescheduling appointment:", err);
+      toast.error("Error de conexión al reprogramar el turno");
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
   const handleClearFilters = () => {
     setProfession(""); setSpecialty("");
     setSelectedTherapyTypes([]); setSelectedTargetAudience([]);
@@ -814,6 +847,8 @@ export function AdminAgendaCentral() {
         slot={fichaDialog.slot}
         onCancel={handleCancelAppointment}
         cancelling={cancelling}
+        onReschedule={handleReschedule}
+        rescheduling={rescheduling}
       />
     </div>
   );
@@ -1481,9 +1516,22 @@ interface FichaDialogProps {
   slot: BookedSlot | null;
   onCancel?: (slot: BookedSlot) => void;
   cancelling?: boolean;
+  onReschedule?: (slot: BookedSlot, reason: string) => void;
+  rescheduling?: boolean;
 }
 
-function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancelling }: FichaDialogProps) {
+function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancelling, onReschedule, rescheduling }: FichaDialogProps) {
+  const [rescheduleMode, setRescheduleMode] = useState(false);
+  const [rescheduleReason, setRescheduleReason] = useState("");
+
+  // Limpiar el modo reprogramar cuando se cierra el dialog
+  useEffect(() => {
+    if (!open) {
+      setRescheduleMode(false);
+      setRescheduleReason("");
+    }
+  }, [open]);
+
   if (!professional || !slot) return null;
   const modalityLabel = slot.modality ? MODALITY_LABELS[slot.modality] || slot.modality : "—";
   const isRescheduled = slot.status === "rescheduled";
@@ -1539,37 +1587,100 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
               <p className="text-sm text-slate-700">{slot.notes}</p>
             </div>
           )}
-        </div>
-        <DialogFooter className="flex justify-between gap-2 sm:justify-between">
-          {/* === Solo permitir cancelar turnos FUTUROS o PENDIENTES ===
-              NO se puede cancelar:
-              - completed (ya atendido)
-              - absent (paciente ausente)
-              - cancelled (ya cancelado)
-              - cancelled_by_professional (cancelado por el profesional)
-              - blocked (slot bloqueado, no es un appointment real)
-              SÍ se puede cancelar:
-              - confirmed (confirmado, futuro)
-              - pending (pendiente de confirmación)
-              - rescheduled (reprogramado por el profesional, esperando nueva fecha)
-          */}
-          {onCancel && ["confirmed", "pending", "rescheduled"].includes(slot.status) && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => onCancel(slot)}
-              disabled={cancelling}
-              className="text-xs"
-            >
-              {cancelling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Cancelando...</> : <><XCircle className="w-3 h-3 mr-1" /> Cancelar Turno</>}
-            </Button>
-          )}
-          {/* === Mensaje informativo para turnos NO cancelables === */}
-          {onCancel && ["completed", "absent", "cancelled", "cancelled_by_professional", "blocked"].includes(slot.status) && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">
-              <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-              <span>Turno no cancelable (estado: {slot.status === "completed" ? "atendido" : slot.status === "absent" ? "ausente" : slot.status === "blocked" ? "bloqueado" : "cancelado"})</span>
+
+          {/* === Modo Reprogramar: textarea para el motivo === */}
+          {rescheduleMode && (
+            <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-orange-600" />
+                <p className="text-sm font-semibold text-orange-800">Reprogramar turno</p>
+              </div>
+              <p className="text-xs text-orange-700">
+                Indicá el motivo de la reprogramación. El turno quedará en estado
+                "Reprogramado" y el profesional deberá coordinar nueva fecha con el paciente.
+              </p>
+              <textarea
+                value={rescheduleReason}
+                onChange={(e) => setRescheduleReason(e.target.value)}
+                placeholder="Ej: El profesional tiene una urgencia, se reprogramará para la próxima semana..."
+                className="w-full min-h-[80px] rounded-md border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                rows={3}
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                  disabled={rescheduling || rescheduleReason.trim().length < 3}
+                  onClick={() => {
+                    if (onReschedule) onReschedule(slot, rescheduleReason.trim());
+                  }}
+                >
+                  {rescheduling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</> : <><CheckCircle2 className="w-3 h-3 mr-1" /> Confirmar Reprogramación</>}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-slate-300 text-slate-600 hover:bg-slate-50"
+                  onClick={() => { setRescheduleMode(false); setRescheduleReason(""); }}
+                  disabled={rescheduling}
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
+          )}
+        </div>
+        <DialogFooter className="flex justify-between gap-2 sm:justify-between flex-wrap">
+          {/* === Botones de acción (solo si NO estamos en modo reprogramar) === */}
+          {!rescheduleMode && (
+            <>
+              {/* === Botón Reprogramar ===
+                  Solo aparece para turnos confirmed/pending que NO sean pasados.
+                  Misma lógica que Cancelar Turno, pero con motivo obligatorio. */}
+              {onReschedule && ["confirmed", "pending"].includes(slot.status) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRescheduleMode(true)}
+                  disabled={cancelling || rescheduling}
+                  className="text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" /> Reprogramar
+                </Button>
+              )}
+
+              {/* === Solo permitir cancelar turnos FUTUROS o PENDIENTES ===
+                  NO se puede cancelar:
+                  - completed (ya atendido)
+                  - absent (paciente ausente)
+                  - cancelled (ya cancelado)
+                  - cancelled_by_professional (cancelado por el profesional)
+                  - blocked (slot bloqueado, no es un appointment real)
+                  SÍ se puede cancelar:
+                  - confirmed (confirmado, futuro)
+                  - pending (pendiente de confirmación)
+                  - rescheduled (reprogramado por el profesional, esperando nueva fecha)
+              */}
+              {onCancel && ["confirmed", "pending", "rescheduled"].includes(slot.status) && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onCancel(slot)}
+                  disabled={cancelling}
+                  className="text-xs"
+                >
+                  {cancelling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Cancelando...</> : <><XCircle className="w-3 h-3 mr-1" /> Cancelar Turno</>}
+                </Button>
+              )}
+              {/* === Mensaje informativo para turnos NO cancelables === */}
+              {onCancel && ["completed", "absent", "cancelled", "cancelled_by_professional", "blocked"].includes(slot.status) && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Turno no cancelable (estado: {slot.status === "completed" ? "atendido" : slot.status === "absent" ? "ausente" : slot.status === "blocked" ? "bloqueado" : "cancelado"})</span>
+                </div>
+              )}
+            </>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
         </DialogFooter>
