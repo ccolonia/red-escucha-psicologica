@@ -20,11 +20,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "ESCUCHAR - ACOMPAÑAR - TRANSFORMAR | Un Espacio Seguro para Vos",
+  title: "REP | Escuchar - Acompañar - Transformar | Un Espacio Seguro para Vos",
   description: "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos y necesidades.",
   // === OpenGraph (redes sociales: Facebook, WhatsApp, LinkedIn, etc.) ===
   openGraph: {
-    title: "ESCUCHAR - ACOMPAÑAR - TRANSFORMAR | Un Espacio Seguro para Vos",
+    title: "REP | Escuchar - Acompañar - Transformar | Un Espacio Seguro para Vos",
     description: "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos y necesidades.",
     type: "website",
     locale: "es_AR",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   // === Twitter Card ===
   twitter: {
     card: "summary_large_image",
-    title: "ESCUCHAR - ACOMPAÑAR - TRANSFORMAR | Un Espacio Seguro para Vos",
+    title: "REP | Escuchar - Acompañar - Transformar | Un Espacio Seguro para Vos",
     description: "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos y necesidades.",
   },
   // === Keywords (ayuda a indexación, aunque Google dice que ya no las usa
