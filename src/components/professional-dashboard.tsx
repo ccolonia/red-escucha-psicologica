@@ -497,7 +497,7 @@ export function ProfessionalSchedule() {
   useEffect(() => {
     if (session?.user) {
       const userId = (session.user as { id: string }).id;
-      fetch("/api/professionals?all=true")
+      fetch("/api/professionals?all=true&includeUnverified=true")
         .then((res) => res.json())
         .then((data) => {
           const profs = Array.isArray(data) ? data : [];
@@ -1116,7 +1116,7 @@ export function ProfessionalProfile() {
   useEffect(() => {
     if (session?.user) {
       const userId = (session.user as { id: string }).id;
-      fetch("/api/professionals?all=true")
+      fetch("/api/professionals?all=true&includeUnverified=true")
         .then((res) => res.json())
         .then((data) => {
           const profs = Array.isArray(data) ? data : [];
@@ -1430,7 +1430,7 @@ export function ProfessionalProfile() {
     if (!professionalId || !cvFileName) return;
     try {
       // Buscar el cvData del profesional
-      const res = await fetch("/api/professionals?all=true");
+      const res = await fetch("/api/professionals?all=true&includeUnverified=true");
       const data = await res.json();
       const profs = Array.isArray(data) ? data : [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

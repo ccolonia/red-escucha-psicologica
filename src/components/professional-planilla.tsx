@@ -201,7 +201,7 @@ export function ProfessionalPlanilla() {
   useEffect(() => {
     if (session?.user) {
       const userId = (session.user as { id: string }).id;
-      fetch("/api/professionals?all=true")
+      fetch("/api/professionals?all=true&includeUnverified=true")
         .then((res) => res.json())
         .then((data) => {
           const profs = Array.isArray(data) ? data : [];

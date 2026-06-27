@@ -23,9 +23,19 @@ export async function GET(request: NextRequest) {
     // Automatically filters to professionals fully enabled for assignment:
     //   user.active = true AND licenseVerified = true
     // Additional params (specialty, available) are still respected.
+    //
+    // Excepción: si includeUnverified=true, NO filtra por licenseVerified.
+    // Esto permite que los componentes del panel del profesional (Planilla,
+    // Agenda, Mi Perfil, etc.) encuentren SU propio perfil incluso si la
+    // matrícula está en trámite (licenseVerified=false). Es seguro porque
+    // el componente filtra por userId después (solo ve su propio perfil).
+    const includeUnverified = searchParams.get("includeUnverified") === "true";
+
     if (all === "true") {
       where.user = { active: true };
-      where.licenseVerified = true;
+      if (!includeUnverified) {
+        where.licenseVerified = true;
+      }
 
       if (specialty) {
         where.specialty = specialty;

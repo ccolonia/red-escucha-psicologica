@@ -92,7 +92,7 @@ export function AdminPlanilla() {
 
   // Load professionals (all=true returns flat array of active+licenseVerified)
   useEffect(() => {
-    fetch("/api/professionals?all=true")
+    fetch("/api/professionals?all=true&includeUnverified=true")
       .then((res) => res.json())
       .then((data) => {
         const profs = Array.isArray(data) ? data : [];
