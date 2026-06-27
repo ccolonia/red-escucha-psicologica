@@ -20,8 +20,50 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Red Escucha Psicológica",
-  description: "Más de 30 años acompañando tu bienestar. Red de profesionales de salud mental en Buenos Aires.",
+  title: "ESCUCHAR - ACOMPAÑAR - TRANSFORMAR | Un Espacio Seguro para Vos",
+  description: "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos y necesidades.",
+  // === OpenGraph (redes sociales: Facebook, WhatsApp, LinkedIn, etc.) ===
+  openGraph: {
+    title: "ESCUCHAR - ACOMPAÑAR - TRANSFORMAR | Un Espacio Seguro para Vos",
+    description: "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos y necesidades.",
+    type: "website",
+    locale: "es_AR",
+    siteName: "Red Escucha Psicológica",
+    url: "https://www.redescuchapsicologica.com",
+  },
+  // === Twitter Card ===
+  twitter: {
+    card: "summary_large_image",
+    title: "ESCUCHAR - ACOMPAÑAR - TRANSFORMAR | Un Espacio Seguro para Vos",
+    description: "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos y necesidades.",
+  },
+  // === Keywords (ayuda a indexación, aunque Google dice que ya no las usa
+  //     directamente, otros buscadores sí las consideran) ===
+  keywords: [
+    "terapia psicológica",
+    "psicólogo Buenos Aires",
+    "terapia individual",
+    "terapia de pareja",
+    "terapia familiar",
+    "terapia grupal",
+    "salud mental",
+    "Red Escucha Psicológica",
+  ],
+  // === Metadata robots: indexar y seguir links ===
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  // === Canonical URL ===
+  alternates: {
+    canonical: "https://www.redescuchapsicologica.com",
+  },
 };
 
 export default function RootLayout({
