@@ -275,6 +275,9 @@ export function ProfessionalWeeklyAgenda({
   const [fichaAppointment, setFichaAppointment] = useState<Appointment | null>(null);
   const [fichaDialogOpen, setFichaDialogOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [rescheduleMode, setRescheduleMode] = useState(false);
+  const [rescheduleReason, setRescheduleReason] = useState("");
 
   // === Bloqueo/desbloqueo de slots individuales ===
   const [slotBlockDialog, setSlotBlockDialog] = useState<{
@@ -326,6 +329,48 @@ export function ProfessionalWeeklyAgenda({
       toast.error("Error de conexión al cancelar el turno");
     } finally {
       setCancelling(false);
+    }
+  };
+
+  // === Reprogramar turno desde la ficha rápida (profesional) ===
+  // Cambia el status a "rescheduled" y guarda el motivo en notes.
+  // El turno NO se cancela, queda en estado intermedio esperando que el
+  // profesional coordine nueva fecha con el paciente (lo hace por su cuenta).
+  // Paridad 1:1 con el admin (commit 63361b5).
+  const handleRescheduleFromFicha = async () => {
+    if (!fichaAppointment) return;
+    if (rescheduleReason.trim().length < 3) {
+      toast.error("El motivo debe tener al menos 3 caracteres");
+      return;
+    }
+    setRescheduling(true);
+    try {
+      const res = await fetch(`/api/appointments/${fichaAppointment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "rescheduled",
+          notes: `[Reprogramado por profesional] ${rescheduleReason.trim()}`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Error al reprogramar el turno");
+        return;
+      }
+      toast.success(`Turno marcado como "Reprogramado". Coordiná nueva fecha con el paciente.`);
+      // Actualizar estado local del appointment
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === fichaAppointment.id ? { ...a, status: "rescheduled", notes: `[Reprogramado por profesional] ${rescheduleReason.trim()}` } : a))
+      );
+      setRescheduleMode(false);
+      setRescheduleReason("");
+      setFichaDialogOpen(false);
+    } catch (err) {
+      console.error("Error rescheduling from ficha:", err);
+      toast.error("Error de conexión al reprogramar el turno");
+    } finally {
+      setRescheduling(false);
     }
   };
 
@@ -1405,44 +1450,111 @@ export function ProfessionalWeeklyAgenda({
                     </div>
                   )}
                 </div>
-                <DialogFooter className="flex justify-between gap-2 sm:justify-between">
-                  {/* === Restricción: NO cancelar turnos completados/ausentes/cancelados
-                      NI turnos pasados (acciones retroactivas prohibidas) ===
-                      Solo se puede cancelar un turno confirmed/pendiente/rescheduled
-                      que sea FUTURO (no haya pasado la hora).
-                      Misma lógica que el admin en commit 03cd5e8. */}
-                  {fichaAppointment
-                    && !["completed", "absent", "cancelled", "cancelled_by_professional"].includes(fichaAppointment.status)
-                    && !isSlotInPast(fichaAppointment.date, fichaAppointment.time)
-                    && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={handleCancelFromFicha}
-                      disabled={cancelling}
-                      className="text-xs"
-                    >
-                      {cancelling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Cancelando...</> : <><XCircle className="w-3 h-3 mr-1" /> Cancelar Turno</>}
-                    </Button>
-                  )}
-                  {fichaAppointment
-                    && !["completed", "absent", "cancelled", "cancelled_by_professional"].includes(fichaAppointment.status)
-                    && isSlotInPast(fichaAppointment.date, fichaAppointment.time)
-                    && (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Turno pasado — no se puede cancelar</span>
+                {/* === Modo Reprogramar: textarea para el motivo === */}
+                {rescheduleMode && fichaAppointment && (
+                  <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-orange-600" />
+                      <p className="text-sm font-semibold text-orange-800">Reprogramar turno</p>
                     </div>
-                  )}
-                  {fichaAppointment
-                    && ["completed", "absent"].includes(fichaAppointment.status)
-                    && (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Turno {fichaAppointment.status === "completed" ? "atendido" : "con ausencia"} — no se puede cancelar</span>
+                    <p className="text-xs text-orange-700">
+                      Indicá el motivo de la reprogramación. El turno quedará en estado
+                      "Reprogramado" y deberás coordinar nueva fecha con el paciente.
+                    </p>
+                    <textarea
+                      value={rescheduleReason}
+                      onChange={(e) => setRescheduleReason(e.target.value)}
+                      placeholder="Ej: Tengo una urgencia, se reprogramará para la próxima semana..."
+                      className="w-full min-h-[80px] rounded-md border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                      rows={3}
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                        disabled={rescheduling || rescheduleReason.trim().length < 3}
+                        onClick={handleRescheduleFromFicha}
+                      >
+                        {rescheduling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</> : <><CheckCircle2 className="w-3 h-3 mr-1" /> Confirmar Reprogramación</>}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-slate-300 text-slate-600 hover:bg-slate-50"
+                        onClick={() => { setRescheduleMode(false); setRescheduleReason(""); }}
+                        disabled={rescheduling}
+                      >
+                        Cancelar
+                      </Button>
                     </div>
+                  </div>
+                )}
+                <DialogFooter className="flex justify-between gap-2 sm:justify-between flex-wrap">
+                  {/* === Botones de acción (solo si NO estamos en modo reprogramar) === */}
+                  {!rescheduleMode && (
+                    <>
+                      {/* === Botón Reprogramar ===
+                          Solo aparece para turnos confirmed/pending que sean FUTUROS.
+                          Paridad 1:1 con el admin (commit 63361b5). */}
+                      {fichaAppointment
+                        && ["confirmed", "pending"].includes(fichaAppointment.status)
+                        && !isSlotInPast(fichaAppointment.date, fichaAppointment.time)
+                        && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setRescheduleMode(true)}
+                          disabled={cancelling || rescheduling}
+                          className="text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" /> Reprogramar
+                        </Button>
+                      )}
+
+                      {/* === Restricción: NO cancelar turnos completados/ausentes/cancelados
+                          NI turnos pasados (acciones retroactivas prohibidas) ===
+                          Solo se puede cancelar un turno confirmed/pendiente/rescheduled
+                          que sea FUTURO (no haya pasado la hora).
+                          Misma lógica que el admin en commit 03cd5e8. */}
+                      {fichaAppointment
+                        && !["completed", "absent", "cancelled", "cancelled_by_professional"].includes(fichaAppointment.status)
+                        && !isSlotInPast(fichaAppointment.date, fichaAppointment.time)
+                        && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleCancelFromFicha}
+                          disabled={cancelling}
+                          className="text-xs"
+                        >
+                          {cancelling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Cancelando...</> : <><XCircle className="w-3 h-3 mr-1" /> Cancelar Turno</>}
+                        </Button>
+                      )}
+                      {fichaAppointment
+                        && !["completed", "absent", "cancelled", "cancelled_by_professional"].includes(fichaAppointment.status)
+                        && isSlotInPast(fichaAppointment.date, fichaAppointment.time)
+                        && (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Turno pasado — no se puede cancelar ni reprogramar</span>
+                        </div>
+                      )}
+                      {fichaAppointment
+                        && ["completed", "absent"].includes(fichaAppointment.status)
+                        && (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Turno {fichaAppointment.status === "completed" ? "atendido" : "con ausencia"} — no se puede cancelar ni reprogramar</span>
+                        </div>
+                      )}
+                    </>
                   )}
-                  <Button variant="outline" onClick={() => setFichaDialogOpen(false)} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
+                  <Button variant="outline" onClick={() => {
+                    setFichaDialogOpen(false);
+                    setRescheduleMode(false);
+                    setRescheduleReason("");
+                  }} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
                 </DialogFooter>
               </>
             );
