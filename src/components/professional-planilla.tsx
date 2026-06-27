@@ -269,25 +269,27 @@ export function ProfessionalPlanilla() {
   // Summary calculations
   const summary = useMemo(() => {
     const allSessions = currentSessions;
-    const attended = allSessions.filter(
-      (s) => !s.absentWithNotice && !s.absentWithoutNotice
+    // === Sesiones facturables ===
+    // - Turnos normales (no ausentes): se facturan
+    // - SA (sin aviso): se facturan (el paciente debe pagar)
+    // - CA (con aviso): NO se facturan (el paciente avisó, no paga)
+    const billable = allSessions.filter(
+      (s) => !s.absentWithNotice
     );
     const absences = allSessions.filter(
       (s) => s.absentWithNotice || s.absentWithoutNotice
     );
-    const totalPatientFee = attended.reduce((sum, s) => sum + s.patientFee, 0);
-    const totalProfFee = attended.reduce((sum, s) => sum + s.professionalFee, 0);
-    const totalRepFee = attended.reduce((sum, s) => sum + s.repFee, 0);
-    const totalSupervised = allSessions.filter((s) => s.supervised).length;
+    const totalPatientFee = billable.reduce((sum, s) => sum + s.patientFee, 0);
+    const totalProfFee = billable.reduce((sum, s) => sum + s.professionalFee, 0);
+    const totalRepFee = billable.reduce((sum, s) => sum + s.repFee, 0);
     const totalSuspended = allSessions.filter((s) => s.suspendedTreatment).length;
 
     return {
-      totalSessions: attended.length,
+      totalSessions: billable.length,
       totalAbsences: absences.length,
       totalPatientFee,
       totalProfFee,
       totalRepFee,
-      totalSupervised,
       totalSuspended,
     };
   }, [currentSessions]);
@@ -856,41 +858,6 @@ export function ProfessionalPlanilla() {
                     <span className="text-xs text-red-600 font-medium shrink-0 whitespace-nowrap">
                       Debe abonar: ${s.patientFee.toLocaleString("es-AR")}
                     </span>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      {currentSessions.some((s) => s.absentWithNotice || s.absentWithoutNotice) && (
-        <Card className="border-amber-100 bg-amber-50/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-amber-800 text-sm flex items-center gap-2">
-              <XCircle className="w-4 h-4" />
-              Motivos de Inasistencia
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {currentSessions
-                .filter((s) => s.absentWithNotice || s.absentWithoutNotice)
-                .map((s) => (
-                  <div key={s.id} className="flex items-center gap-3">
-                    <Badge variant={s.absentWithoutNotice ? "destructive" : "outline"} className="text-xs shrink-0">
-                      {s.absentWithNotice ? "CA" : "SA"}
-                    </Badge>
-                    <span className="text-sm text-teal-700 shrink-0 w-[100px]">
-                      {formatDisplayDate(s.date)}
-                    </span>
-                    <span className="text-sm text-teal-900 font-medium shrink-0">
-                      {s.patientName}
-                    </span>
-                    <Input
-                      value={s.absentReason}
-                      onChange={(e) => updateSession(s.id, "absentReason", e.target.value)}
-                      placeholder="Motivo de inasistencia..."
-                      className="h-7 text-xs border-amber-200 flex-1"
-                    />
                   </div>
                 ))}
             </div>
