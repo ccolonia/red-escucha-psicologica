@@ -239,6 +239,13 @@ export function ProfessionalRegister() {
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvFileName, setCvFileName] = useState<string>("");
 
+  // === Matrícula en trámite ===
+  // Si el profesional todavía no tiene la matrícula definitiva, puede
+  // tildar esta opción para que se deshabilite el input de matrícula
+  // y se guarde como "EN TRÁMITE" en la base de datos. Esto le permite
+  // seguir con el registro sin ser bloqueado por la validación de formato.
+  const [licensePending, setLicensePending] = useState(false);
+
   const [form, setForm] = useState({
     // Step 1: Cuenta
     email: "",
@@ -407,16 +414,21 @@ export function ProfessionalRegister() {
           toast.error("Seleccioná tu profesión");
           return false;
         }
-        if (!form.license.trim()) {
-          toast.error("Ingresá tu número de matrícula");
-          return false;
-        }
-        // Matrícula: MN o MP + 4-6 dígitos
-        const licenseDigits = form.license.replace(/[\s.-]/g, "");
-        const licenseMatch = licenseDigits.match(/^(MN|MP)(\d{4,6})$/);
-        if (!licenseMatch) {
-          toast.error("La matrícula debe ser MN o MP seguido de 4 a 6 dígitos (ej: MN-12345 o MP-5432)");
-          return false;
+        // === Validación de matrícula ===
+        // Si "Matrícula en trámite" está tildada, saltar la validación
+        // de formato y usar "EN TRÁMITE" como valor.
+        if (!licensePending) {
+          if (!form.license.trim()) {
+            toast.error("Ingresá tu número de matrícula o tildá 'Matrícula en trámite'");
+            return false;
+          }
+          // Matrícula: MN o MP + 4-6 dígitos
+          const licenseDigits = form.license.replace(/[\s.-]/g, "");
+          const licenseMatch = licenseDigits.match(/^(MN|MP)(\d{4,6})$/);
+          if (!licenseMatch) {
+            toast.error("La matrícula debe ser MN o MP seguido de 4 a 6 dígitos (ej: MN-12345 o MP-5432)");
+            return false;
+          }
         }
         if (!form.specialty) {
           toast.error("Seleccioná tu especialidad");
@@ -511,7 +523,7 @@ export function ProfessionalRegister() {
         password: form.password,
         role: "professional",
         profession: form.profession,
-        license: form.license,
+        license: licensePending ? "EN TRÁMITE" : form.license,
         specialty: form.specialty,
         bio: form.bio || null,
         title: form.title || null,
@@ -878,11 +890,30 @@ export function ProfessionalRegister() {
                       <div className="space-y-2">
                         <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Nº de matrícula *</Label>
                         <Input
-                          value={form.license}
+                          value={licensePending ? "EN TRÁMITE" : form.license}
                           onChange={(e) => updateForm("license", e.target.value)}
                           className="border-beige-300 bg-beige-50 focus:ring-sage-300/20"
                           placeholder="MN-12345 o MP-5432"
+                          disabled={licensePending}
                         />
+                        {/* === Matrícula en trámite (opción sutil) === */}
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <Checkbox
+                            checked={licensePending}
+                            onCheckedChange={(checked) => {
+                              setLicensePending(checked === true);
+                              if (checked) {
+                                updateForm("license", "EN TRÁMITE");
+                              } else {
+                                updateForm("license", "");
+                              }
+                            }}
+                            className="border-beige-400 data-[state=checked]:bg-forest-400 data-[state=checked]:border-forest-400"
+                          />
+                          <span className="text-xs text-forest-300 font-light italic group-hover:text-forest-400 transition-colors" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                            Matrícula en trámite
+                          </span>
+                        </label>
                       </div>
                     </div>
                     {/* CV Upload */}
