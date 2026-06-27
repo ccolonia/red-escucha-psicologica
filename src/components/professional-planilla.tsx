@@ -343,7 +343,7 @@ export function ProfessionalPlanilla() {
         // Auto-calculate fees when patientFee changes
         if (field === "patientFee") {
           const fee = typeof value === "number" ? value : 0;
-          if (updated.absentWithNotice || updated.absentWithoutNotice) {
+          if (updated.absentWithNotice) {
             updated.patientFee = 0;
             updated.professionalFee = 0;
             updated.repFee = 0;
@@ -363,9 +363,6 @@ export function ProfessionalPlanilla() {
         }
         if (field === "absentWithoutNotice" && value) {
           updated.absentWithNotice = false;
-          updated.patientFee = 0;
-          updated.professionalFee = 0;
-          updated.repFee = 0;
         }
 
         // When unmarking absent, recalculate if patientFee was set
@@ -630,7 +627,6 @@ export function ProfessionalPlanilla() {
                     <th className="px-2 py-2 text-right text-teal-700 font-medium w-[70px]">REP</th>
                     <th className="px-2 py-2 text-center text-teal-700 font-medium w-[40px]">CA</th>
                     <th className="px-2 py-2 text-center text-teal-700 font-medium w-[40px]">SA</th>
-                    <th className="px-2 py-2 text-center text-teal-700 font-medium w-[50px]">Sup.</th>
                     <th className="px-2 py-2 text-center text-teal-700 font-medium w-[50px]">Susp.</th>
                     <th className="px-2 py-2 text-center text-teal-700 font-medium w-[40px]"></th>
                   </tr>
@@ -714,7 +710,7 @@ export function ProfessionalPlanilla() {
                             }}
                             placeholder="$0"
                             className="h-8 text-xs border-teal-200 text-right w-[90px]"
-                            disabled={isAbsent}
+                            disabled={s.absentWithNotice}
                           />
                         </td>
                         {/* Professional Fee (auto-calculated) */}
@@ -729,7 +725,7 @@ export function ProfessionalPlanilla() {
                             ${s.repFee.toLocaleString("es-AR")}
                           </div>
                         </td>
-                        {/* CA - Con Aviso */}
+                        {/* CA - Con Aviso (paciente avisó, NO debe pagar) */}
                         <td className="px-2 py-1.5 text-center">
                           <button
                             onClick={() => updateSession(s.id, "absentWithNotice", !s.absentWithNotice)}
@@ -738,11 +734,12 @@ export function ProfessionalPlanilla() {
                                 ? "bg-red-500 text-white"
                                 : "bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500"
                             }`}
+                            title="Ausente con Aviso"
                           >
                             CA
                           </button>
                         </td>
-                        {/* SA - Sin Aviso */}
+                        {/* SA - Sin Aviso (paciente NO avisó, DEBE pagar honorarios) */}
                         <td className="px-2 py-1.5 text-center">
                           <button
                             onClick={() => updateSession(s.id, "absentWithoutNotice", !s.absentWithoutNotice)}
@@ -751,22 +748,9 @@ export function ProfessionalPlanilla() {
                                 ? "bg-red-600 text-white"
                                 : "bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600"
                             }`}
+                            title="Ausente sin Aviso"
                           >
                             SA
-                          </button>
-                        </td>
-                        {/* Supervised */}
-                        <td className="px-2 py-1.5 text-center">
-                          <button
-                            onClick={() => updateSession(s.id, "supervised", !s.supervised)}
-                            className={`w-7 h-7 rounded-full transition-colors ${
-                              s.supervised
-                                ? "bg-emerald-500 text-white"
-                                : "bg-gray-100 text-gray-400 hover:bg-emerald-100"
-                            }`}
-                            title={s.supervised ? "Supervisado" : "No supervisado"}
-                          >
-                            {s.supervised ? <CheckCircle2 className="w-4 h-4 mx-auto" /> : <Circle className="w-4 h-4 mx-auto" />}
                           </button>
                         </td>
                         {/* Suspended Treatment */}
@@ -802,7 +786,82 @@ export function ProfessionalPlanilla() {
         </CardContent>
       </Card>
 
-      {/* Absence Reason (shown for rows with CA/SA) */}
+      {/* === Ausencia con aviso (CA) === */}
+      {currentSessions.some((s) => s.absentWithNotice) && (
+        <Card className="border-orange-100 bg-orange-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-orange-800 text-sm flex items-center gap-2">
+              <XCircle className="w-4 h-4" />
+              Ausencia con aviso
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {currentSessions
+                .filter((s) => s.absentWithNotice)
+                .map((s) => (
+                  <div key={s.id} className="flex items-center gap-3">
+                    <Badge variant="outline" className="text-xs shrink-0 bg-red-50 border-red-200 text-red-600">
+                      CA
+                    </Badge>
+                    <span className="text-sm text-teal-700 shrink-0 w-[100px]">
+                      {formatDisplayDate(s.date)}
+                    </span>
+                    <span className="text-sm text-teal-900 font-medium shrink-0">
+                      {s.patientName}
+                    </span>
+                    <Input
+                      value={s.absentReason}
+                      onChange={(e) => updateSession(s.id, "absentReason", e.target.value)}
+                      placeholder="Motivo de ausencia con aviso..."
+                      className="h-7 text-xs border-orange-200 flex-1"
+                    />
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* === Ausencia sin aviso (SA) === */}
+      {currentSessions.some((s) => s.absentWithoutNotice) && (
+        <Card className="border-red-100 bg-red-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-red-800 text-sm flex items-center gap-2">
+              <XCircle className="w-4 h-4" />
+              Ausencia sin aviso
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {currentSessions
+                .filter((s) => s.absentWithoutNotice)
+                .map((s) => (
+                  <div key={s.id} className="flex items-center gap-3">
+                    <Badge variant="destructive" className="text-xs shrink-0">
+                      SA
+                    </Badge>
+                    <span className="text-sm text-teal-700 shrink-0 w-[100px]">
+                      {formatDisplayDate(s.date)}
+                    </span>
+                    <span className="text-sm text-teal-900 font-medium shrink-0">
+                      {s.patientName}
+                    </span>
+                    <Input
+                      value={s.absentReason}
+                      onChange={(e) => updateSession(s.id, "absentReason", e.target.value)}
+                      placeholder="Motivo de ausencia sin aviso..."
+                      className="h-7 text-xs border-red-200 flex-1"
+                    />
+                    <span className="text-xs text-red-600 font-medium shrink-0 whitespace-nowrap">
+                      Debe abonar: ${s.patientFee.toLocaleString("es-AR")}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {currentSessions.some((s) => s.absentWithNotice || s.absentWithoutNotice) && (
         <Card className="border-amber-100 bg-amber-50/30">
           <CardHeader className="pb-2">
@@ -871,10 +930,7 @@ export function ProfessionalPlanilla() {
               <p className="text-xs text-teal-500">Total Cobrado</p>
               <p className="text-xl font-bold text-teal-900">${summary.totalPatientFee.toLocaleString("es-AR")}</p>
             </div>
-            <div className="bg-white rounded-lg p-3 border border-emerald-100">
-              <p className="text-xs text-emerald-500">Supervisiones</p>
-              <p className="text-2xl font-bold text-emerald-700">{summary.totalSupervised}</p>
-            </div>
+
             <div className="bg-white rounded-lg p-3 border border-amber-100">
               <p className="text-xs text-amber-500">Suspendieron Tratamiento</p>
               <p className="text-2xl font-bold text-amber-700">{summary.totalSuspended}</p>
