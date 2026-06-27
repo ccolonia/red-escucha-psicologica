@@ -52,14 +52,19 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Validar formato de matrícula: MN o MP + 4-6 dígitos
-      const licenseClean = license.replace(/[\s.-]/g, "");
-      const licenseRegex = /^(MN|MP)(\d{4,6})$/;
-      if (!licenseRegex.test(licenseClean)) {
-        return NextResponse.json(
-          { error: "La matrícula debe ser MN o MP seguido de 4 a 6 dígitos (ej: MN-12345 o MP-5432)" },
-          { status: 400 }
-        );
+      // === Validar formato de matrícula ===
+      // Excepción: si la matrícula es "EN TRÁMITE", se permite sin validar
+      // formato (el profesional todavía no tiene la matrícula definitiva).
+      // licenseVerified queda en false hasta que el admin la verifique.
+      if (license !== "EN TRÁMITE") {
+        const licenseClean = license.replace(/[\s.-]/g, "");
+        const licenseRegex = /^(MN|MP)(\d{4,6})$/;
+        if (!licenseRegex.test(licenseClean)) {
+          return NextResponse.json(
+            { error: "La matrícula debe ser MN o MP seguido de 4 a 6 dígitos (ej: MN-12345 o MP-5432)" },
+            { status: 400 }
+          );
+        }
       }
 
       // Check if license already exists
