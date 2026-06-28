@@ -279,17 +279,6 @@ export function ProfessionalWeeklyAgenda({
   const [rescheduleMode, setRescheduleMode] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
 
-  // === Bloqueo/desbloqueo de slots individuales ===
-  const [slotBlockDialog, setSlotBlockDialog] = useState<{
-    open: boolean;
-    date: string;
-    time: string;
-    endTime: string;
-    dayLabel: string;
-    overrideId: string | null;
-  }>({ open: false, date: "", time: "", endTime: "", dayLabel: "", overrideId: null });
-  const [slotBlocking, setSlotBlocking] = useState(false);
-
   const openFichaDialog = (apt: Appointment) => {
     setFichaAppointment(apt);
     setFichaDialogOpen(true);
@@ -371,103 +360,6 @@ export function ProfessionalWeeklyAgenda({
       toast.error("Error de conexión al reprogramar el turno");
     } finally {
       setRescheduling(false);
-    }
-  };
-
-  // === Bloquear/desbloquear slot individual ===
-  // Restricción: NO se puede bloquear NI desbloquear un slot pasado
-  // (acciones retroactivas totalmente prohibidas). Si el slot ya pasó,
-  // no tiene sentido modificar su estado de bloqueo — queda como quedó.
-  const openSlotBlockDialog = (date: string, time: string, endTime: string, dayLabel: string) => {
-    // Verificar si ya existe un override de bloqueo para este slot
-    const existing = overrides.find((o) =>
-      o.date === date && o.type === "block" && o.startTime === time && o.endTime === endTime
-    );
-
-    // Si el slot es pasado → no permitir abrir el dialog (ni bloquear ni desbloquear)
-    if (isSlotInPast(date, time)) {
-      toast.error("No se puede modificar un slot que ya pasó");
-      return;
-    }
-
-    setSlotBlockDialog({
-      open: true,
-      date,
-      time,
-      endTime,
-      dayLabel,
-      overrideId: existing?.id || null,
-    });
-  };
-
-  const handleBlockSlot = async () => {
-    if (!professionalId || !slotBlockDialog.date) return;
-    // Defensa en profundidad: doble check de que el slot no sea pasado
-    // (aunque openSlotBlockDialog ya lo verifica, esto evita cualquier bypass)
-    if (isSlotInPast(slotBlockDialog.date, slotBlockDialog.time)) {
-      toast.error("No se puede bloquear un slot que ya pasó");
-      return;
-    }
-    setSlotBlocking(true);
-    try {
-      const res = await fetch(`/api/professionals/${professionalId}/overrides`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: slotBlockDialog.date,
-          type: "block",
-          startTime: slotBlockDialog.time,
-          endTime: slotBlockDialog.endTime,
-          reason: "Bloqueado desde grilla",
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "Error al bloquear slot");
-        return;
-      }
-      toast.success(`Slot ${slotBlockDialog.time} bloqueado correctamente`);
-      setSlotBlockDialog((prev) => ({ ...prev, open: false }));
-      // Recargar overrides
-      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
-      setOverrides(Array.isArray(overRes) ? overRes : []);
-    } catch (err) {
-      console.error("Error blocking slot:", err);
-      toast.error("Error de conexión al bloquear slot");
-    } finally {
-      setSlotBlocking(false);
-    }
-  };
-
-  const handleUnblockSlot = async () => {
-    if (!professionalId || !slotBlockDialog.overrideId) return;
-    // Defensa en profundidad: NO permitir desbloquear slots pasados
-    // (openSlotBlockDialog ya lo verifica, pero esto evita cualquier bypass)
-    if (isSlotInPast(slotBlockDialog.date, slotBlockDialog.time)) {
-      toast.error("No se puede desbloquear un slot que ya pasó");
-      return;
-    }
-    setSlotBlocking(true);
-    try {
-      const res = await fetch(
-        `/api/professionals/${professionalId}/overrides?overrideId=${slotBlockDialog.overrideId}`,
-        { method: "DELETE" }
-      );
-      if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "Error al desbloquear slot");
-        return;
-      }
-      toast.success(`Slot ${slotBlockDialog.time} desbloqueado correctamente`);
-      setSlotBlockDialog((prev) => ({ ...prev, open: false }));
-      // Recargar overrides
-      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
-      setOverrides(Array.isArray(overRes) ? overRes : []);
-    } catch (err) {
-      console.error("Error unblocking slot:", err);
-      toast.error("Error de conexión al desbloquear slot");
-    } finally {
-      setSlotBlocking(false);
     }
   };
 
@@ -755,9 +647,8 @@ export function ProfessionalWeeklyAgenda({
       dateStr: string,
       time: string,
       dayOfWeek: number
-    ): "available" | "booked" | "outside" | "blocked" => {
-      if (isDateBlocked(dateStr)) return "blocked";
-      if (isTimeSlotBlocked(dateStr, time)) return "blocked";
+    ): "available" | "booked" | "outside" => {
+      // Bloqueo de slots eliminado — los slots se muestran como disponibles
       if (getAppointmentForCell(dateStr, time)) return "booked";
       if (isSlotInSchedule(dayOfWeek, time)) return "available";
 
@@ -771,7 +662,7 @@ export function ProfessionalWeeklyAgenda({
 
       return "outside";
     },
-    [isDateBlocked, isTimeSlotBlocked, getAppointmentForCell, isSlotInSchedule, overrides]
+    [getAppointmentForCell, isSlotInSchedule, overrides]
   );
 
   // Handle status update for appointments (Atendido / Ausente)
@@ -959,10 +850,9 @@ export function ProfessionalWeeklyAgenda({
                 let cellClass =
                   "border-l border-teal-50/50 p-0.5 min-h-[32px] transition-colors ";
 
-                if (state === "outside" || state === "blocked") {
-                  cellClass += "bg-gray-50/50 ";
+                if (state === "outside") {
+                  cellClass += "bg-red-50/30 ";
                 } else if (state === "available") {
-                  // Soft green background for availability
                   cellClass += "bg-emerald-50/60 ";
                 } else if (state === "booked") {
                   cellClass += "bg-white ";
@@ -990,24 +880,14 @@ export function ProfessionalWeeklyAgenda({
                   <div
                     key={`${dateStr}-${time}`}
                     className={cellClass}
-                    onClick={(state === "available" || state === "blocked") ? () => {
-                      const dur = schedules.find((s) => s.dayOfWeek === dayOfWeek)?.slotDuration || 45;
-                      const [h, m] = time.split(":").map(Number);
-                      const total = h * 60 + m + dur;
-                      const endTime = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-                      const dayLabel = format(parseISO(dateStr), "EEEE d 'de' MMMM", { locale: es });
-                      openSlotBlockDialog(dateStr, time, endTime, dayLabel);
-                    } : undefined}
-                    style={(state === "available" || state === "blocked") ? { cursor: "pointer" } : undefined}
                   >
                     {state === "booked" && apt && renderAppointment(apt)}
-                    {state === "available" && renderModalityIndicator(modality)}
-                    {state === "blocked" && (
+                    {state === "available" && (
                       <div
-                        className="flex items-center justify-center w-full bg-slate-200 border border-slate-400 text-slate-700 rounded-md py-1.5 text-[10px] font-bold select-none"
-                        title={slotIsPast ? "Slot bloqueado (pasado — no modificable)" : "Slot bloqueado por el profesional (click para desbloquear)"}
+                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700"
+                        title={`Disponible`}
                       >
-                        🔒 Ocupado
+                        Disponible
                       </div>
                     )}
                   </div>
@@ -1069,8 +949,8 @@ export function ProfessionalWeeklyAgenda({
             let rowClass =
               "flex items-start min-h-[36px] rounded-md px-2 py-1 transition-colors ";
 
-            if (state === "outside" || state === "blocked") {
-              rowClass += "bg-gray-50/30 ";
+            if (state === "outside") {
+              rowClass += "bg-red-50/20 ";
             } else if (state === "available") {
               rowClass += "bg-emerald-50/50 ";
             } else if (state === "booked") {
@@ -1089,24 +969,13 @@ export function ProfessionalWeeklyAgenda({
                   {state === "booked" && apt && (
                     <div className="ml-2">{renderAppointment(apt)}</div>
                   )}
-                  {(state === "available" || state === "blocked") && (
+                  {state === "available" && (
                     <div className="ml-2 flex-1">
-                      <button
-                        onClick={() => openSlotBlockDialog(dateStr, time, (() => {
-                          // Calcular endTime según slotDuration del profesional
-                          const dur = schedules.find((s) => s.dayOfWeek === dayOfWeek)?.slotDuration || 45;
-                          const [h, m] = time.split(":").map(Number);
-                          const total = h * 60 + m + dur;
-                          return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-                        })(), format(parseISO(dateStr), "EEEE d 'de' MMMM", { locale: es }))}
-                        className={`flex items-center justify-center w-full ${
-                          state === "blocked"
-                            ? "bg-slate-100 border border-slate-300 text-slate-500 rounded-lg py-2 text-xs font-medium"
-                            : modalityDisplay?.colorClass || "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium"
-                        }`}
+                      <div
+                        className="flex items-center justify-center w-full bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg py-2 text-xs font-medium"
                       >
-                        {state === "blocked" ? "🔒 Ocupado" : (modalityDisplay?.label || "Disponible")}
-                      </button>
+                        Disponible
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1559,52 +1428,6 @@ export function ProfessionalWeeklyAgenda({
               </>
             );
           })()}
-        </DialogContent>
-      </Dialog>
-
-      {/* === Dialog: Bloquear/Desbloquear slot individual === */}
-      <Dialog open={slotBlockDialog.open} onOpenChange={(open) => setSlotBlockDialog((prev) => ({ ...prev, open }))}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-teal-900 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-teal-600" />
-              Gestionar Slot
-            </DialogTitle>
-            <DialogDescription className="text-teal-600 capitalize">
-              {slotBlockDialog.dayLabel} — {slotBlockDialog.time} a {slotBlockDialog.endTime} hs
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-2 space-y-3">
-            <p className="text-sm text-slate-600">
-              {slotBlockDialog.overrideId
-                ? "Este slot está actualmente bloqueado. Podés desbloquearlo para que vuelva a estar disponible para asignación."
-                : "Este slot está disponible. Podés bloquearlo para que ni el admin ni los pacientes puedan asignar turnos en este horario."}
-            </p>
-          </div>
-          <DialogFooter className="flex justify-between gap-2 sm:justify-between">
-            {slotBlockDialog.overrideId ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleUnblockSlot}
-                disabled={slotBlocking}
-                className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-              >
-                {slotBlocking ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Desbloqueando...</> : <>🔓 Desbloquear horario</>}
-              </Button>
-            ) : (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleBlockSlot}
-                disabled={slotBlocking}
-                className="text-xs"
-              >
-                {slotBlocking ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Bloqueando...</> : <>🛑 Bloquear este horario</>}
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setSlotBlockDialog((prev) => ({ ...prev, open: false }))} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

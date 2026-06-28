@@ -1109,15 +1109,11 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 }
 
                 // Determinar estado usando la MISMA lógica que el profesional
-                let state: "available" | "booked" | "outside" | "blocked" | "past" = "outside";
+                // === Bloqueo de slots eliminado ===
+                // Los slots que antes estaban bloqueados ahora se tratan como disponibles.
+                let state: "available" | "booked" | "outside" | "past" = "outside";
 
-                if (isDateBlocked(dateStr)) {
-                  state = "blocked";
-                } else if (isTimeSlotBlocked(dateStr, time)) {
-                  state = "blocked";
-                } else if (bookedSlot && bookedSlot.status === "blocked") {
-                  state = "blocked";
-                } else if (bookedSlot) {
+                if (bookedSlot && bookedSlot.status !== "blocked") {
                   state = "booked";
                 } else if (effectiveFreeSlot && !slotIsPast) {
                   // Slot futuro disponible (clickeable para asignar)
@@ -1143,8 +1139,8 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 // Clases CSS (IDÉNTICAS al profesional, +past)
                 let cellClass = "border-l border-teal-50/50 p-0.5 min-h-[32px] transition-colors ";
 
-                if (state === "outside" || state === "blocked") {
-                  cellClass += "bg-gray-50/50 ";
+                if (state === "outside") {
+                  cellClass += "bg-red-50/30 ";
                 } else if (state === "available") {
                   cellClass += "bg-emerald-50/60 ";
                 } else if (state === "booked") {
@@ -1186,16 +1182,6 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                         title={`Pasado — ${MODALITY_LABELS[modality] || modality} ${time} a ${scheduleInfo.endTime} hs (no disponible para asignar)`}
                       >
                         {MODALITY_LABELS[modality] || modality}
-                      </div>
-                    )}
-
-                    {/* === Slot BLOQUEADO por el profesional === */}
-                    {state === "blocked" && (
-                      <div
-                        className="flex items-center justify-center w-full bg-slate-200 border border-slate-400 text-slate-700 rounded-md py-1.5 text-[10px] font-bold select-none"
-                        title="Slot bloqueado por el profesional"
-                      >
-                        🔒 Ocupado
                       </div>
                     )}
 
