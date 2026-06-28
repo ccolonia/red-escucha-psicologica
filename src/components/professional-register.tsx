@@ -364,8 +364,16 @@ export function ProfessionalRegister() {
           toast.error("Los emails no coinciden");
           return false;
         }
-        if (!form.password || form.password.length < 6) {
-          toast.error("La contraseña debe tener al menos 6 caracteres");
+        if (!form.password || form.password.length < 8) {
+          toast.error("La contraseña debe tener al menos 8 caracteres, una mayúscula y un símbolo");
+          return false;
+        }
+        if (!/[A-Z]/.test(form.password)) {
+          toast.error("La contraseña debe incluir al menos una letra mayúscula");
+          return false;
+        }
+        if (!/[!@#$%^&*(),.?":{}|<>_+\-=]/.test(form.password)) {
+          toast.error("La contraseña debe incluir al menos un símbolo (!, $, #, etc.)");
           return false;
         }
         if (form.password !== form.confirmPassword) {
@@ -743,7 +751,7 @@ export function ProfessionalRegister() {
                             value={form.password}
                             onChange={(e) => updateForm("password", e.target.value)}
                             className="border-beige-300 bg-beige-50 pr-10 focus:ring-sage-300/20"
-                            placeholder="Mínimo 6 caracteres"
+                            placeholder="Ingresá tu contraseña"
                           />
                           <button
                             type="button"
@@ -753,6 +761,26 @@ export function ProfessionalRegister() {
                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
                         </div>
+                        {/* === Micro-badges de validación en tiempo real === */}
+                        {(() => {
+                          const hasMinLength = form.password.length >= 8;
+                          const hasUppercase = /[A-Z]/.test(form.password);
+                          const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_+\-=]/.test(form.password);
+                          const allValid = hasMinLength && hasUppercase && hasSpecialChar;
+                          return (
+                            <div className={`flex flex-col gap-0.5 pt-1 transition-opacity ${form.password ? "opacity-100" : "opacity-0"}`}>
+                              <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasMinLength ? "text-emerald-600" : "text-slate-400"}`}>
+                                {hasMinLength ? "✓" : "•"} Mínimo 8 caracteres
+                              </span>
+                              <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasUppercase ? "text-emerald-600" : "text-slate-400"}`}>
+                                {hasUppercase ? "✓" : "•"} Una mayúscula
+                              </span>
+                              <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasSpecialChar ? "text-emerald-600" : "text-slate-400"}`}>
+                                {hasSpecialChar ? "✓" : "•"} Un símbolo (!, $, #...)
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="space-y-2">
                         <Label className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Repetir contraseña *</Label>
@@ -1352,7 +1380,15 @@ export function ProfessionalRegister() {
                   {step < totalSteps ? (
                     <Button
                       onClick={nextStep}
-                      className="btn-sage text-forest-900 font-semibold"
+                      disabled={
+                        step === 1 &&
+                        !(
+                          form.password.length >= 8 &&
+                          /[A-Z]/.test(form.password) &&
+                          /[!@#$%^&*(),.?":{}|<>_+\-=]/.test(form.password)
+                        )
+                      }
+                      className="btn-sage text-forest-900 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ fontFamily: "Montserrat, sans-serif" }}
                     >
                       Siguiente
