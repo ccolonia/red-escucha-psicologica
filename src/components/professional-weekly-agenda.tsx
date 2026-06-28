@@ -278,10 +278,100 @@ export function ProfessionalWeeklyAgenda({
   const [rescheduling, setRescheduling] = useState(false);
   const [rescheduleMode, setRescheduleMode] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
+  const [activatingSlot, setActivatingSlot] = useState(false);
 
   const openFichaDialog = (apt: Appointment) => {
     setFichaAppointment(apt);
     setFichaDialogOpen(true);
+  };
+
+  // === Activar slot como Disponible ===
+  // El profesional hace click en un slot "schedule" (naranja) → se activa
+  // como "available" (verde) creando un override type="extra".
+  // Esto lo hace visible para el admin en la Agenda Central.
+  const handleActivateSlot = async (dateStr: string, time: string, dayOfWeek: number) => {
+    if (!professionalId) return;
+    // NO permitir activar slots pasados
+    if (isSlotInPast(dateStr, time)) {
+      toast.error("No se puede activar un slot que ya pasó");
+      return;
+    }
+    // Calcular endTime según slotDuration del schedule
+    const schedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
+    const dur = schedule?.slotDuration || 45;
+    const modality = schedule?.modality || "ambas";
+    const [h, m] = time.split(":").map(Number);
+    const total = h * 60 + m + dur;
+    const endTime = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+
+    setActivatingSlot(true);
+    try {
+      const res = await fetch(`/api/professionals/${professionalId}/overrides`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: dateStr,
+          type: "extra",
+          startTime: time,
+          endTime: endTime,
+          slotDuration: dur,
+          modality: modality,
+          reason: "Slot activado desde grilla",
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Error al activar slot");
+        return;
+      }
+      toast.success(`Slot ${time}–${endTime} activado como Disponible`);
+      // Recargar overrides
+      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
+      setOverrides(Array.isArray(overRes) ? overRes : []);
+    } catch (err) {
+      console.error("Error activating slot:", err);
+      toast.error("Error de conexión al activar slot");
+    } finally {
+      setActivatingSlot(false);
+    }
+  };
+
+  // === Desactivar slot (volver de Disponible a schedule) ===
+  const handleDeactivateSlot = async (dateStr: string, time: string) => {
+    if (!professionalId) return;
+    if (isSlotInPast(dateStr, time)) {
+      toast.error("No se puede desactivar un slot que ya pasó");
+      return;
+    }
+    // Buscar el override type="extra" que coincide
+    const existing = overrides.find((o) =>
+      o.date === dateStr && o.type === "extra" && o.startTime === time
+    );
+    if (!existing?.id) {
+      toast.error("No se encontró el slot activado");
+      return;
+    }
+    setActivatingSlot(true);
+    try {
+      const res = await fetch(
+        `/api/professionals/${professionalId}/overrides?overrideId=${existing.id}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Error al desactivar slot");
+        return;
+      }
+      toast.success(`Slot ${time} desactivado`);
+      // Recargar overrides
+      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
+      setOverrides(Array.isArray(overRes) ? overRes : []);
+    } catch (err) {
+      console.error("Error deactivating slot:", err);
+      toast.error("Error de conexión al desactivar slot");
+    } finally {
+      setActivatingSlot(false);
+    }
   };
 
   // === Cancelar turno desde la ficha rápida ===
@@ -642,23 +732,29 @@ export function ProfessionalWeeklyAgenda({
   );
 
   // Determine cell state
+  // === NUEVO FLUJO DE SLOTS ===
+  // - "schedule": dentro del schedule pero NO activado → muestra modalidad (naranja)
+  // - "available": activado por el profesional (override type="extra") → verde "Disponible"
+  // - "booked": tiene turno asignado
+  // - "outside": fuera del schedule
   const getCellState = useCallback(
     (
       dateStr: string,
       time: string,
       dayOfWeek: number
-    ): "available" | "booked" | "outside" => {
-      // Bloqueo de slots eliminado — los slots se muestran como disponibles
+    ): "schedule" | "available" | "booked" | "outside" => {
       if (getAppointmentForCell(dateStr, time)) return "booked";
-      if (isSlotInSchedule(dayOfWeek, time)) return "available";
 
-      // Check if extra override adds this slot
-      const extraSlot = overrides.find((o) => {
+      // Verificar si el slot fue activado por el profesional (override type="extra")
+      const activatedSlot = overrides.find((o) => {
         if (o.date !== dateStr || o.type !== "extra") return false;
         if (!o.startTime || !o.endTime) return false;
         return time >= o.startTime && time < o.endTime;
       });
-      if (extraSlot) return "available";
+      if (activatedSlot) return "available";
+
+      // Verificar si está dentro del schedule (pero NO activado)
+      if (isSlotInSchedule(dayOfWeek, time)) return "schedule";
 
       return "outside";
     },
@@ -852,16 +948,17 @@ export function ProfessionalWeeklyAgenda({
 
                 if (state === "outside") {
                   cellClass += "bg-red-50/30 ";
+                } else if (state === "schedule") {
+                  // Dentro del schedule pero NO activado → fondo sutil
+                  cellClass += "bg-amber-50/30 ";
                 } else if (state === "available") {
+                  // Activado por el profesional → verde
                   cellClass += "bg-emerald-50/60 ";
                 } else if (state === "booked") {
                   cellClass += "bg-white ";
                 }
 
-                // === Slots pasados: opacidad reducida (estilo Agenda Central) ===
-                // Esto aplica a TODOS los estados (available, booked, blocked, outside)
-                // para dar feedback visual inmediato de que el slot ya pasó y no es
-                // modificable. Igual que en la Agenda Central del admin.
+                // === Slots pasados: opacidad reducida ===
                 if (slotIsPast) {
                   cellClass += "opacity-50 ";
                 }
@@ -872,7 +969,7 @@ export function ProfessionalWeeklyAgenda({
 
                 // Get modality for this cell
                 const modality =
-                  state === "available"
+                  (state === "schedule" || state === "available")
                     ? getModalityForCell(dateStr, dayOfWeek, time)
                     : null;
 
@@ -880,12 +977,22 @@ export function ProfessionalWeeklyAgenda({
                   <div
                     key={`${dateStr}-${time}`}
                     className={cellClass}
+                    onClick={(state === "schedule" && !slotIsPast) ? () => handleActivateSlot(dateStr, time, dayOfWeek) : (state === "available" && !slotIsPast) ? () => handleDeactivateSlot(dateStr, time) : undefined}
+                    style={(state === "schedule" || state === "available") && !slotIsPast ? { cursor: "pointer" } : undefined}
                   >
                     {state === "booked" && apt && renderAppointment(apt)}
+                    {state === "schedule" && (
+                      <div
+                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition-colors"
+                        title={`${modality || "ambas"} — click para activar como Disponible`}
+                      >
+                        {modality || "Ambas"}
+                      </div>
+                    )}
                     {state === "available" && (
                       <div
-                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700"
-                        title={`Disponible`}
+                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors"
+                        title={`Disponible — click para desactivar`}
                       >
                         Disponible
                       </div>
@@ -938,29 +1045,32 @@ export function ProfessionalWeeklyAgenda({
             const state = getCellState(dateStr, time, dayOfWeek);
             const apt = getAppointmentForCell(dateStr, time);
             const modality =
-              state === "available"
+              (state === "schedule" || state === "available")
                 ? getModalityForCell(dateStr, dayOfWeek, time)
                 : null;
             const modalityDisplay = modality
               ? MODALITY_CELL_DISPLAY[modality]
               : null;
-            const ModIcon = modalityDisplay?.icon;
 
             let rowClass =
               "flex items-start min-h-[36px] rounded-md px-2 py-1 transition-colors ";
 
             if (state === "outside") {
               rowClass += "bg-red-50/20 ";
+            } else if (state === "schedule") {
+              rowClass += "bg-amber-50/30 ";
             } else if (state === "available") {
               rowClass += "bg-emerald-50/50 ";
             } else if (state === "booked") {
               rowClass += "bg-white ";
             }
 
+            const slotIsPastMobile = isSlotInPast(dateStr, time);
+
             return (
               <div
                 key={time}
-                className={rowClass}
+                className={`${rowClass} ${slotIsPastMobile ? "opacity-50" : ""}`}
               >
                 <span className="text-[11px] text-teal-400 w-12 flex-shrink-0 pt-0.5">
                   {time}
@@ -969,11 +1079,36 @@ export function ProfessionalWeeklyAgenda({
                   {state === "booked" && apt && (
                     <div className="ml-2">{renderAppointment(apt)}</div>
                   )}
-                  {state === "available" && (
+                  {state === "schedule" && !slotIsPastMobile && (
                     <div className="ml-2 flex-1">
-                      <div
-                        className="flex items-center justify-center w-full bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg py-2 text-xs font-medium"
+                      <button
+                        onClick={() => handleActivateSlot(dateStr, time, dayOfWeek)}
+                        className="flex items-center justify-center w-full bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors"
                       >
+                        {modalityDisplay?.label || "Ambas"}
+                      </button>
+                    </div>
+                  )}
+                  {state === "available" && !slotIsPastMobile && (
+                    <div className="ml-2 flex-1">
+                      <button
+                        onClick={() => handleDeactivateSlot(dateStr, time)}
+                        className="flex items-center justify-center w-full bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg py-2 text-xs font-medium hover:bg-emerald-200 transition-colors"
+                      >
+                        Disponible
+                      </button>
+                    </div>
+                  )}
+                  {state === "schedule" && slotIsPastMobile && (
+                    <div className="ml-2 flex-1">
+                      <div className="flex items-center justify-center w-full bg-amber-50/50 border border-amber-200/50 text-amber-500 rounded-lg py-2 text-xs font-medium">
+                        {modalityDisplay?.label || "Ambas"}
+                      </div>
+                    </div>
+                  )}
+                  {state === "available" && slotIsPastMobile && (
+                    <div className="ml-2 flex-1">
+                      <div className="flex items-center justify-center w-full bg-emerald-50/50 border border-emerald-200/50 text-emerald-500 rounded-lg py-2 text-xs font-medium">
                         Disponible
                       </div>
                     </div>
