@@ -1519,8 +1519,16 @@ export function ProfessionalProfile() {
       toast.error("Completá todos los campos de contraseña");
       return;
     }
-    if (newPassword.length < 6) {
-      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
+    if (newPassword.length < 8) {
+      toast.error("La nueva contraseña debe tener al menos 8 caracteres, una mayúscula y un símbolo");
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      toast.error("La nueva contraseña debe incluir al menos una letra mayúscula");
+      return;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>_+\-=]/.test(newPassword)) {
+      toast.error("La nueva contraseña debe incluir al menos un símbolo (!, $, #, etc.)");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -2176,14 +2184,46 @@ export function ProfessionalProfile() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Nueva contraseña</Label>
-              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="border-teal-200" />
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Ingresá tu nueva contraseña" className="border-teal-200" />
+              {/* === Micro-badges de validación en tiempo real === */}
+              {(() => {
+                const hasMinLength = newPassword.length >= 8;
+                const hasUppercase = /[A-Z]/.test(newPassword);
+                const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_+\-=]/.test(newPassword);
+                return (
+                  <div className={`flex flex-col gap-0.5 pt-1 transition-opacity ${newPassword ? "opacity-100" : "opacity-0"}`}>
+                    <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasMinLength ? "text-emerald-600" : "text-slate-400"}`}>
+                      {hasMinLength ? "✓" : "•"} Mínimo 8 caracteres
+                    </span>
+                    <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasUppercase ? "text-emerald-600" : "text-slate-400"}`}>
+                      {hasUppercase ? "✓" : "•"} Una mayúscula
+                    </span>
+                    <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasSpecialChar ? "text-emerald-600" : "text-slate-400"}`}>
+                      {hasSpecialChar ? "✓" : "•"} Un símbolo (!, $, #...)
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="space-y-2">
               <Label>Confirmar nueva contraseña</Label>
               <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repetir nueva contraseña" className="border-teal-200" />
             </div>
           </div>
-          <Button variant="outline" className="border-teal-300 text-teal-600 hover:bg-teal-50" disabled={changingPassword} onClick={handleChangePassword}>
+          <Button
+            variant="outline"
+            className="border-teal-300 text-teal-600 hover:bg-teal-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={
+              changingPassword ||
+              !(
+                newPassword.length >= 8 &&
+                /[A-Z]/.test(newPassword) &&
+                /[!@#$%^&*(),.?":{}|<>_+\-=]/.test(newPassword) &&
+                newPassword === confirmPassword
+              )
+            }
+            onClick={handleChangePassword}
+          >
             <Lock className="mr-2 w-4 h-4" />
             {changingPassword ? "Cambiando..." : "Cambiar Contraseña"}
           </Button>
