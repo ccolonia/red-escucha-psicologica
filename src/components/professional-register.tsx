@@ -789,7 +789,13 @@ export function ProfessionalRegister() {
                             type={showConfirmPassword ? "text" : "password"}
                             value={form.confirmPassword}
                             onChange={(e) => updateForm("confirmPassword", e.target.value)}
-                            className="border-beige-300 bg-beige-50 pr-10 focus:ring-sage-300/20"
+                            className={`bg-beige-50 pr-10 focus:ring-sage-300/20 transition-colors ${
+                              form.confirmPassword && form.confirmPassword === form.password
+                                ? "border-emerald-400"
+                                : form.confirmPassword
+                                  ? "border-red-400"
+                                  : "border-beige-300"
+                            }`}
                             placeholder="Repetir contraseña"
                           />
                           <button
@@ -800,6 +806,17 @@ export function ProfessionalRegister() {
                             {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
                         </div>
+                        {/* === Indicador de coincidencia === */}
+                        {form.confirmPassword && (
+                          <div className={`text-[10px] flex items-center gap-1 transition-colors ${
+                            form.confirmPassword === form.password ? "text-emerald-600" : "text-red-500"
+                          }`}>
+                            {form.confirmPassword === form.password
+                              ? <>✓ Las contraseñas coinciden</>
+                              : <>✗ Las contraseñas no coinciden</>
+                            }
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -939,7 +956,7 @@ export function ProfessionalRegister() {
                             className="border-beige-400 data-[state=checked]:bg-forest-400 data-[state=checked]:border-forest-400"
                           />
                           <span className="text-xs text-forest-300 font-light italic group-hover:text-forest-400 transition-colors" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                            Matrícula en trámite
+                            Matrícula en trámite (solo supervisa)
                           </span>
                         </label>
                       </div>
