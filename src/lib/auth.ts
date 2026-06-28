@@ -38,9 +38,21 @@ export const authOptions: NextAuthOptions = {
         let isValid = false;
         if (isHashed(user.password)) {
           isValid = await comparePassword(credentials.password, user.password);
+          // === LOG TEMPORAL para diagnosticar login después de cambio de contraseña ===
+          console.log("[auth.authorize] HASHED password login attempt:", {
+            email: credentials.email,
+            inputPasswordLength: credentials.password.length,
+            inputPasswordFirst3: credentials.password.substring(0, 3),
+            dbPasswordFirst10: user.password.substring(0, 10),
+            isValid,
+          });
         } else {
           // Legacy plaintext comparison (will be removed after migration)
           isValid = user.password === credentials.password;
+          console.log("[auth.authorize] PLAINTEXT password login attempt:", {
+            email: credentials.email,
+            isValid,
+          });
           // Auto-upgrade plaintext to bcrypt on successful login
           if (isValid) {
             const hashedPassword = await hashPassword(credentials.password);
