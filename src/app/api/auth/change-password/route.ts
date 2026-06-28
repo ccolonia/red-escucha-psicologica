@@ -56,31 +56,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     const hashedNewPassword = await hashPassword(newPassword);
-
-    // === LOG TEMPORAL para diagnosticar por qué la nueva contraseña no funciona ===
-    console.log("[change-password] DEBUG:", {
-      userId,
-      currentPasswordLength: currentPassword.length,
-      newPasswordLength: newPassword.length,
-      newPasswordFirst3: newPassword.substring(0, 3),
-      hashedNewPasswordFirst10: hashedNewPassword.substring(0, 10),
-      hashedNewPasswordLength: hashedNewPassword.length,
-    });
-
     await db.user.update({
       where: { id: userId },
       data: { password: hashedNewPassword },
-    });
-
-    // Verificar que se guardó correctamente
-    const updatedUser = await db.user.findUnique({
-      where: { id: userId },
-      select: { password: true },
-    });
-    console.log("[change-password] POST-UPDATE:", {
-      dbPasswordFirst10: updatedUser?.password.substring(0, 10),
-      dbPasswordLength: updatedUser?.password.length,
-      matchesHashed: updatedUser?.password === hashedNewPassword,
     });
 
     return NextResponse.json({ message: "Contraseña actualizada exitosamente" });
