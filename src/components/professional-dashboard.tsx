@@ -2248,7 +2248,13 @@ export function ProfessionalProfile() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repetir nueva contraseña"
-                  className="border-teal-200 pr-10"
+                  className={`pr-10 transition-colors ${
+                    confirmPassword && confirmPassword === newPassword
+                      ? "border-emerald-400 focus:ring-emerald-300/20"
+                      : confirmPassword
+                        ? "border-red-400 focus:ring-red-300/20"
+                        : "border-teal-200"
+                  }`}
                 />
                 <button
                   type="button"
@@ -2258,6 +2264,17 @@ export function ProfessionalProfile() {
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {/* === Indicador de coincidencia === */}
+              {confirmPassword && (
+                <div className={`text-[10px] flex items-center gap-1 transition-colors ${
+                  confirmPassword === newPassword ? "text-emerald-600" : "text-red-500"
+                }`}>
+                  {confirmPassword === newPassword
+                    ? <>✓ Las contraseñas coinciden</>
+                    : <>✗ Las contraseñas no coinciden</>
+                  }
+                </div>
+              )}
             </div>
           </div>
           <Button
