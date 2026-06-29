@@ -1092,37 +1092,35 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 // Verificar si el slot está en el pasado (usando timezone Argentina)
                 const slotIsPast = dayData ? isSlotInPast(dayData.date, time) : false;
 
-                // === NUEVO FLUJO: el profesional debe activar slots manualmente ===
-                // El admin SOLO muestra como disponibles los slots que el profesional
-                // activó (override type="extra"). Los slots del schedule que NO fueron
-                // activados NO se muestran como disponibles.
-                // El backend ya procesa los extraOverrides en computeAvailableSlots,
-                // así que freeSlot debería contener los slots activados.
-                // Si freeSlot existe Y no es pasado → available (clickeable para asignar)
-                // Si no hay freeSlot pero está en el schedule → outside (no asignable)
+                // Determinar estado — PARIDAD 1:1 con la agenda del profesional
+                // "schedule": dentro del schedule pero NO activado → naranja con modalidad
+                // "available": activado por el profesional → verde "Disponible"
+                // "booked": tiene turno asignado
+                // "past": slot activado pero ya pasó → tenue
+                // "outside": fuera del schedule → rojo tenue
                 const effectiveFreeSlot = freeSlot;
 
-                // Determinar estado
-                let state: "available" | "booked" | "outside" | "past" = "outside";
+                let state: "schedule" | "available" | "booked" | "outside" | "past" = "outside";
 
                 if (bookedSlot && bookedSlot.status !== "blocked") {
                   state = "booked";
                 } else if (effectiveFreeSlot && !slotIsPast) {
-                  // Slot activado por el profesional y futuro → disponible para asignar
                   state = "available";
                 } else if (effectiveFreeSlot && slotIsPast) {
-                  // Slot activado pero ya pasó → mostrar modalidad tenue
                   state = "past";
+                } else if (isSlotInSchedule(day.dayOfWeek, time)) {
+                  state = "schedule";
                 } else {
-                  // No hay freeSlot (no fue activado por el profesional) → outside
                   state = "outside";
                 }
 
-                // Clases CSS (IDÉNTICAS al profesional, +past)
+                // Clases CSS — paridad 1:1 con profesional
                 let cellClass = "border-l border-teal-50/50 p-0.5 min-h-[32px] transition-colors ";
 
                 if (state === "outside") {
                   cellClass += "bg-red-50/30 ";
+                } else if (state === "schedule") {
+                  cellClass += "bg-amber-50/30 ";
                 } else if (state === "available") {
                   cellClass += "bg-emerald-50/60 ";
                 } else if (state === "booked") {
@@ -1131,18 +1129,21 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   cellClass += "bg-emerald-50/30 ";
                 }
 
+                if (slotIsPast && state !== "outside" && state !== "booked") {
+                  cellClass += "opacity-50 ";
+                }
+
                 if (isToday) {
                   cellClass += "border-l-2 border-l-teal-300 ";
                 }
 
                 const past = slotIsPast;
 
-                // Obtener modalidad para slots available/past
-                const modality = (state === "available" || state === "past")
+                // Obtener modalidad para slots schedule/available/past
+                const modality = (state === "schedule" || state === "available" || state === "past")
                   ? getModalityForCell(day.dayOfWeek, time)
                   : null;
 
-                // Para slots past, obtener schedule completo (con endTime real para el tooltip)
                 const scheduleInfo = state === "past" ? getScheduleForCell(day.dayOfWeek, time) : null;
 
                 return (
@@ -1152,16 +1153,31 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     onClick={(state === "available" && effectiveFreeSlot && !past) ? () => onSlotClick(effectiveFreeSlot, dayData!.date) : (state === "booked" && bookedSlot) ? () => onBookedSlotClick(bookedSlot) : undefined}
                     style={(state === "available" || state === "booked") ? { cursor: "pointer" } : undefined}
                   >
-                    {/* === Slot LIBRE (clickeable, futuro) === */}
-                    {state === "available" && effectiveFreeSlot && (
-                      <ModalityIndicator slot={effectiveFreeSlot} past={past} />
+                    {/* === Slot SCHEDULE (naranja, no clickeable) === */}
+                    {state === "schedule" && (
+                      <div
+                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600"
+                        title={`${MODALITY_LABELS[modality || "ambas"] || modality || "Ambas"} — no disponible (el profesional debe activar este slot)`}
+                      >
+                        {MODALITY_LABELS[modality || "ambas"] || modality || "Ambas"}
+                      </div>
                     )}
 
-                    {/* === Slot PASADO o en schedule (muestra modalidad, no clickeable) === */}
+                    {/* === Slot DISPONIBLE (verde, clickeable para asignar) === */}
+                    {state === "available" && effectiveFreeSlot && (
+                      <div
+                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700"
+                        title={`Disponible — click para asignar turno`}
+                      >
+                        Disponible
+                      </div>
+                    )}
+
+                    {/* === Slot PASADO (tenue, no clickeable) === */}
                     {state === "past" && modality && scheduleInfo && (
                       <div
-                        className={`flex items-center justify-center w-full rounded py-1.5 text-[10px] font-medium opacity-50 ${MODALITY_COLORS[modality] || MODALITY_COLORS.ambas}`}
-                        title={`Pasado — ${MODALITY_LABELS[modality] || modality} ${time} a ${scheduleInfo.endTime} hs (no disponible para asignar)`}
+                        className={`flex items-center justify-center w-full rounded py-1 text-[10px] font-medium opacity-50 ${MODALITY_COLORS[modality] || MODALITY_COLORS.ambas}`}
+                        title={`Pasado — ${MODALITY_LABELS[modality] || modality} ${time} a ${scheduleInfo.endTime} hs`}
                       >
                         {MODALITY_LABELS[modality] || modality}
                       </div>
