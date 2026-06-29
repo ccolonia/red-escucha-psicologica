@@ -68,8 +68,19 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if license already exists
+      // === Excepción: "EN TRÁMITE" no se valida como duplicado ===
+      // Como TODOS los profesionales sin matrícula usan "EN TRÁMITE", si
+      // validáramos duplicados, solo el primero podría registrarse. Los
+      // demás chocarían con "Ya existe un profesional con esta matrícula".
+      // Para "EN TRÁMITE" generamos un valor único agregando un sufijo.
+      let finalLicense = license;
+      if (license === "EN TRÁMITE") {
+        // Generar un valor único: "EN TRÁMITE-{timestamp}" para evitar colisión
+        finalLicense = `EN TRÁMITE-${Date.now()}`;
+      }
+
       const existingLicense = await db.professional.findUnique({
-        where: { license },
+        where: { license: finalLicense },
       });
 
       if (existingLicense) {
@@ -130,7 +141,7 @@ export async function POST(request: NextRequest) {
       await db.professional.create({
         data: {
           userId: user.id,
-          license,
+          license: finalLicense,
           specialty,
           bio: bio || null,
           title: title || null,
@@ -173,7 +184,7 @@ export async function POST(request: NextRequest) {
           professionalEmail: email,
           professionalPhone: phone || null,
           profession: body.profession || null,
-          license,
+          license: finalLicense,
           specialty,
           title: title || null,
         }).catch((err) => console.error("Failed to send admin notification:", err));
