@@ -77,6 +77,11 @@ function isModalityCompatible(scheduleModality: string, requestedModality: strin
 }
 
 // === Helper: computar slots disponibles para un professional en una fecha ===
+// NUEVO FLUJO: el profesional debe activar manualmente cada slot desde Mi Agenda.
+// Los slots del schedule NO se incluyen automáticamente como disponibles.
+// SOLO se incluyen los slots que el profesional activó (override type="extra").
+// Los slots del schedule se muestran en la grilla del profesional como "schedule"
+// (naranja) y en el admin como "outside" (no asignables) hasta que se activen.
 function computeAvailableSlots(
   schedules: { startTime: string; endTime: string; slotDuration: number; modality: string; dayOfWeek: number; direccionId?: string | null }[],
   overrides: { type: string; startTime: string | null; endTime: string | null; slotDuration: number | null; modality: string | null; direccionId?: string | null }[],
@@ -85,40 +90,10 @@ function computeAvailableSlots(
   todayStr: string,
   targetDayOfWeek: number
 ): { time: string; endTime: string; modality: string; duration: number; direccionId: string | null }[] {
-  // Filtrar schedules del día específico
-  const daySchedules = schedules.filter((s) => s.dayOfWeek === targetDayOfWeek);
-  const blockOverrides = overrides.filter((o) => o.type === "block");
+  // === SOLO procesar extraOverrides (slots activados por el profesional) ===
   const extraOverrides = overrides.filter((o) => o.type === "extra");
 
-  const fullDayBlock = blockOverrides.some((o) => !o.startTime && !o.endTime);
-  if (fullDayBlock) return [];
-
   const allSlots: { time: string; endTime: string; modality: string; duration: number; direccionId: string | null }[] = [];
-  for (const schedule of daySchedules) {
-    const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
-    for (const time of slots) {
-      const slotStartMin = timeToMinutes(time);
-      const slotEndMin = slotStartMin + schedule.slotDuration;
-      const endMin = timeToMinutes(schedule.endTime);
-      if (slotStartMin >= endMin || slotEndMin > endMin) continue;
-
-      const isBlocked = blockOverrides.some((block) => {
-        if (block.startTime && block.endTime) {
-          return time >= block.startTime && time < block.endTime;
-        }
-        return false;
-      });
-      if (!isBlocked) {
-        allSlots.push({
-          time,
-          endTime: minutesToTime(slotEndMin),
-          modality: schedule.modality,
-          duration: schedule.slotDuration,
-          direccionId: schedule.direccionId || null,
-        });
-      }
-    }
-  }
 
   for (const extra of extraOverrides) {
     if (extra.startTime && extra.endTime) {
