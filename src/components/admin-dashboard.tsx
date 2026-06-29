@@ -2510,6 +2510,7 @@ export function AdminProfile() {
   });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
@@ -2579,8 +2580,16 @@ export function AdminProfile() {
       toast.error("Ingresá tu contraseña actual");
       return;
     }
-    if (passwordForm.newPassword.length < 6) {
-      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
+    if (passwordForm.newPassword.length < 8) {
+      toast.error("La nueva contraseña debe tener al menos 8 caracteres, una mayúscula y un símbolo");
+      return;
+    }
+    if (!/[A-Z]/.test(passwordForm.newPassword)) {
+      toast.error("La nueva contraseña debe incluir al menos una letra mayúscula");
+      return;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>_+\-=]/.test(passwordForm.newPassword)) {
+      toast.error("La nueva contraseña debe incluir al menos un símbolo (!, $, #, etc.)");
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -2750,7 +2759,7 @@ export function AdminProfile() {
                       })
                     }
                     className="border-teal-200 pr-10"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Ingresá tu nueva contraseña"
                   />
                   <button
                     type="button"
@@ -2764,29 +2773,87 @@ export function AdminProfile() {
                     )}
                   </button>
                 </div>
+                {/* === Micro-badges de validación en tiempo real === */}
+                {(() => {
+                  const hasMinLength = passwordForm.newPassword.length >= 8;
+                  const hasUppercase = /[A-Z]/.test(passwordForm.newPassword);
+                  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_+\-=]/.test(passwordForm.newPassword);
+                  return (
+                    <div className={`flex flex-col gap-0.5 pt-1 transition-opacity ${passwordForm.newPassword ? "opacity-100" : "opacity-0"}`}>
+                      <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasMinLength ? "text-emerald-600" : "text-slate-400"}`}>
+                        {hasMinLength ? "✓" : "•"} Mínimo 8 caracteres
+                      </span>
+                      <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasUppercase ? "text-emerald-600" : "text-slate-400"}`}>
+                        {hasUppercase ? "✓" : "•"} Una mayúscula
+                      </span>
+                      <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasSpecialChar ? "text-emerald-600" : "text-slate-400"}`}>
+                        {hasSpecialChar ? "✓" : "•"} Un símbolo (!, $, #...)
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm-pass">Confirmar contraseña *</Label>
-                <Input
-                  id="confirm-pass"
-                  type="password"
-                  value={passwordForm.confirmPassword}
-                  onChange={(e) =>
-                    setPasswordForm({
-                      ...passwordForm,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  className="border-teal-200"
-                  placeholder="Repetir nueva contraseña"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirm-pass"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordForm({
+                        ...passwordForm,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                    className={`pr-10 transition-colors ${
+                      passwordForm.confirmPassword && passwordForm.confirmPassword === passwordForm.newPassword
+                        ? "border-emerald-400"
+                        : passwordForm.confirmPassword
+                          ? "border-red-400"
+                          : "border-teal-200"
+                    }`}
+                    placeholder="Repetir nueva contraseña"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 hover:text-teal-600"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                {/* === Indicador de coincidencia === */}
+                {passwordForm.confirmPassword && (
+                  <div className={`text-[10px] flex items-center gap-1 transition-colors ${
+                    passwordForm.confirmPassword === passwordForm.newPassword ? "text-emerald-600" : "text-red-500"
+                  }`}>
+                    {passwordForm.confirmPassword === passwordForm.newPassword
+                      ? <>✓ Las contraseñas coinciden</>
+                      : <>✗ Las contraseñas no coinciden</>
+                    }
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex gap-2">
               <Button
                 type="submit"
-                disabled={savingPassword}
-                className="bg-teal-600 hover:bg-teal-700 text-white"
+                disabled={
+                  savingPassword ||
+                  !(
+                    passwordForm.newPassword.length >= 8 &&
+                    /[A-Z]/.test(passwordForm.newPassword) &&
+                    /[!@#$%^&*(),.?":{}|<>_+\-=]/.test(passwordForm.newPassword) &&
+                    passwordForm.newPassword === passwordForm.confirmPassword &&
+                    passwordForm.currentPassword
+                  )
+                }
+                className="bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Lock className="mr-2 w-4 h-4" />
                 {savingPassword ? "Cambiando..." : "Cambiar Contraseña"}
