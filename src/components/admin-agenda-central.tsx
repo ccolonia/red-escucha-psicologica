@@ -1092,48 +1092,30 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 // Verificar si el slot está en el pasado (usando timezone Argentina)
                 const slotIsPast = dayData ? isSlotInPast(dayData.date, time) : false;
 
-                // Si no hay freeSlot del backend pero está en el schedule Y es futuro,
-                // construir freeSlot a partir del schedule (el backend puede haberlo
-                // filtrado por un bug de timezone, pero el frontend sabe que es futuro)
-                let effectiveFreeSlot = freeSlot;
-                if (!effectiveFreeSlot && !slotIsPast) {
-                  const scheduleInfo = getScheduleForCell(day.dayOfWeek, time);
-                  if (scheduleInfo) {
-                    effectiveFreeSlot = {
-                      time: time,
-                      endTime: scheduleInfo.endTime,
-                      modality: scheduleInfo.modality,
-                      duration: scheduleInfo.slotDuration,
-                    };
-                  }
-                }
+                // === NUEVO FLUJO: el profesional debe activar slots manualmente ===
+                // El admin SOLO muestra como disponibles los slots que el profesional
+                // activó (override type="extra"). Los slots del schedule que NO fueron
+                // activados NO se muestran como disponibles.
+                // El backend ya procesa los extraOverrides en computeAvailableSlots,
+                // así que freeSlot debería contener los slots activados.
+                // Si freeSlot existe Y no es pasado → available (clickeable para asignar)
+                // Si no hay freeSlot pero está en el schedule → outside (no asignable)
+                const effectiveFreeSlot = freeSlot;
 
-                // Determinar estado usando la MISMA lógica que el profesional
-                // === Bloqueo de slots eliminado ===
-                // Los slots que antes estaban bloqueados ahora se tratan como disponibles.
+                // Determinar estado
                 let state: "available" | "booked" | "outside" | "past" = "outside";
 
                 if (bookedSlot && bookedSlot.status !== "blocked") {
                   state = "booked";
                 } else if (effectiveFreeSlot && !slotIsPast) {
-                  // Slot futuro disponible (clickeable para asignar)
+                  // Slot activado por el profesional y futuro → disponible para asignar
                   state = "available";
-                } else if (isSlotInSchedule(day.dayOfWeek, time)) {
-                  // Está dentro del rango del schedule pero es pasado
-                  // Mostrar modalidad pero NO clickeable
+                } else if (effectiveFreeSlot && slotIsPast) {
+                  // Slot activado pero ya pasó → mostrar modalidad tenue
                   state = "past";
                 } else {
-                  // Verificar extra overrides (igual que el profesional)
-                  const extraSlot = rawOverrides.find((o: { date: string; type: string; startTime: string | null; endTime: string | null }) => {
-                    if (o.date !== dateStr || o.type !== "extra") return false;
-                    if (!o.startTime || !o.endTime) return false;
-                    return time >= o.startTime && time < o.endTime;
-                  });
-                  if (extraSlot) {
-                    state = slotIsPast ? "past" : "available";
-                  } else {
-                    state = "outside";
-                  }
+                  // No hay freeSlot (no fue activado por el profesional) → outside
+                  state = "outside";
                 }
 
                 // Clases CSS (IDÉNTICAS al profesional, +past)
