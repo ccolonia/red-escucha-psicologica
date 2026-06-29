@@ -984,7 +984,7 @@ export function ProfessionalWeeklyAgenda({
                     {state === "schedule" && (
                       <div
                         className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition-colors"
-                        title={`${modality || "ambas"} — click para activar como Disponible`}
+                        title={`${MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"} — click para activar como Disponible ${time}–${(() => { const d = schedules.find((s) => s.dayOfWeek === dayOfWeek)?.slotDuration || 45; const [h,m] = time.split(":").map(Number); const t = h*60+m+d; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; })()} hs`}
                       >
                         {MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"}
                       </div>
@@ -992,7 +992,7 @@ export function ProfessionalWeeklyAgenda({
                     {state === "available" && (
                       <div
                         className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors"
-                        title={`Disponible — click para desactivar`}
+                        title={`Disponible ${time}–${(() => { const d = schedules.find((s) => s.dayOfWeek === dayOfWeek)?.slotDuration || 45; const [h,m] = time.split(":").map(Number); const t = h*60+m+d; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; })()} hs — click para desactivar`}
                       >
                         Disponible
                       </div>

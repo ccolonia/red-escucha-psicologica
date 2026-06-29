@@ -1157,9 +1157,9 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     {state === "schedule" && (
                       <div
                         className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600"
-                        title={`${MODALITY_LABELS[modality || "ambas"] || modality || "Ambas"} — no disponible (el profesional debe activar este slot)`}
+                        title={`${MODALITY_LABELS[modality || "ambas"] || "P|OL"} ${time}–${(() => { const si = getScheduleForCell(day.dayOfWeek, time); if (si) { const [h,m] = time.split(":").map(Number); const t = h*60+m+si.slotDuration; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; } return ""; })()} hs — no disponible (el profesional debe activar este slot)`}
                       >
-                        {MODALITY_LABELS[modality || "ambas"] || modality || "Ambas"}
+                        {MODALITY_LABELS[modality || "ambas"] || "P|OL"}
                       </div>
                     )}
 
@@ -1167,7 +1167,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     {state === "available" && effectiveFreeSlot && (
                       <div
                         className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700"
-                        title={`Disponible — click para asignar turno`}
+                        title={`Disponible ${time}–${effectiveFreeSlot.endTime} hs — click para asignar turno`}
                       >
                         Disponible
                       </div>
