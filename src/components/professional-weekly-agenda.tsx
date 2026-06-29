@@ -167,7 +167,7 @@ const MODALITY_BADGE: Record<
 > = {
   OL: { icon: Monitor, label: "OL", color: "bg-blue-50 text-blue-600 border-blue-200" },
   P: { icon: MapPin, label: "P", color: "bg-purple-50 text-purple-600 border-purple-200" },
-  ambas: { icon: MapPin, label: "Ambas", color: "bg-indigo-50 text-indigo-600 border-indigo-200" },
+  ambas: { icon: MapPin, label: "P|OL", color: "bg-indigo-50 text-indigo-600 border-indigo-200" },
   H: { icon: MapPin, label: "H", color: "bg-violet-50 text-violet-600 border-violet-200" },
 };
 
@@ -986,7 +986,7 @@ export function ProfessionalWeeklyAgenda({
                         className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition-colors"
                         title={`${modality || "ambas"} — click para activar como Disponible`}
                       >
-                        {modality || "Ambas"}
+                        {MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"}
                       </div>
                     )}
                     {state === "available" && (
@@ -1085,7 +1085,7 @@ export function ProfessionalWeeklyAgenda({
                         onClick={() => handleActivateSlot(dateStr, time, dayOfWeek)}
                         className="flex items-center justify-center w-full bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors"
                       >
-                        {modalityDisplay?.label || "Ambas"}
+                        {modalityDisplay?.label || "P|OL"}
                       </button>
                     </div>
                   )}
@@ -1102,7 +1102,7 @@ export function ProfessionalWeeklyAgenda({
                   {state === "schedule" && slotIsPastMobile && (
                     <div className="ml-2 flex-1">
                       <div className="flex items-center justify-center w-full bg-amber-50/50 border border-amber-200/50 text-amber-500 rounded-lg py-2 text-xs font-medium">
-                        {modalityDisplay?.label || "Ambas"}
+                        {modalityDisplay?.label || "P|OL"}
                       </div>
                     </div>
                   )}
@@ -1364,10 +1364,10 @@ export function ProfessionalWeeklyAgenda({
               : apt.status === "completed" ? "Atendido"
               : apt.status === "absent" ? "Ausente"
               : apt.status;
-            const modalityLabel = apt.modality === "P" ? "Presencial"
-              : apt.modality === "OL" ? "Online"
-              : apt.modality === "H" ? "Híbrido"
-              : apt.modality === "ambas" ? "Ambas"
+            const modalityLabel = apt.modality === "P" ? "P"
+              : apt.modality === "OL" ? "OL"
+              : apt.modality === "H" ? "H"
+              : apt.modality === "ambas" ? "P|OL"
               : "—";
             const timeDisplay = apt.timeEnd ? `${apt.time}–${apt.timeEnd} hs` : `${apt.time} hs`;
             const patientName = apt.patient?.user?.name || "Paciente";
