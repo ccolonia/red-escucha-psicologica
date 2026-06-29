@@ -51,11 +51,18 @@ function SetPasswordContent() {
     e.preventDefault();
     setError("");
 
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres");
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres, una mayúscula y un símbolo");
       return;
     }
-
+    if (!/[A-Z]/.test(password)) {
+      setError("La contraseña debe incluir al menos una letra mayúscula");
+      return;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>_+\-=]/.test(password)) {
+      setError("La contraseña debe incluir al menos un símbolo (!, $, #, etc.)");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
@@ -176,7 +183,7 @@ function SetPasswordContent() {
           {/* Form */}
           <div className="p-8">
             <p className="text-forest-400 text-sm mb-6 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              Creá tu contraseña para acceder a la plataforma. La misma debe tener al menos 6 caracteres.
+              Creá tu contraseña para acceder a la plataforma.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -190,7 +197,7 @@ function SetPasswordContent() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Ingresá tu contraseña"
                     className="border-beige-300 bg-beige-50 pr-10"
                     required
                   />
@@ -202,6 +209,25 @@ function SetPasswordContent() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {/* === Micro-badges de validación en tiempo real === */}
+                {(() => {
+                  const hasMinLength = password.length >= 8;
+                  const hasUppercase = /[A-Z]/.test(password);
+                  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_+\-=]/.test(password);
+                  return (
+                    <div className={`flex flex-col gap-0.5 pt-1 transition-opacity ${password ? "opacity-100" : "opacity-0"}`}>
+                      <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasMinLength ? "text-emerald-600" : "text-slate-400"}`}>
+                        {hasMinLength ? "✓" : "•"} Mínimo 8 caracteres
+                      </span>
+                      <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasUppercase ? "text-emerald-600" : "text-slate-400"}`}>
+                        {hasUppercase ? "✓" : "•"} Una mayúscula
+                      </span>
+                      <span className={`text-[10px] flex items-center gap-1 transition-colors ${hasSpecialChar ? "text-emerald-600" : "text-slate-400"}`}>
+                        {hasSpecialChar ? "✓" : "•"} Un símbolo (!, $, #...)
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="space-y-2">
@@ -215,7 +241,13 @@ function SetPasswordContent() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repetí la contraseña"
-                    className="border-beige-300 bg-beige-50 pr-10"
+                    className={`bg-beige-50 pr-10 transition-colors ${
+                      confirmPassword && confirmPassword === password
+                        ? "border-emerald-400"
+                        : confirmPassword
+                          ? "border-red-400"
+                          : "border-beige-300"
+                    }`}
                     required
                   />
                   <button
@@ -226,6 +258,17 @@ function SetPasswordContent() {
                     {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {/* === Indicador de coincidencia === */}
+                {confirmPassword && (
+                  <div className={`text-[10px] flex items-center gap-1 transition-colors ${
+                    confirmPassword === password ? "text-emerald-600" : "text-red-500"
+                  }`}>
+                    {confirmPassword === password
+                      ? <>✓ Las contraseñas coinciden</>
+                      : <>✗ Las contraseñas no coinciden</>
+                    }
+                  </div>
+                )}
               </div>
 
               {error && (
@@ -236,8 +279,16 @@ function SetPasswordContent() {
 
               <Button
                 type="submit"
-                disabled={loading}
-                className="w-full btn-sage text-forest-900 font-semibold h-11 rounded-full"
+                disabled={
+                  loading ||
+                  !(
+                    password.length >= 8 &&
+                    /[A-Z]/.test(password) &&
+                    /[!@#$%^&*(),.?":{}|<>_+\-=]/.test(password) &&
+                    password === confirmPassword
+                  )
+                }
+                className="w-full btn-sage text-forest-900 font-semibold h-11 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 {loading ? (

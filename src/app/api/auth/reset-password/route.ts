@@ -28,10 +28,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate password length
-    if (password.length < 6) {
+    // Validate password strength
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: "La contraseña debe tener al menos 6 caracteres" },
+        { error: "La contraseña debe tener al menos 8 caracteres, una mayúscula y un símbolo" },
+        { status: 400 }
+      );
+    }
+    if (!/[A-Z]/.test(password)) {
+      return NextResponse.json(
+        { error: "La contraseña debe incluir al menos una letra mayúscula" },
+        { status: 400 }
+      );
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>_+\-=]/.test(password)) {
+      return NextResponse.json(
+        { error: "La contraseña debe incluir al menos un símbolo (!, $, #, etc.)" },
         { status: 400 }
       );
     }
