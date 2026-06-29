@@ -150,10 +150,10 @@ const MODALITY_CELL_DISPLAY: Record<
   string,
   { icon: React.ComponentType<{ className?: string }>; label: string; colorClass: string }
 > = {
-  OL: { icon: Monitor, label: "Online", colorClass: "bg-blue-50 border border-blue-200 text-blue-600 rounded-lg py-2 text-xs font-medium hover:bg-blue-100 transition-colors" },
-  P: { icon: MapPin, label: "Presencial", colorClass: "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium hover:bg-emerald-100 transition-colors" },
-  ambas: { icon: MapPin, label: "Ambas", colorClass: "bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors" },
-  H: { icon: MapPin, label: "Híbrido", colorClass: "bg-purple-50 border border-purple-200 text-purple-600 rounded-lg py-2 text-xs font-medium hover:bg-purple-100 transition-colors" },
+  OL: { icon: Monitor, label: "OL", colorClass: "bg-blue-50 border border-blue-200 text-blue-600 rounded-lg py-2 text-xs font-medium hover:bg-blue-100 transition-colors" },
+  P: { icon: MapPin, label: "P", colorClass: "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium hover:bg-emerald-100 transition-colors" },
+  ambas: { icon: MapPin, label: "P|OL", colorClass: "bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors" },
+  H: { icon: MapPin, label: "H", colorClass: "bg-purple-50 border border-purple-200 text-purple-600 rounded-lg py-2 text-xs font-medium hover:bg-purple-100 transition-colors" },
 };
 
 // Modality display for appointment cards

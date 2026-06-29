@@ -125,7 +125,7 @@ const MODALITY_COLORS: Record<string, string> = {
 };
 
 const MODALITY_LABELS: Record<string, string> = {
-  P: "Presencial", OL: "Online", H: "Híbrido", ambas: "Ambas", amb: "Ambas",
+  P: "P", OL: "OL", H: "H", ambas: "P|OL", amb: "P|OL",
 };
 
 // ====================================================================
@@ -179,10 +179,10 @@ const STATUS_COLORS_ADMIN: Record<string, { bg: string; text: string; border: st
 
 // === Modality badge colors (versión compacta para el card) ===
 const MODALITY_BADGE_ADMIN: Record<string, { label: string; color: string }> = {
-  P: { label: "Presencial", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  P: { label: "P", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   OL: { label: "OL", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  H: { label: "Híbrido", color: "bg-purple-50 text-purple-700 border-purple-200" },
-  ambas: { label: "Ambas", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  H: { label: "H", color: "bg-purple-50 text-purple-700 border-purple-200" },
+  ambas: { label: "P|OL", color: "bg-amber-50 text-amber-700 border-amber-200" },
 };
 
 interface DaySlots {
