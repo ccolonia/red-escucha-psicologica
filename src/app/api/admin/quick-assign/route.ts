@@ -195,26 +195,50 @@ export async function POST(request: NextRequest) {
 
       let patientCreated = false;
 
-      // Si todavía no hay Patient, crear User + Patient
+      // Si todavía no hay Patient, crear Patient (y User si no existe)
       if (!patient) {
-        const bcrypt = await import("bcryptjs");
-        const tempPassword = await bcrypt.hash(
-          Math.random().toString(36).slice(2),
-          10
-        );
-        const newUser = await tx.user.create({
-          data: {
-            name: trimmedName,
-            email: trimmedEmail,
-            password: tempPassword,
-            phone: trimmedPhone,
-            role: "patient",
-            active: false,
-          },
+        let userId: string;
+
+        // Revisar si el User ya existe (puede pasar si el email ya está
+        // registrado pero no tiene Patient asociado, ej: era un PatientRequest)
+        const existingUser = await tx.user.findUnique({
+          where: { email: trimmedEmail },
         });
+
+        if (existingUser) {
+          // El User ya existe — reutilizarlo, NO crear uno nuevo
+          userId = existingUser.id;
+          // Actualizar name y phone si difieren
+          if (existingUser.name !== trimmedName || existingUser.phone !== trimmedPhone) {
+            await tx.user.update({
+              where: { id: userId },
+              data: { name: trimmedName, phone: trimmedPhone },
+            });
+          }
+        } else {
+          // El User no existe — crearlo
+          const bcrypt = await import("bcryptjs");
+          const tempPassword = await bcrypt.hash(
+            Math.random().toString(36).slice(2),
+            10
+          );
+          const newUser = await tx.user.create({
+            data: {
+              name: trimmedName,
+              email: trimmedEmail,
+              password: tempPassword,
+              phone: trimmedPhone,
+              role: "patient",
+              active: false,
+            },
+          });
+          userId = newUser.id;
+        }
+
+        // Crear el Patient vinculado al User (existente o nuevo)
         patient = await tx.patient.create({
           data: {
-            userId: newUser.id,
+            userId: userId,
             notes: `Creado desde asignación rápida por admin (${new Date().toISOString().split("T")[0]})`,
           },
           include: { user: true },
