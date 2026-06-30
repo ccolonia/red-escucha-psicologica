@@ -121,6 +121,10 @@ export async function GET(request: NextRequest) {
     for (const r of leadRequests) {
       const emailKey = r.email.toLowerCase();
       if (!resultsMap.has(emailKey)) {
+        // Buscar si hay una ContactRequest con el mismo email que tenga el mensaje
+        const matchingContact = contactTurnoRequests.find(
+          (c) => c.email.toLowerCase() === emailKey
+        );
         resultsMap.set(emailKey, {
           id: r.id,
           name: `${r.name} (Solicitud Online)`,
@@ -132,6 +136,8 @@ export async function GET(request: NextRequest) {
           leadPatientAge: r.patientAge,
           leadGuardianName: r.guardianName,
           leadSource: "patient_request",
+          // Si hay una ContactRequest con el mismo email, traer el mensaje
+          leadNotes: matchingContact?.message || null,
         });
       }
     }
