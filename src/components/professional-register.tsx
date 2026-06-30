@@ -54,73 +54,59 @@ import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 
 const THERAPY_TYPES = [
-  "Psicología clínica",
-  "Psicoanálisis",
-  "Terapia cognitivo-conductual",
-  "Terapias vinculares",
-  "Terapia sistémica",
-  "Logoterapia",
-  "Terapia gestáltica",
-  "Neuropsicología",
-  // === Reestructuración de tipos de terapia ===
-  // - Eliminado: "Sexología" (discontinuado)
-  // - Modificado: "Trauma y EMDR" → "EMDR" (más específico)
-  "Mindfulness",
-  "Psicología laboral / organizacional",
-  "Psicología positiva",
-  "Psicología forense",
   "Adicciones",
+  "Deportología",
+  "Docente/Capacitador",
   "EMDR",
-  "Trastornos alimentarios",
-  "Psiconutrición",
+  "Logoterapia",
+  "Mindfulness",
+  "Neuropsicología",
+  "Otras terapias",
   "Psicooncología",
-  "Psicología geriátrica",
+  "Psicoanálisis",
+  "Psicocorporal Reichiana",
+  "Psicodrama",
+  "Psicología clínica",
   "Psicología deportiva",
+  "Psicología forense",
+  "Psicología geriátrica",
+  "Psicología laboral / organizacional",
   "Psicología perinatal",
+  "Psicología positiva",
+  "Psicoterapia Integral",
+  "Psiconutrición",
+  "Terapia cognitivo-conductual",
+  "Terapia constructivista",
+  "Terapia gestáltica",
   "Terapia humanista",
   "Terapia junguiana",
-  "Psicodrama",
-  "Psicoterapia Integral",
-  // === Tipos de terapia eliminados (duplicados con especialidades) ===
-  // - "Terapia de Pareja y Familia" (eliminado — es una especialidad)
-  // - "Psicología Infanto-Juvenil" (eliminado — es una especialidad)
-  "Deportología",
-  "Psicocorporal Reichiana",
+  "Terapia sistémica",
   "Terapia transpersonal",
-  "Terapia constructivista",
-  "Otras terapias",
+  "Terapias vinculares",
+  "Trastornos alimentarios",
 ];
 
 const TARGET_AUDIENCES = [
-  "Niños/as",
   "Adolescentes",
-  "Adultos mayores",
   "Adultos",
-  "Jóvenes",
-  "Parejas",
+  "Adultos mayores",
   "Familias",
+  "Jóvenes",
+  "Niños/as",
   "Orientación a padres",
+  "Parejas",
 ];
 
-// === Modalidades de Terapia ===
-// Array extraído a constante (antes estaba inline en el render) para
-// mejor mantenibilidad. Se guarda como JSON string en el campo
-// therapyModality del modelo Professional.
-//
-// Nuevas opciones agregadas (commit de hoy):
-// - Pericias: orientado al ámbito de la psicología jurídica, forense y pericial
-// - Discapacidad: espacios de atención y abordaje adaptado
-// - Orientación Vocacional: procesos de guía académica y profesional
 const THERAPY_MODALITIES = [
-  "Individual",
-  "Vincular",
-  "Evaluaciones",
-  "Terapia Grupal",
-  "Orientación a Padres",
   "Asesoría a Empresas",
-  "Pericias",
   "Discapacidad",
+  "Evaluaciones",
+  "Individual",
+  "Orientación a Padres",
   "Orientación Vocacional",
+  "Pericias",
+  "Terapia Grupal",
+  "Vincular",
 ];
 
 const ZONES_HIERARCHY: { region: string; areas: string[] }[] = [
@@ -911,24 +897,21 @@ export function ProfessionalRegister() {
                             <SelectValue placeholder="Seleccionar profesión" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Psicólogo">Psicólogo/a</SelectItem>
-                            <SelectItem value="Psiquiatra">Psiquiatra</SelectItem>
-                            <SelectItem value="Psicopedagogo">Psicopedagogo/a</SelectItem>
-                            <SelectItem value="Musicoterapeuta">Musicoterapeuta</SelectItem>
-                            <SelectItem value="Licenciado en Psicología">Lic. en Psicología</SelectItem>
                             <SelectItem value="Doctor en Psicología">Dr. en Psicología</SelectItem>
+                            <SelectItem value="Estimulador/a Temprana">Estimulador/a Temprana</SelectItem>
+                            <SelectItem value="Fonoaudiólogo/a">Fonoaudiólogo/a</SelectItem>
+                            <SelectItem value="Licenciado en Psicología">Lic. en Psicología</SelectItem>
+                            <SelectItem value="Musicoterapeuta">Musicoterapeuta</SelectItem>
                             <SelectItem value="Neuropsicólogo">Neuropsicólogo/a</SelectItem>
+                            <SelectItem value="Neuropsicolingüista">Neuropsicolingüista</SelectItem>
+                            <SelectItem value="Neuropsicomotrista">Neuropsicomotrista</SelectItem>
+                            <SelectItem value="Nutricionista">Nutricionista</SelectItem>
+                            <SelectItem value="Otra">Otra</SelectItem>
+                            <SelectItem value="Psicólogo">Psicólogo/a</SelectItem>
+                            <SelectItem value="Psicopedagogo">Psicopedagogo/a</SelectItem>
+                            <SelectItem value="Psiquiatra">Psiquiatra</SelectItem>
                             <SelectItem value="Terapista Ocupacional">Terapista Ocupacional</SelectItem>
                             <SelectItem value="Trabajador Social">Trabajador/a Social</SelectItem>
-                            {/* === Profesión: cambios === */}
-                            {/* - Eliminado: "Coach Profesional" (discontinuado) */}
-                            {/* - Modificado: "Estimulador/ora Temprana" → "Estimulador/a Temprana" (más inclusivo) */}
-                            <SelectItem value="Estimulador/a Temprana">Estimulador/a Temprana</SelectItem>
-                            <SelectItem value="Neuropsicomotrista">Neuropsicomotrista</SelectItem>
-                            <SelectItem value="Neuropsicolingüista">Neuropsicolingüista</SelectItem>
-                            <SelectItem value="Nutricionista">Nutricionista</SelectItem>
-                            <SelectItem value="Fonoaudiólogo/a">Fonoaudiólogo/a</SelectItem>
-                            <SelectItem value="Otra">Otra</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
