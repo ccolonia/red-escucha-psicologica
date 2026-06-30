@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
         patient = await tx.patient.create({
           data: {
             userId: userId,
-            notes: `Creado desde asignación rápida por admin (${new Date().toISOString().split("T")[0]})`,
+            notes: null,
           },
           include: { user: true },
         });
@@ -298,7 +298,7 @@ export async function POST(request: NextRequest) {
           time,
           modality: appointmentModality,
           status: "confirmed",
-          reason: `Asignación rápida por admin: ${trimmedName}`,
+          reason: null,
           notes: trimmedNotes,
         },
         include: {
@@ -445,8 +445,8 @@ export async function POST(request: NextRequest) {
             time: result.appointment.time,
             timeEnd,
             reason: isLead
-              ? `Paciente nuevo derivado de Solicitud Online. ${trimmedNotes || ""}`.trim()
-              : `Asignación rápida por admin. ${trimmedNotes || ""}`.trim(),
+              ? (trimmedNotes || null)
+              : (trimmedNotes || null),
             officeAddress,
           });
           emailSent.professional = !profResult.error;
