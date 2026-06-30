@@ -852,6 +852,7 @@ interface SendContactNotificationParams {
   phone: string | null;
   message: string;
   reason: string | null;
+  modality?: string | null;
 }
 
 const REASON_MAP: Record<string, string> = {
@@ -860,9 +861,18 @@ const REASON_MAP: Record<string, string> = {
   informacion: "Información",
 };
 
-export async function sendContactNotification({ name, email, phone, message, reason }: SendContactNotificationParams) {
+export async function sendContactNotification({ name, email, phone, message, reason, modality }: SendContactNotificationParams) {
   const resend = getResend();
   const reasonLabel = reason ? (REASON_MAP[reason] || reason) : "No especificado";
+
+  // Mapear modalidad a label legible
+  const MODALITY_MAP: Record<string, string> = {
+    online: "Online",
+    presencial: "Presencial",
+    "híbrida": "Híbrida",
+    hibrida: "Híbrida",
+  };
+  const modalityLabel = modality ? (MODALITY_MAP[modality] || modality) : null;
 
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
@@ -991,6 +1001,13 @@ export async function sendContactNotification({ name, email, phone, message, rea
                 <div class="label">Motivo</div>
                 <div class="value"><span class="reason-badge">${reasonLabel}</span></div>
               </div>
+
+              ${modalityLabel ? `
+              <div class="field">
+                <div class="label">Modalidad preferida</div>
+                <div class="value"><span class="reason-badge">${modalityLabel}</span></div>
+              </div>
+              ` : ''}
 
               <hr class="divider">
 

@@ -1311,9 +1311,16 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
   const [searching, setSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Flag para evitar que el debounce se dispare después de seleccionar un paciente
+  const selectingRef = useRef(false);
 
   // Debounced search de pacientes
   useEffect(() => {
+    // Si acabamos de seleccionar un paciente, no disparar búsqueda
+    if (selectingRef.current) {
+      selectingRef.current = false;
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (patientSearch.trim().length < 2) {
       setSearchResults([]);
@@ -1351,9 +1358,7 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
   const selectPatient = (patient: any) => {
     const cleanName = patient.isLead ? patient.name.replace(" (Solicitud Online)", "") : patient.name;
     // === Mapear modalidad del lead al formato del form ===
-    // El lead puede tener leadModality: "online" | "presencial" | "híbrida"
-    // El form usa: "OL" (online) | "P" (presencial) | "H" (híbrida)
-    let mappedModality = form.modality; // default: mantener la actual
+    let mappedModality = form.modality;
     if (patient.isLead && patient.leadModality) {
       const mod = patient.leadModality.toLowerCase();
       if (mod === "online") mappedModality = "OL";
@@ -1361,8 +1366,6 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
       else if (mod === "híbrida" || mod === "hibrida") mappedModality = "H";
     }
     // === Autocompletar notes con el mensaje del lead si existe ===
-    // Si el lead viene de ContactRequest, leadNotes tiene el mensaje del form.
-    // Si viene de PatientRequest, no hay leadNotes (los notes van aparte).
     const autoNotes = patient.isLead && patient.leadNotes ? patient.leadNotes : form.notes;
     onFormChange({
       ...form,
@@ -1375,11 +1378,11 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
       modality: mappedModality,
       notes: autoNotes,
     });
-    // Setear patientSearch al cleanName (sin "(Solicitud Online)")
-    // para que no dispare otra búsqueda con ese sufijo.
+    // Setear flag para evitar que el useEffect del debounce se dispare
+    selectingRef.current = true;
+    // Setear patientSearch al cleanName
     setPatientSearch(cleanName);
-    // Ocultar sugerencias inmediatamente para que no aparezca el mensaje
-    // "No se encontraron pacientes" después de seleccionar.
+    // Ocultar sugerencias inmediatamente
     setShowSuggestions(false);
     setSearchResults([]);
   };
