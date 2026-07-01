@@ -167,46 +167,37 @@ const ZONES_HIERARCHY: { region: string; areas: string[] }[] = [
 ];
 
 const SPECIALTIES = [
-  // === Especialidades tradicionales que se mantienen ===
-  "Psicología Clínica",
-  // === Especialidades eliminadas (5) ===
-  // - Terapia de Pareja y Familia (eliminada)
-  // - Psicología Infanto-Juvenil (eliminada)
-  // - Psiquiatría (eliminada)
-  // - Psicopedagogía (eliminada)
-  // - Musicoterapia (eliminada)
-  "Neuropsicología",
-  "Psicología Laboral / Organizacional",
-  // === Modificado: "Psicología Educativa" → "Psicología Educacional" ===
-  "Psicología Educacional",
-  "Psicología Deportiva",
-  "Psicología Forense",
-  "Psicología Social / Comunitaria",
-  "Psicología de la Salud",
-  "Sexología / Terapia Sexual",
-  "Adicciones",
-  "Duelo y Pérdida",
-  "Trastornos Alimentarios",
-  "Psicología Geriátrica",
-  "Psicología Transcultural",
-  // === Nuevas especialidades clínicas (13) ===
-  "Psicología Perinatal",
-  "Psicooncología",
-  "Psiconutrición",
-  "Violencia y Abuso Sexual",
-  "Trastorno Obsesivo-Compulsivo (TOC)",
-  "Psicosis y Esquizofrenia",
-  "Hebefrenia",
-  "Trastorno Límite de la Personalidad (TLP)",
-  "Ansiedad y Ataques de Pánico",
-  "Síndrome de Burnout",
+  // === Ordenadas alfabéticamente (es_AR, sin tildes) ===
   "Acoso Laboral",
-  "Bullying",
+  "Adicciones",
+  "Ansiedad y Ataques de Pánico",
   "Autolesiones e Ideación Suicida",
-  // === Nuevas especialidades vinculares / jurídicas (3) ===
-  "Pacientes Judicializados",
-  "Revinculaciones",
+  "Bullying",
   "Coparentalidad",
+  "Duelo y Pérdida",
+  "Hebefrenia",
+  "Neuropsicología",
+  "Pacientes Judicializados",
+  "Psicología Clínica",
+  "Psicología de la Salud",
+  "Psicología Deportiva",
+  "Psicología Educacional",
+  "Psicología Forense",
+  "Psicología Geriátrica",
+  "Psicología Laboral / Organizacional",
+  "Psicología Perinatal",
+  "Psicología Social / Comunitaria",
+  "Psicología Transcultural",
+  "Psiconutrición",
+  "Psicooncología",
+  "Psicosis y Esquizofrenia",
+  "Revinculaciones",
+  "Sexología / Terapia Sexual",
+  "Síndrome de Burnout",
+  "Trastorno Límite de la Personalidad (TLP)",
+  "Trastorno Obsesivo-Compulsivo (TOC)",
+  "Trastornos Alimentarios",
+  "Violencia y Abuso Sexual",
 ];
 
 const TITLES = ["Lic.", "Dr.", "Dra.", "Ninguno"];
