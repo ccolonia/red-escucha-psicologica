@@ -76,6 +76,7 @@ model Professional {
   scheduleOverrides   ScheduleOverride[]
   patientRequests     PatientRequest[]
   addresses           ProfessionalAddress[]
+  patientNotes        ProfessionalPatientNote[]
 }
 
 // === Direcciones de atención presencial del profesional ===
@@ -107,6 +108,26 @@ model Patient {
   updatedAt        DateTime      @updatedAt
   user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   appointments     Appointment[]
+  professionalNotes ProfessionalPatientNote[]
+}
+
+// === Notas privadas del profesional sobre un paciente ===
+// Cada profesional puede tener UNA nota privada por paciente (relación 1:1 efectiva
+// mediante @@unique). El contenido es editable desde el panel del profesional
+// y NUNCA es visible para el paciente ni para el administrador — es el cuaderno
+// de trabajo clínico privado del profesional dentro de la plataforma.
+model ProfessionalPatientNote {
+  id            String   @id @default(cuid())
+  professionalId String
+  patientId     String
+  content       String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  professional  Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([professionalId, patientId])
 }
 
 model Appointment {

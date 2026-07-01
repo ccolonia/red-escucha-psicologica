@@ -22,13 +22,14 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let where: any = {};
 
-    // Admins see all patients; professionals only see patients with appointments with them
-    if (role === "admin" || role === "super_admin") {
-      // All patients
-    } else {
-      // Professional: only patients who have (or had) appointments with this professional
-      const professional = await db.professional.findUnique({
+    // === Profesional autenticado (si aplica) ===
+    // Se obtiene acá arriba porque lo reutilizamos más abajo para filtrar
+    // citas (appointments) y notas privadas (professionalNotes) en el include.
+    let professional: { id: string } | null = null;
+    if (role === "professional") {
+      professional = await db.professional.findUnique({
         where: { userId: session.user.id },
+        select: { id: true },
       });
 
       if (!professional) {
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
 
       where.id = { in: patientIds };
     }
+    // Admins see all patients — no where filter needed
 
     // Apply search filter
     if (search) {
@@ -67,6 +69,44 @@ export async function GET(request: NextRequest) {
         user: {
           select: { name: true, email: true, phone: true, active: true, createdAt: true },
         },
+        // === Historial de sesiones ===
+        // Para profesionales: filtrar solo SUS citas con cada paciente.
+        // Para admins: traer todas las citas (visión global del paciente).
+        appointments:
+          role === "admin" || role === "super_admin"
+            ? {
+                select: {
+                  id: true,
+                  date: true,
+                  time: true,
+                  status: true,
+                  modality: true,
+                  reason: true,
+                },
+                orderBy: { date: "desc" },
+              }
+            : {
+                where: { professionalId: professional?.id ?? "" },
+                select: {
+                  id: true,
+                  date: true,
+                  time: true,
+                  status: true,
+                  modality: true,
+                  reason: true,
+                },
+                orderBy: { date: "desc" },
+              },
+        // === Notas privadas del profesional ===
+        // Solo se incluyen para profesionales (un admin no debe ver las notas
+        // clínicas privadas de cada profesional sobre cada paciente).
+        professionalNotes:
+          role === "professional" && professional
+            ? {
+                where: { professionalId: professional.id },
+                select: { content: true, updatedAt: true },
+              }
+            : false,
       },
       orderBy: { user: { name: "asc" } },
     });

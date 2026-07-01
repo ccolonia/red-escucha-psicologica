@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
@@ -32,6 +32,8 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  Search,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -950,58 +952,414 @@ export function ProfessionalSchedule() {
   );
 }
 
+// === Tipos del panel de Pacientes ===
+type AppointmentForHistory = {
+  id: string;
+  date: string;
+  time: string;
+  status: string;
+  modality: string | null;
+  reason: string | null;
+};
+
+type PrivateNote = {
+  content: string;
+  updatedAt: Date;
+};
+
+type PatientWithDetails = {
+  id: string;
+  user: {
+    name: string;
+    email: string;
+    phone: string;
+    active: boolean;
+    createdAt: Date;
+  };
+  appointments?: AppointmentForHistory[];
+  professionalNotes?: PrivateNote[];
+};
+
+// === Mapa de estados de cita → { label, classes } ===
+// Centralizado para mantener consistencia entre badges de la lista y del detalle.
+const APPOINTMENT_STATUS_STYLES: Record<
+  string,
+  { label: string; classes: string }
+> = {
+  completed: {
+    label: "Atendida",
+    classes: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  absent: {
+    label: "Ausente",
+    classes: "bg-amber-50 text-amber-700 border-amber-200",
+  },
+  cancelled: {
+    label: "Cancelada",
+    classes: "bg-rose-50 text-rose-700 border-rose-200",
+  },
+  confirmed: {
+    label: "Confirmada",
+    classes: "bg-sky-50 text-sky-700 border-sky-200",
+  },
+  pending: {
+    label: "Pendiente",
+    classes: "bg-slate-50 text-slate-700 border-slate-200",
+  },
+  rescheduled: {
+    label: "Reprogramada",
+    classes: "bg-violet-50 text-violet-700 border-violet-200",
+  },
+};
+
+function getAppointmentStatusStyle(status: string) {
+  return (
+    APPOINTMENT_STATUS_STYLES[status] ?? {
+      label: status || "—",
+      classes: "bg-slate-50 text-slate-700 border-slate-200",
+    }
+  );
+}
+
+// === Formatea fecha ISO (yyyy-mm-dd) a dd/mm/yyyy ===
+function formatAppointmentDate(isoDate: string): string {
+  // La fecha viene como "2026-06-15" (sin TZ). La parseamos manualmente
+  // para evitar que JS la interprete como UTC y la desplace un día al
+  // convertirla a la zona horaria local del navegador.
+  const [y, m, d] = isoDate.split("-");
+  if (!y || !m || !d) return isoDate;
+  return `${d}/${m}/${y}`;
+}
+
 export function ProfessionalPatients() {
-  const [patients, setPatients] = useState<
-    { id: string; user: { name: string; email: string; phone: string } }[]
-  >([]);
+  const [patients, setPatients] = useState<PatientWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // === Notas privadas: estado local ===
+  // La nota se carga junto con el paciente (professionalNotes[0]?.content)
+  // y se mantiene en un estado local separado para que el textarea sea
+  // controlado y fluido. El guardado es con debounce + flag de "guardando".
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
+  const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
+  const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
     fetch("/api/patients")
       .then((res) => res.json())
-      .then((data) => {
+      .then((data: PatientWithDetails[]) => {
         setPatients(data);
+        // Inicializar los borradores de notas con el contenido que ya tenía cada paciente
+        const initialDrafts: Record<string, string> = {};
+        for (const p of data) {
+          initialDrafts[p.id] = p.professionalNotes?.[0]?.content ?? "";
+        }
+        setNoteDrafts(initialDrafts);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
+  // === Filtro en tiempo real (cliente-side) ===
+  // Filtra por nombre O email, case-insensitive. Si el término está vacío,
+  // muestra todos. Esto evita una llamada al server por cada tecla.
+  const filteredPatients = patients.filter((p) => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
+    return (
+      p.user.name.toLowerCase().includes(term) ||
+      p.user.email.toLowerCase().includes(term)
+    );
+  });
+
+  // === Guardado de nota con debounce (1.2s sin escribir) ===
+  // El guardado es upsert: si la nota cambió respecto del último guardado,
+  // se manda PUT. Si el usuario dejó de escribir por 1.2s, se considera
+  // que terminó de editar y se persiste.
+  const scheduleNoteSave = (patientId: string) => {
+    // Limpiar timer previo si existe
+    if (debounceRef.current[patientId]) {
+      clearTimeout(debounceRef.current[patientId]);
+    }
+    // Programar nuevo guardado
+    debounceRef.current[patientId] = setTimeout(async () => {
+      const content = noteDrafts[patientId] ?? "";
+      setSavingNoteId(patientId);
+      setSavedNoteId(null);
+      try {
+        const res = await fetch(`/api/patients/${patientId}/notes`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+        if (res.ok) {
+          setSavedNoteId(patientId);
+          // Mantener el "Guardado" visible por 2.5s y luego limpiar
+          setTimeout(() => {
+            setSavedNoteId((curr) => (curr === patientId ? null : curr));
+          }, 2500);
+        } else {
+          toast.error("No se pudo guardar la nota privada");
+        }
+      } catch {
+        toast.error("No se pudo guardar la nota privada");
+      } finally {
+        setSavingNoteId(null);
+      }
+    }, 1200);
+  };
+
+  const handleNoteChange = (patientId: string, value: string) => {
+    setNoteDrafts((prev) => ({ ...prev, [patientId]: value }));
+    scheduleNoteSave(patientId);
+  };
+
+  const toggleExpand = (patientId: string) => {
+    setExpandedId((curr) => (curr === patientId ? null : patientId));
+  };
+
   return (
     <div>
-      <h2 className="text-2xl font-bold text-teal-900 mb-6">Pacientes</h2>
+      {/* === Header: título + contador === */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold text-teal-900">
+          Pacientes
+          <span className="ml-2 text-sm font-normal text-teal-500">
+            ({patients.length} {patients.length === 1 ? "paciente" : "pacientes"})
+          </span>
+        </h2>
+      </div>
+
+      {/* === Barra de búsqueda instantánea === */}
+      <div className="relative mb-5">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400 pointer-events-none" />
+        <Input
+          type="text"
+          placeholder="Buscar por nombre o email…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9 h-11 border-teal-200 bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-100 focus-visible:ring-teal-100"
+        />
+        {searchTerm && (
+          <button
+            type="button"
+            onClick={() => setSearchTerm("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 hover:text-teal-700 transition-colors"
+            aria-label="Limpiar búsqueda"
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* === Estados: loading / vacío / lista === */}
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-teal-50 animate-pulse rounded-lg" />
+            <div
+              key={i}
+              className="h-16 bg-teal-50 animate-pulse rounded-lg"
+            />
           ))}
         </div>
-      ) : patients.length === 0 ? (
+      ) : filteredPatients.length === 0 ? (
         <Card className="border-teal-100">
           <CardContent className="py-12 text-center">
-            <Users className="w-12 h-12 text-teal-200 mx-auto" />
-            <p className="text-teal-600 mt-2">No hay pacientes registrados</p>
+            <Users className="w-12 h-12 text-teal-200 mx-auto mb-2" />
+            <p className="text-teal-700 font-medium">
+              {searchTerm
+                ? "No se encontraron pacientes con ese criterio"
+                : "No hay pacientes registrados"}
+            </p>
+            <p className="text-teal-500 text-sm mt-1">
+              {searchTerm
+                ? "Probá con otro nombre o email, o limpiá la búsqueda."
+                : "Cuando tengas turnos asignados, tus pacientes aparecerán acá."}
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {patients.map((patient) => (
-            <Card key={patient.id} className="border-teal-100">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
-                  <UserCheck className="w-5 h-5 text-teal-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-teal-900">
-                    {patient.user.name}
-                  </p>
-                  <p className="text-sm text-teal-600">{patient.user.email}</p>
-                  {patient.user.phone && (
-                    <p className="text-sm text-teal-500">{patient.user.phone}</p>
+          {filteredPatients.map((patient) => {
+            const isExpanded = expandedId === patient.id;
+            const historial = patient.appointments ?? [];
+            const ultimaSesion = historial[0];
+            const ultimaSesionStyle = ultimaSesion
+              ? getAppointmentStatusStyle(ultimaSesion.status)
+              : null;
+
+            return (
+              <Card
+                key={patient.id}
+                className={`border-teal-100 transition-all overflow-hidden ${
+                  isExpanded ? "ring-1 ring-teal-200 shadow-sm" : ""
+                }`}
+              >
+                {/* === Header de la tarjeta (siempre visible, cliqueable) === */}
+                <button
+                  type="button"
+                  onClick={() => toggleExpand(patient.id)}
+                  className="w-full text-left p-4 flex items-center gap-3 hover:bg-teal-50/50 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 rounded-lg"
+                  aria-expanded={isExpanded}
+                >
+                  <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center shrink-0">
+                    <UserCheck className="w-5 h-5 text-teal-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-teal-900 truncate">
+                      {patient.user.name}
+                    </p>
+                    <div className="flex items-center gap-3 text-sm text-teal-600">
+                      <span className="truncate flex items-center gap-1">
+                        <Mail className="w-3 h-3 shrink-0" />
+                        {patient.user.email}
+                      </span>
+                      {patient.user.phone && (
+                        <span className="hidden sm:inline-flex items-center gap-1 shrink-0">
+                          <Phone className="w-3 h-3" />
+                          {patient.user.phone}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* === Badge de última sesión (a la derecha) === */}
+                  {ultimaSesionStyle && (
+                    <span
+                      className={`hidden md:inline-flex items-center text-xs px-2 py-1 rounded-full border ${ultimaSesionStyle.classes} shrink-0`}
+                    >
+                      Última: {ultimaSesionStyle.label}
+                    </span>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  {/* === Indicador de expansión === */}
+                  <ChevronDown
+                    className={`w-5 h-5 text-teal-500 shrink-0 transition-transform duration-200 ${
+                      isExpanded ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* === Detalle expandible === */}
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="border-t border-teal-100 bg-white"
+                  >
+                    <div className="p-4 space-y-5">
+                      {/* === Datos de contacto (cuando el teléfono no entra en el header) === */}
+                      {patient.user.phone && (
+                        <div className="md:hidden flex items-center gap-1 text-sm text-teal-600">
+                          <Phone className="w-3 h-3" />
+                          {patient.user.phone}
+                        </div>
+                      )}
+
+                      {/* === Historial de sesiones === */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-teal-900 mb-2 flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-teal-500" />
+                          Historial de sesiones
+                          <span className="text-xs font-normal text-teal-500">
+                            ({historial.length}{" "}
+                            {historial.length === 1
+                              ? "sesión"
+                              : "sesiones"})
+                          </span>
+                        </h3>
+
+                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                          {historial.length === 0 ? (
+                            <p className="text-sm text-slate-500 text-center py-3">
+                              Sin sesiones registradas todavía.
+                            </p>
+                          ) : (
+                            <ul className="space-y-2">
+                              {historial.map((sesion) => {
+                                const style = getAppointmentStatusStyle(
+                                  sesion.status
+                                );
+                                return (
+                                  <li
+                                    key={sesion.id}
+                                    className="flex items-center justify-between gap-3 py-2 border-b border-slate-100 last:border-0 last:pb-0"
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center shrink-0">
+                                        <Clock className="w-4 h-4 text-slate-500" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="text-sm text-slate-800 font-medium">
+                                          {formatAppointmentDate(sesion.date)}{" "}
+                                          · {sesion.time}
+                                        </p>
+                                        {sesion.reason && (
+                                          <p className="text-xs text-slate-500 truncate">
+                                            {sesion.reason}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <span
+                                      className={`text-xs px-2 py-1 rounded-full border shrink-0 ${style.classes}`}
+                                    >
+                                      {style.label}
+                                    </span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* === Notas privadas === */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-teal-900 mb-2 flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-teal-500" />
+                          Notas privadas
+                        </h3>
+
+                        <div className="bg-teal-50/40 border border-teal-100 rounded-xl p-4">
+                          <textarea
+                            value={noteDrafts[patient.id] ?? ""}
+                            onChange={(e) =>
+                              handleNoteChange(patient.id, e.target.value)
+                            }
+                            placeholder="Espacio para tus notas clínicas privadas. Solo visible para ti."
+                            rows={4}
+                            className="w-full text-sm text-slate-800 bg-white border border-teal-200 rounded-lg p-3 resize-y focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 placeholder:text-slate-400"
+                          />
+
+                          {/* === Indicador de estado del guardado === */}
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs text-teal-600 italic">
+                              (El paciente y el admin NO pueden leer esto)
+                            </p>
+                            <div className="text-xs text-teal-500">
+                              {savingNoteId === patient.id ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                  Guardando…
+                                </span>
+                              ) : savedNoteId === patient.id ? (
+                                <span className="inline-flex items-center gap-1 text-emerald-600">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Guardado
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
