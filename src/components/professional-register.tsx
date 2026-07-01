@@ -56,7 +56,6 @@ import { toast } from "sonner";
 const THERAPY_TYPES = [
   "Adicciones",
   "Deportología",
-  "Docente/Capacitador",
   "EMDR",
   "Logoterapia",
   "Mindfulness",
@@ -204,6 +203,10 @@ const SPECIALTIES = [
   "Acoso Laboral",
   "Bullying",
   "Autolesiones e Ideación Suicida",
+  // === Nuevas especialidades vinculares / jurídicas (3) ===
+  "Pacientes Judicializados",
+  "Revinculaciones",
+  "Coparentalidad",
 ];
 
 const TITLES = ["Lic.", "Dr.", "Dra.", "Ninguno"];
