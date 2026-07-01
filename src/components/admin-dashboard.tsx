@@ -1185,10 +1185,34 @@ export function AdminProfessionals() {
             {professionals.map((prof) => {
               const isActive = prof.user.active;
               const isExpanded = expandedId === prof.id;
-              const parsedTherapyTypes = prof.therapyTypes ? JSON.parse(prof.therapyTypes) : [];
-              const parsedTargetAudience = prof.targetAudience ? JSON.parse(prof.targetAudience) : [];
-              const parsedTherapyModality = prof.therapyModality ? JSON.parse(prof.therapyModality) : [];
-              const parsedZones = prof.zones ? JSON.parse(prof.zones) : [];
+              // === Saneamiento defensivo al renderizar ===
+              // Dedup case-insensitive por si la DB ya tiene entradas
+              // duplicadas por un bug previo (ej: "Psicología Clínica" y
+              // "Psicología clínica" coexistiendo en el mismo array).
+              // Esto sanea la UI sin necesidad de migración de datos.
+              const dedupCaseInsensitive = (arr: string[]): string[] => {
+                const seen = new Set<string>();
+                const result: string[] = [];
+                for (const item of arr) {
+                  const key = String(item).trim().toLowerCase();
+                  if (!key || seen.has(key)) continue;
+                  seen.add(key);
+                  result.push(item);
+                }
+                return result;
+              };
+              const parsedTherapyTypes = dedupCaseInsensitive(
+                prof.therapyTypes ? JSON.parse(prof.therapyTypes) : []
+              );
+              const parsedTargetAudience = dedupCaseInsensitive(
+                prof.targetAudience ? JSON.parse(prof.targetAudience) : []
+              );
+              const parsedTherapyModality = dedupCaseInsensitive(
+                prof.therapyModality ? JSON.parse(prof.therapyModality) : []
+              );
+              const parsedZones = dedupCaseInsensitive(
+                prof.zones ? JSON.parse(prof.zones) : []
+              );
               return (
                 <Card key={prof.id} className={`border-teal-100 ${!isActive ? "border-l-4 border-l-amber-400" : ""}`}>
                   <CardContent className="p-4">

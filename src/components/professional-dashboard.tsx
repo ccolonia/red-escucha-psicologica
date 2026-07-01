@@ -1509,16 +1509,33 @@ export function ProfessionalProfile() {
 
   // === Helper: parsear JSON string a array (con fallback seguro) ===
   const parseJsonArray = (val: unknown): string[] => {
-    if (Array.isArray(val)) return val;
-    if (typeof val === "string") {
+    let arr: string[] = [];
+    if (Array.isArray(val)) {
+      arr = val;
+    } else if (typeof val === "string") {
       try {
         const parsed = JSON.parse(val);
-        return Array.isArray(parsed) ? parsed : [];
+        if (Array.isArray(parsed)) arr = parsed;
       } catch {
-        return [];
+        arr = [];
       }
     }
-    return [];
+    // === Saneamiento defensivo ===
+    // Dedup case-insensitive por si la DB ya tiene entradas duplicadas
+    // por un bug previo (ej: "Psicología Clínica" y "Psicología clínica"
+    // coexistiendo en el mismo array). Esto sanea la vista del profesional
+    // sin necesidad de migración de datos.
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const item of arr) {
+      const trimmed = String(item).trim();
+      if (!trimmed) continue;
+      const key = trimmed.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(trimmed);
+    }
+    return result;
   };
 
   useEffect(() => {

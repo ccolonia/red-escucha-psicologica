@@ -273,6 +273,14 @@ export async function PATCH(request: NextRequest) {
       cvData,
       cvFileName,
       cvMimeType,
+      // === Modalidades de atención (booleanos) ===
+      // Antes no se procesaban en el PATCH, lo que causaba que los cambios
+      // hechos desde "Mi Perfil / Hub de Control" no persistieran (Punto 1
+      // de la auditoría). El frontend ya los enviaba, pero el backend los
+      // ignoraba silenciosamente.
+      onlineAttention,
+      presentialAttention,
+      homeAttention,
       // === Campos de auditoría documental (SOLO admin) ===
       dniVerified,
       degreeVerified,
@@ -323,7 +331,29 @@ export async function PATCH(request: NextRequest) {
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: { available?: boolean; license?: string; licenseVerified?: boolean; specialty?: string; bio?: string | null; internalNotes?: string | null; evaluationStatus?: string | null; dniVerified?: boolean; degreeVerified?: boolean; malpracticeInsuranceVerified?: boolean; taxRegistrationVerified?: boolean; nationalRegistryVerified?: boolean; profession?: string; cuil?: string | null; therapyTypes?: string; targetAudience?: string; therapyModality?: string; zones?: string; otherTherapyDetails?: string | null; cvData?: string | null; cvFileName?: string | null; cvMimeType?: string | null } = {};
+    const data: { available?: boolean; license?: string; licenseVerified?: boolean; specialty?: string; bio?: string | null; internalNotes?: string | null; evaluationStatus?: string | null; dniVerified?: boolean; degreeVerified?: boolean; malpracticeInsuranceVerified?: boolean; taxRegistrationVerified?: boolean; nationalRegistryVerified?: boolean; profession?: string; cuil?: string | null; therapyTypes?: string; targetAudience?: string; therapyModality?: string; zones?: string; otherTherapyDetails?: string | null; cvData?: string | null; cvFileName?: string | null; cvMimeType?: string | null; onlineAttention?: boolean; presentialAttention?: boolean; homeAttention?: boolean } = {};
+
+    // === Helper: sanea arrays de strings ===
+    // - Filtra nulls/undefined/no-strings
+    // - Elimina duplicados case-insensitive (preservando la primera ocurrencia)
+    // - Elimina strings vacíos o solo whitespace
+    // Esto previene el bug "Psicología Clínica" vs "Psicología clínica" que
+    // causaba duplicación visual en el Admin Panel (Punto 2 de la auditoría).
+    const sanitizeStringArray = (arr: unknown): string[] => {
+      if (!Array.isArray(arr)) return [];
+      const seen = new Set<string>();
+      const result: string[] = [];
+      for (const item of arr) {
+        if (typeof item !== "string") continue;
+        const trimmed = item.trim();
+        if (!trimmed) continue;
+        const key = trimmed.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        result.push(trimmed);
+      }
+      return result;
+    };
 
     if (available !== undefined) {
       data.available = available;
@@ -358,7 +388,8 @@ export async function PATCH(request: NextRequest) {
 
     // === Campos del Hub de Control Profesional ===
     // El profesional puede editar sus datos profesionales desde su perfil.
-    // Los arrays se guardan como JSON string (igual que en el registro).
+    // Los arrays se sanean (dedup case-insensitive + trim) antes de
+    // serializarlos a JSON string (igual que en el registro).
     if (profession !== undefined) {
       data.profession = profession;
     }
@@ -366,16 +397,30 @@ export async function PATCH(request: NextRequest) {
       data.cuil = cuil || null;
     }
     if (therapyTypes !== undefined) {
-      data.therapyTypes = Array.isArray(therapyTypes) ? JSON.stringify(therapyTypes) : therapyTypes;
+      // Aceptamos array (desde el Hub) o string JSON (desde otros callers).
+      // Si es array, se sanea. Si es string, se parsea, sanea y re-serializa.
+      const arr = Array.isArray(therapyTypes)
+        ? therapyTypes
+        : (() => { try { return JSON.parse(therapyTypes); } catch { return []; } })();
+      data.therapyTypes = JSON.stringify(sanitizeStringArray(arr));
     }
     if (targetAudience !== undefined) {
-      data.targetAudience = Array.isArray(targetAudience) ? JSON.stringify(targetAudience) : targetAudience;
+      const arr = Array.isArray(targetAudience)
+        ? targetAudience
+        : (() => { try { return JSON.parse(targetAudience); } catch { return []; } })();
+      data.targetAudience = JSON.stringify(sanitizeStringArray(arr));
     }
     if (therapyModality !== undefined) {
-      data.therapyModality = Array.isArray(therapyModality) ? JSON.stringify(therapyModality) : therapyModality;
+      const arr = Array.isArray(therapyModality)
+        ? therapyModality
+        : (() => { try { return JSON.parse(therapyModality); } catch { return []; } })();
+      data.therapyModality = JSON.stringify(sanitizeStringArray(arr));
     }
     if (zones !== undefined) {
-      data.zones = Array.isArray(zones) ? JSON.stringify(zones) : zones;
+      const arr = Array.isArray(zones)
+        ? zones
+        : (() => { try { return JSON.parse(zones); } catch { return []; } })();
+      data.zones = JSON.stringify(sanitizeStringArray(arr));
     }
     if (otherTherapyDetails !== undefined) {
       data.otherTherapyDetails = otherTherapyDetails || null;
@@ -388,6 +433,20 @@ export async function PATCH(request: NextRequest) {
     }
     if (cvMimeType !== undefined) {
       data.cvMimeType = cvMimeType || null;
+    }
+
+    // === Modalidades de atención (booleanos) ===
+    // Punto 1 de la auditoría: antes no se procesaban, lo que causaba que
+    // los cambios desde Mi Perfil / Hub de Control no persistieran.
+    // Ahora se incluyen en el update siempre que vengan definidos en el body.
+    if (onlineAttention !== undefined) {
+      data.onlineAttention = Boolean(onlineAttention);
+    }
+    if (presentialAttention !== undefined) {
+      data.presentialAttention = Boolean(presentialAttention);
+    }
+    if (homeAttention !== undefined) {
+      data.homeAttention = Boolean(homeAttention);
     }
 
     // === Campos de auditoría documental — solo admin/super_admin ===
