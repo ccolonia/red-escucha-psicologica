@@ -874,6 +874,39 @@ export async function sendContactNotification({ name, email, phone, message, rea
   };
   const modalityLabel = modality ? (MODALITY_MAP[modality] || modality) : null;
 
+  // === Botón de WhatsApp para el teléfono ===
+  // Si el consultante dejó teléfono, generamos un link wa.me con mensaje
+  // pre-rellenado para que el admin pueda responder con un clic.
+  // El mensaje pre-rellenado incluye el nombre del consultante para que el
+  // admin no tenga que tipear nada al iniciar el chat.
+  const waPhone = phone ? formatPhoneForWhatsApp(phone) : null;
+  const waMessage = phone
+    ? encodeURIComponent(
+        `Hola ${name}, te contacto desde Red Escucha Psicológica por tu consulta.`
+      )
+    : null;
+  const waUrl = waPhone ? `https://wa.me/${waPhone}?text=${waMessage}` : null;
+
+  // Bloque "Teléfono" que reemplaza al anterior (que solo tenía tel:).
+  // Muestra el número + botón verde "Enviar WhatsApp" con el mismo estilo
+  // que ya usa el email de triage para consistencia visual.
+  const phoneField = phone
+    ? `
+              <div class="field">
+                <div class="label">Teléfono</div>
+                <div class="value" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                  <a href="tel:${phone.replace(/[^0-9+]/g, "")}" style="color:#6a8a6a;text-decoration:none;">${phone}</a>
+                  ${waUrl ? `
+                  <a href="${waUrl}" target="_blank" rel="noopener noreferrer"
+                     style="display:inline-block;padding:6px 14px;background-color:#25D366;color:#ffffff;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,0.1);">
+                    <span style="vertical-align:middle;">Enviar WhatsApp</span>
+                  </a>
+                  ` : ""}
+                </div>
+              </div>
+    `
+    : "";
+
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: ["contacto@redescuchapsicologica.com", "redescuchapsicologica@gmail.com"],
@@ -990,12 +1023,7 @@ export async function sendContactNotification({ name, email, phone, message, rea
                 <div class="value"><a href="mailto:${email}" style="color:#6a8a6a;">${email}</a></div>
               </div>
 
-              ${phone ? `
-              <div class="field">
-                <div class="label">Teléfono</div>
-                <div class="value"><a href="tel:${phone}" style="color:#6a8a6a;">${phone}</a></div>
-              </div>
-              ` : ''}
+              ${phoneField}
 
               <div class="field">
                 <div class="label">Motivo</div>
