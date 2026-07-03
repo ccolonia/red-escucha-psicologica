@@ -16,6 +16,20 @@ model User {
   phone        String?
   role         String      @default("patient") // "admin", "super_admin", "professional", "patient"
   active       Boolean     @default(true)
+  // === Control de aprobación y onboarding del profesional ===
+  // isApproved: true cuando el admin aprueba al profesional desde el panel.
+  //   Antes de la aprobación, el profesional no puede recibir el email de
+  //   bienvenida ni setear su contraseña definitiva.
+  // passwordSet: true después de que el profesional setea su contraseña
+  //   definitiva desde el link del email de aprobación. Permite al admin
+  //   ver quién ya completó el onboarding y quién está pendiente.
+  // hasAccessedPanel: true después del primer login exitoso del profesional.
+  //   Permite al admin detectar profesionales aprobados que todavía no
+  //   ingresaron al sistema (caso típico: email olvidado en spam, link
+  //   expirado, etc.).
+  isApproved        Boolean @default(false)
+  passwordSet       Boolean @default(false)
+  hasAccessedPanel  Boolean @default(false)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   professional   Professional?

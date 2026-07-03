@@ -93,6 +93,11 @@ export async function POST(request: NextRequest) {
       where: { id: passwordToken.userId },
       data: {
         password: hashedPassword,
+        // Mantener passwordSet=true (ya estaba en true si el usuario
+        // había seteado contraseña antes, y este reset cuenta como nueva
+        // contraseña definitiva). Si por algún caso edge estaba en false
+        // (raro), lo dejamos en true acá porque acaba de setear una nueva.
+        passwordSet: true,
       },
     });
 

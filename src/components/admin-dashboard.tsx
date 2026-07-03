@@ -157,7 +157,17 @@ interface Professional {
   taxRegistrationVerified?: boolean;
   nationalRegistryVerified?: boolean;
   createdAt: string;
-  user: { name: string; email: string; phone: string; active: boolean; createdAt: string };
+  user: {
+    name: string;
+    email: string;
+    phone: string;
+    active: boolean;
+    createdAt: string;
+    // === Flags de onboarding (aprobación + contraseña + acceso) ===
+    isApproved?: boolean;
+    passwordSet?: boolean;
+    hasAccessedPanel?: boolean;
+  };
 }
 
 interface ContactRequest {
@@ -647,20 +657,46 @@ export function AdminProfessionals() {
           )
         );
 
-        // If approving (activating), send approval email with password setup link
+        // If approving (activating), call the new approval endpoint which:
+        //   1. Marks isApproved = true on the user
+        //   2. Invalidates the current password (forces set-password flow)
+        //   3. Sends the approval email with the password setup link
+        // After this, passwordSet and hasAccessedPanel stay false until
+        // the professional completes their part of the onboarding.
         if (!currentActive) {
           toast.success("Cuenta activada. Enviando email de bienvenida...");
           try {
-            const emailRes = await fetch("/api/auth/approve-email", {
+            const emailRes = await fetch("/api/admin/professionals/approve", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ userId }),
             });
             if (emailRes.ok) {
-              toast.success("Email de bienvenida enviado exitosamente");
+              const emailData = await emailRes.json().catch(() => ({}));
+              // Actualizar estado local con los flags nuevos
+              setProfessionals((prev) =>
+                prev.map((p) =>
+                  p.userId === userId
+                    ? {
+                        ...p,
+                        user: {
+                          ...p.user,
+                          isApproved: true,
+                          passwordSet: false,
+                          hasAccessedPanel: false,
+                        },
+                      }
+                    : p
+                )
+              );
+              if (emailData.warning) {
+                toast.warning(emailData.warning);
+              } else {
+                toast.success("Profesional aprobado. Email de bienvenida enviado.");
+              }
             } else {
-              const emailData = await emailRes.json();
-              toast.error(emailData.error || "Error al enviar el email de bienvenida");
+              const emailData = await emailRes.json().catch(() => ({}));
+              toast.error(emailData.error || "Error al aprobar al profesional");
             }
           } catch {
             toast.error("Error al enviar el email de bienvenida");
@@ -1329,17 +1365,70 @@ export function AdminProfessionals() {
                               <p className="text-sm text-teal-500">{prof.user.email}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {!isActive && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* === Badge de estado de aprobación === */}
+                            {/* Si está aprobado, mostrar badge verde. Si no, botón Aprobar. */}
+                            {prof.user.isApproved ? (
+                              <Badge
+                                variant="outline"
+                                className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs h-7"
+                                title="Profesional aprobado por el administrador"
+                              >
+                                <CheckCircle2 className="mr-1 w-3 h-3" />
+                                Aprobado
+                              </Badge>
+                            ) : (
                               <Button
                                 size="sm"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs"
+                                className="bg-teal-600 hover:bg-teal-700 text-white h-8 text-xs"
                                 onClick={() => handleToggleActive(prof.userId, false)}
+                                title="Aprobar al profesional y enviar email de bienvenida"
                               >
                                 <CheckCircle2 className="mr-1 w-3.5 h-3.5" />
                                 Aprobar
                               </Button>
                             )}
+
+                            {/* === Micro-badge: estado de contraseña === */}
+                            {/* Indica si el profesional ya seteó su contraseña definitiva */}
+                            {prof.user.isApproved && (
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] h-6 ${
+                                  prof.user.passwordSet
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-slate-50 text-slate-500 border-slate-200"
+                                }`}
+                                title={
+                                  prof.user.passwordSet
+                                    ? "El profesional ya configuró su contraseña definitiva"
+                                    : "El profesional todavía no configuró su contraseña"
+                                }
+                              >
+                                {prof.user.passwordSet ? "✓ Contraseña" : "• Contraseña"}
+                              </Badge>
+                            )}
+
+                            {/* === Micro-badge: acceso al panel === */}
+                            {/* Indica si el profesional ya inició sesión al menos una vez */}
+                            {prof.user.isApproved && (
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] h-6 ${
+                                  prof.user.hasAccessedPanel
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-slate-50 text-slate-500 border-slate-200"
+                                }`}
+                                title={
+                                  prof.user.hasAccessedPanel
+                                    ? "El profesional ya ingresó al panel al menos una vez"
+                                    : "El profesional todavía no ingresó al panel"
+                                }
+                              >
+                                {prof.user.hasAccessedPanel ? "✓ Ingresó" : "• Sin accesos"}
+                              </Badge>
+                            )}
+
                             <Button
                               size="sm"
                               variant="outline"

@@ -93,7 +93,21 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           updatedAt: true,
           user: {
-            select: { id: true, name: true, email: true, phone: true, active: true, createdAt: true },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              active: true,
+              createdAt: true,
+              // === Flags de onboarding ===
+              // Se incluyen para que el panel admin pueda mostrar los
+              // badges de Aprobado / Contraseña / Acceso en la ficha
+              // del profesional.
+              isApproved: true,
+              passwordSet: true,
+              hasAccessedPanel: true,
+            },
           },
         },
         orderBy: { user: { name: "asc" } },
@@ -207,7 +221,18 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           updatedAt: true,
           user: {
-            select: { id: true, name: true, email: true, phone: true, active: true, createdAt: true },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              active: true,
+              createdAt: true,
+              // === Flags de onboarding (modo paginado admin) ===
+              isApproved: true,
+              passwordSet: true,
+              hasAccessedPanel: true,
+            },
           },
         },
         orderBy: { user: { name: "asc" } },

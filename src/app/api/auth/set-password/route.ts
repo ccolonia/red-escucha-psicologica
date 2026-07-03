@@ -68,6 +68,12 @@ export async function POST(request: NextRequest) {
       data: {
         password: hashedPassword,
         active: true,
+        // === Marcar que el profesional ya seteó su contraseña definitiva ===
+        // Esto permite al admin ver en el panel quién completó el onboarding
+        // y quién todavía tiene pendiente setear su contraseña. Aplica a
+        // cualquier rol (admin/professional/patient) — es una bandera de
+        // estado del usuario, no específica del profesional.
+        passwordSet: true,
       },
     });
 

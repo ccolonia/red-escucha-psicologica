@@ -54,6 +54,20 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // === Marcar primer acceso al panel ===
+        // hasAccessedPanel se setea en true en el primer login exitoso.
+        // Lo hacemos SIN await (fire-and-forget) para no demorar el login.
+        // Si falla (DB caída, etc.), el usuario igual entra — el flag se
+        // actualizará en el próximo login exitoso.
+        if (!user.hasAccessedPanel) {
+          db.user.update({
+            where: { id: user.id },
+            data: { hasAccessedPanel: true },
+          }).catch((err) => {
+            console.error("[auth] Error marcando hasAccessedPanel:", err);
+          });
+        }
+
         return {
           id: user.id,
           email: user.email,
