@@ -37,8 +37,30 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
+      // === Mensaje específico según el rol del usuario existente ===
+      // Como regla de negocio: 1 email = 1 rol. Si una persona es paciente
+      // y quiere ser profesional (o viceversa), debe usar otro email. El
+      // mensaje le explica claramente la situación y le indica qué hacer.
+      const roleMessages: Record<string, string> = {
+        patient:
+          "Ya existe una cuenta de paciente con este email. Si querés registrarte como profesional, usá otro email. Si ya sos paciente y necesitás ayuda, contactanos a contacto@redescuchapsicologica.com.",
+        professional:
+          "Ya existe una cuenta de profesional con este email. Si ya te registraste como profesional, esperá la aprobación del administrador. Si no recordás tu contraseña, usá '¿Olvidaste tu contraseña?' en la pantalla de inicio de sesión.",
+        admin:
+          "Este email ya está registrado en el sistema como administrador. Contactanos a contacto@redescuchapsicologica.com para asistencia.",
+        super_admin:
+          "Este email ya está registrado en el sistema como administrador. Contactanos a contacto@redescuchapsicologica.com para asistencia.",
+      };
+      const specificMessage =
+        roleMessages[existingUser.role] ||
+        "Ya existe una cuenta con este email. Contactanos a contacto@redescuchapsicologica.com para asistencia.";
+
       return NextResponse.json(
-        { error: "Ya existe una cuenta con este email" },
+        {
+          error: specificMessage,
+          code: "EMAIL_ALREADY_EXISTS",
+          existingRole: existingUser.role,
+        },
         { status: 409 }
       );
     }
