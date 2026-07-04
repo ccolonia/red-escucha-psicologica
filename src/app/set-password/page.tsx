@@ -148,7 +148,7 @@ function SetPasswordContent() {
               Tu contraseña ha sido creada exitosamente. Ya podés ingresar a tu cuenta.
             </p>
             <Button
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/#login")}
               className="btn-sage text-forest-900 font-semibold px-8 h-11 rounded-full"
               style={{ fontFamily: "Montserrat, sans-serif" }}
             >
