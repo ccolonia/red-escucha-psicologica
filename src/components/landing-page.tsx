@@ -701,10 +701,41 @@ export function LandingPage() {
           <div className="max-w-3xl flex-1 min-w-0">
             {/* Hero text content - smooth crossfade with CSS */}
             <div className="transition-opacity duration-500 ease-in-out">
-                {/* Badge */}
-                <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                  <Leaf className="w-4 h-4" />
-                  {cmsHeroSlides[currentSlide].badge}
+                {/* === Fila superior: Badge + Botón "Pedí tu turno aquí" === */}
+                {/* El badge queda a la izquierda y el botón CTA llamativo a la
+                    derecha, en la misma fila. El botón usa amber (color de
+                    acento institucional) para destacar sobre el fondo verde
+                    oscuro del hero y diferenciarse de los CTAs verdes de abajo. */}
+                <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
+                  {/* Badge */}
+                  <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                    <Leaf className="w-4 h-4" />
+                    {cmsHeroSlides[currentSlide].badge}
+                  </div>
+
+                  {/* Botón "Pedí tu turno aquí" — CTA principal del hero */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.96 }}
+                    className="relative group"
+                  >
+                    {/* Glow pulsante detrás del botón */}
+                    <div className="absolute -inset-0.5 bg-amber-400/50 rounded-full blur-md animate-pulse group-hover:bg-amber-400/70 transition-colors duration-300" />
+
+                    {/* Botón */}
+                    <Button
+                      onClick={() => scrollToSection("contacto")}
+                      className="relative bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-sm sm:text-base px-5 sm:px-7 h-11 sm:h-12 rounded-full shadow-xl border border-amber-300/40 whitespace-nowrap"
+                      style={{ fontFamily: "Montserrat, sans-serif" }}
+                      aria-label="Pedí tu turno aquí"
+                    >
+                      <CalendarPlus className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
+                      Pedí tu turno aquí
+                    </Button>
+                  </motion.div>
                 </div>
 
                 {/* Title */}
@@ -890,133 +921,6 @@ export function LandingPage() {
           </motion.div>
 
           </div>
-        </div>
-      </section>
-
-      {/* ===== CTA CENTRAL: "Pedí tu turno aquí" ===== */}
-      {/* Banner llamativo entre Hero y Nosotros que invita a solicitar turno.
-          Usa los colores institucionales (forest/sage) con un toque de amber
-          para destacar el CTA principal. */}
-      <section
-        className="relative py-10 sm:py-14 overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, #1a2e1c 0%, #2d4a2f 50%, #1a2e1c 100%)",
-        }}
-      >
-        {/* Patrón decorativo de hojas en el fondo */}
-        <div
-          className="absolute inset-0 opacity-10 pointer-events-none"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 50%, rgba(168, 192, 168, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(168, 192, 168, 0.2) 0%, transparent 50%)",
-          }}
-        />
-
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
-            className="flex flex-col items-center text-center"
-          >
-            {/* Icono animado con pulso */}
-            <motion.div
-              animate={{
-                scale: [1, 1.08, 1],
-                rotate: [0, 5, -5, 0],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="mb-4 sm:mb-6 relative"
-            >
-              <div className="absolute inset-0 bg-amber-400/30 rounded-full blur-xl animate-pulse" />
-              <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-amber-500 rounded-full flex items-center justify-center shadow-2xl shadow-amber-500/40 border-2 border-amber-300/50">
-                <CalendarPlus className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-              </div>
-            </motion.div>
-
-            {/* Texto principal */}
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-beige-50 mb-2 sm:mb-3 leading-tight"
-            >
-              Pedí tu turno aquí
-            </motion.h2>
-
-            {/* Subtítulo con badge de urgencia */}
-            <motion.p
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="text-sage-200 text-base sm:text-lg font-light mb-6 sm:mb-8 max-w-xl"
-              style={{ fontFamily: "Montserrat, sans-serif" }}
-            >
-              Sin listas de espera. Respuesta del equipo en menos de 48hs
-              hábiles. Acompañamiento real, humano y profesional.
-            </motion.p>
-
-            {/* Botón principal con efecto de brillo */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.97 }}
-              className="relative group"
-            >
-              {/* Glow detrás del botón */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 rounded-full blur-lg opacity-60 group-hover:opacity-90 transition-opacity duration-300 animate-pulse" />
-
-              {/* Botón */}
-              <Button
-                onClick={() => scrollToSection("contacto")}
-                className="relative bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-base sm:text-lg px-8 sm:px-12 h-12 sm:h-14 rounded-full shadow-2xl border-2 border-amber-300/30"
-                style={{ fontFamily: "Montserrat, sans-serif" }}
-              >
-                <CalendarPlus className="mr-2 sm:mr-3 w-5 h-5 sm:w-6 sm:h-6" />
-                Solicitar Turno Ahora
-                <ArrowRight className="ml-2 sm:ml-3 w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform duration-200" />
-              </Button>
-
-              {/* Brillo sutil que cruza el botón en hover */}
-              <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
-                <div className="absolute -inset-x-2 -top-2 bottom-0 bg-gradient-to-b from-white/30 to-transparent transform -rotate-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              </div>
-            </motion.div>
-
-            {/* Trust indicators debajo del botón */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-              className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-8 sm:mt-10 text-sage-200/80 text-xs sm:text-sm"
-              style={{ fontFamily: "Montserrat, sans-serif" }}
-            >
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-sage-400" />
-                Atención presencial y online
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-sage-400" />
-                Profesionales verificados
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-sage-400" />
-                Confidencialidad garantizada
-              </span>
-            </motion.div>
-          </motion.div>
         </div>
       </section>
 
