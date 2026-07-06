@@ -701,27 +701,20 @@ export function LandingPage() {
           <div className="max-w-3xl flex-1 min-w-0">
             {/* Hero text content - smooth crossfade with CSS */}
             <div className="transition-opacity duration-500 ease-in-out">
-                {/* === Fila superior: Badge + Botón "Pedí tu turno aquí" === */}
-                {/* Ambos elementos centrados horizontalmente en la misma fila.
-                    El botón usa el mismo tamaño que el badge (px-4 py-1.5 text-sm)
-                    para mantener armonía visual. Color amber para diferenciarse
-                    del badge sage y de los CTAs verdes de abajo. */}
-                <div className="flex items-center justify-center gap-3 sm:gap-4 mb-8 flex-wrap">
-                  {/* Badge */}
-                  <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                    <Leaf className="w-4 h-4" />
-                    {cmsHeroSlides[currentSlide].badge}
-                  </div>
-
-                  {/* Botón "Pedí tu turno aquí" — CTA principal del hero */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.96 }}
-                    className="relative group"
-                  >
+                {/* === Botón "Pedí tu turno aquí" — fila superior, centrado === */}
+                {/* Una fila por encima del badge, centrado horizontalmente.
+                    Tamaño igual al badge (px-4 py-1.5 text-sm) para mantener
+                    armonía visual. Color amber para diferenciarse del badge
+                    sage y de los CTAs verdes de abajo. */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.96 }}
+                  className="flex justify-center mb-4"
+                >
+                  <div className="relative group">
                     {/* Glow pulsante detrás del botón */}
                     <div className="absolute -inset-0.5 bg-amber-400/50 rounded-full blur-md animate-pulse group-hover:bg-amber-400/70 transition-colors duration-300" />
 
@@ -736,7 +729,15 @@ export function LandingPage() {
                       <CalendarPlus className="w-4 h-4" />
                       Pedí tu turno aquí
                     </button>
-                  </motion.div>
+                  </div>
+                </motion.div>
+
+                {/* Badge — fila del medio */}
+                <div className="flex justify-center mb-8">
+                  <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                    <Leaf className="w-4 h-4" />
+                    {cmsHeroSlides[currentSlide].badge}
+                  </div>
                 </div>
 
                 {/* Title */}
