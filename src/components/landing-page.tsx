@@ -898,7 +898,12 @@ export function LandingPage() {
             y el contenido principal), centrado horizontalmente con left-1/2
             + -translate-x-1/2. Así se ve centrado tanto en PC (hero de 2
             columnas) como en mobile (hero de 1 columna). No afecta el flujo
-            del layout del hero ni del carrusel — es un overlay independiente. */}
+            del layout del hero ni del carrusel — es un overlay independiente.
+
+            Estilo: botón transparente con borde amber, texto blanco. Efecto
+            de parpadeo sutil (blink) que prende y apaga el fondo amber para
+            captar la atención del usuario sin ser invasivo. El ciclo dura
+            2.4s: 1.2s apagado (transparente) + 1.2s prendido (amber suave). */}
         <motion.div
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -908,20 +913,55 @@ export function LandingPage() {
           className="absolute z-[4] top-[12%] left-1/2 -translate-x-1/2"
         >
           <div className="relative group">
-            {/* Glow pulsante detrás del botón */}
-            <div className="absolute -inset-0.5 bg-amber-400/50 rounded-full blur-md animate-pulse group-hover:bg-amber-400/70 transition-colors duration-300" />
+            {/* Glow pulsante detrás del botón — sincronizado con el blink */}
+            <motion.div
+              animate={{ opacity: [0.2, 0.6, 0.2] }}
+              transition={{
+                duration: 2.4,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="absolute -inset-0.5 bg-amber-400/40 rounded-full blur-md"
+            />
 
-            {/* Botón — mismo tamaño que el badge */}
-            <button
+            {/* Botón transparente con parpadeo sutil */}
+            <motion.button
               type="button"
               onClick={() => scrollToSection("contacto")}
-              className="relative inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium text-sm px-4 py-1.5 rounded-full shadow-lg border border-amber-300/40 whitespace-nowrap transition-colors"
+              animate={{
+                backgroundColor: "rgba(245, 158, 11, 0)",
+                borderColor: "rgba(251, 191, 36, 0.6)",
+              }}
+              transition={{
+                duration: 2.4,
+                repeat: Infinity,
+                ease: "easeInOut",
+                repeatType: "reverse",
+              }}
+              className="relative inline-flex items-center gap-2 text-white font-medium text-sm px-4 py-1.5 rounded-full border whitespace-nowrap backdrop-blur-sm"
               style={{ fontFamily: "Montserrat, sans-serif" }}
               aria-label="Pedí tu turno aquí"
             >
-              <CalendarPlus className="w-4 h-4" />
-              Pedí tu turno aquí
-            </button>
+              {/* Capa de fondo que parpadea (prendapague) */}
+              <motion.span
+                animate={{
+                  opacity: [0, 0.85, 0],
+                }}
+                transition={{
+                  duration: 2.4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  times: [0, 0.5, 1],
+                }}
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500 to-amber-600"
+                style={{ zIndex: 0 }}
+              />
+              {/* Texto e ícono encima del fondo parpadeante */}
+              <CalendarPlus className="w-4 h-4 relative" style={{ zIndex: 1 }} />
+              <span className="relative" style={{ zIndex: 1 }}>
+                Pedí tu turno aquí
+              </span>
+            </motion.button>
           </div>
         </motion.div>
       </section>
