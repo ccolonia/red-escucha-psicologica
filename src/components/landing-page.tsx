@@ -894,7 +894,7 @@ export function LandingPage() {
 
         {/* === Botón "Pedí tu turno aquí" — overlay absoluto centrado === */}
         {/* Posicionado de forma absoluta respecto al hero (que es relative).
-            top-[15%] lo ubica un poco más abajo del header (entre el header
+            top-[12%] lo ubica un poco más abajo del header (entre el header
             y el contenido principal), centrado horizontalmente con left-1/2
             + -translate-x-1/2. Así se ve centrado tanto en PC (hero de 2
             columnas) como en mobile (hero de 1 columna). No afecta el flujo
@@ -905,7 +905,7 @@ export function LandingPage() {
           transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.96 }}
-          className="absolute z-[4] top-[15%] left-1/2 -translate-x-1/2"
+          className="absolute z-[4] top-[12%] left-1/2 -translate-x-1/2"
         >
           <div className="relative group">
             {/* Glow pulsante detrás del botón */}
