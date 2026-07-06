@@ -95,6 +95,141 @@ function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', 'AW-1017920443');`}
         </Script>
+
+        {/* === Schema.org LocalBusiness — SEO local para Google Maps ===
+            Como Red Escucha Psicológica no tiene una dirección física única
+            (los profesionales atienden en diferentes direcciones y también
+            online), usamos:
+            - @type: LocalBusiness (general, no PhysicalBusiness)
+            - areaServed: áreas geográficas donde se brinda el servicio
+            - availableService: tipos de terapia que se ofrecen
+            - openingHours: 24/7 (atención telefónica/online permanente)
+            - contactPoint: email + WhatsApp + teléfono
+
+            Esto le dice a Google:
+            1. Que somos un negocio de salud mental
+            2. Dónde operamos (CABA, GBA, Argentina + Online)
+            3. Cómo contactarnos (email, teléfono, WhatsApp)
+            4. Qué servicios ofrecemos
+            5. Horario de atención (24/7)
+
+            Google usa estos datos para:
+            - Mostrarnos en Google Maps (con el área de cobertura)
+            - Mejorar el SEO local
+            - Habilitar rich snippets en resultados de búsqueda
+            - Conectar con Google Business Profile cuando lo creen */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "@id": "https://www.redescuchapsicologica.com/#business",
+              name: "Red Escucha Psicológica",
+              alternateName: "REP",
+              description:
+                "Plataforma de psicólogos que brindan terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Atención presencial y online en todo Argentina.",
+              url: "https://www.redescuchapsicologica.com",
+              email: "contacto@redescuchapsicologica.com",
+              telephone: "+5491168667898",
+              image: "https://www.redescuchapsicologica.com/rep-logo.png",
+              logo: "https://www.redescuchapsicologica.com/rep-logo.png",
+              slogan: "Escuchar - Acompañar - Transformar",
+              // === Áreas de servicio ===
+              // Sin dirección física única — los profesionales atienden
+              // en diferentes ubicaciones. Definimos el área de cobertura.
+              areaServed: [
+                { "@type": "AdministrativeArea", name: "Capital Federal (CABA)" },
+                { "@type": "AdministrativeArea", name: "Gran Buenos Aires (GBA)" },
+                { "@type": "AdministrativeArea", name: "Provincia de Buenos Aires" },
+                { "@type": "AdministrativeArea", name: "Córdoba" },
+                { "@type": "AdministrativeArea", name: "Mendoza" },
+                { "@type": "AdministrativeArea", name: "Santa Fe" },
+                { "@type": "Country", name: "Argentina" },
+                { "@type": "Place", name: "Online (videollamada a todo el país)" },
+              ],
+              // === Tipo de negocio ===
+              additionalType: "https://schema.org/MedicalBusiness",
+              // === Servicios disponibles ===
+              availableService: [
+                {
+                  "@type": "MedicalTherapy",
+                  name: "Terapia individual",
+                  description:
+                    "Psicoterapia individual para adolescentes, adultos y adultos mayores.",
+                },
+                {
+                  "@type": "MedicalTherapy",
+                  name: "Terapia de pareja",
+                  description:
+                    "Terapia vincular para parejas que buscan mejorar su relación.",
+                },
+                {
+                  "@type": "MedicalTherapy",
+                  name: "Terapia familiar",
+                  description:
+                    "Terapia sistémica para familias en proceso de cambio o conflicto.",
+                },
+                {
+                  "@type": "MedicalTherapy",
+                  name: "Terapia grupal",
+                  description:
+                    "Grupos terapéuticos coordinados por profesionales especializados.",
+                },
+              ],
+              // === Modalidades de atención ===
+              // Indicamos que ofrecemos atención presencial y online
+              branchCode: "online-y-presencial",
+              // === Horario de atención ===
+              // 24 horas, los 365 días del año (atención telefónica y online)
+              openingHoursSpecification: [
+                {
+                  "@type": "OpeningHoursSpecification",
+                  dayOfWeek: [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                    "Sunday",
+                  ],
+                  opens: "00:00",
+                  closes: "23:59",
+                },
+              ],
+              // === Puntos de contacto ===
+              contactPoint: [
+                {
+                  "@type": "ContactPoint",
+                  contactType: "customer support",
+                  email: "contacto@redescuchapsicologica.com",
+                  telephone: "+5491168667898",
+                  contactOption: "TollFree",
+                  areaServed: "Argentina",
+                  availableLanguage: ["Spanish"],
+                },
+                {
+                  "@type": "ContactPoint",
+                  contactType: "reservations",
+                  email: "contacto@redescuchapsicologica.com",
+                  telephone: "+5491168667898",
+                  contactOption: "WhatsApp",
+                  areaServed: "Argentina",
+                  availableLanguage: ["Spanish"],
+                },
+              ],
+              // === Same as (redes sociales, si las tienen) ===
+              sameAs: [
+                "https://www.redescuchapsicologica.com",
+              ],
+              // === Política de precios ===
+              priceRange: "$$",
+              paymentAccepted: "Transferencia, Efectivo, Tarjeta",
+              currenciesAccepted: "ARS",
+            }),
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground overflow-x-hidden`}
