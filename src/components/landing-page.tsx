@@ -894,11 +894,14 @@ export function LandingPage() {
 
         {/* === Botón "Pedí tu turno aquí" — overlay absoluto centrado === */}
         {/* Posicionado de forma absoluta respecto al hero (que es relative).
-            top-[12%] lo ubica un poco más abajo del header (entre el header
-            y el contenido principal), centrado horizontalmente con left-1/2
-            + -translate-x-1/2. Así se ve centrado tanto en PC (hero de 2
-            columnas) como en mobile (hero de 1 columna). No afecta el flujo
-            del layout del hero ni del carrusel — es un overlay independiente.
+            Posición responsive:
+              - Mobile (default): top-[18%] — un cachito más abajo para que
+                no se interponga con el texto del carrusel
+              - PC (sm: y superior): top-[12%] — posición original que se
+                ve bien en pantallas grandes
+            Centrado horizontalmente con left-1/2 + -translate-x-1/2.
+            No afecta el flujo del layout del hero ni del carrusel — es
+            un overlay independiente.
 
             Estilo: botón transparente con borde amber, texto blanco. Efecto
             de parpadeo sutil (blink) que prende y apaga el fondo amber para
@@ -910,7 +913,7 @@ export function LandingPage() {
           transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.96 }}
-          className="absolute z-[4] top-[12%] left-1/2 -translate-x-1/2"
+          className="absolute z-[4] top-[18%] sm:top-[12%] left-1/2 -translate-x-1/2"
         >
           <div className="relative group">
             {/* Glow pulsante detrás del botón — sincronizado con el blink */}
