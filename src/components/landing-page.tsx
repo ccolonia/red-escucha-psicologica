@@ -701,43 +701,10 @@ export function LandingPage() {
           <div className="max-w-3xl flex-1 min-w-0">
             {/* Hero text content - smooth crossfade with CSS */}
             <div className="transition-opacity duration-500 ease-in-out">
-                {/* === Botón "Pedí tu turno aquí" — fila superior, centrado === */}
-                {/* Una fila por encima del badge, centrado horizontalmente.
-                    Tamaño igual al badge (px-4 py-1.5 text-sm) para mantener
-                    armonía visual. Color amber para diferenciarse del badge
-                    sage y de los CTAs verdes de abajo. */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.85 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.96 }}
-                  className="flex justify-center mb-4"
-                >
-                  <div className="relative group">
-                    {/* Glow pulsante detrás del botón */}
-                    <div className="absolute -inset-0.5 bg-amber-400/50 rounded-full blur-md animate-pulse group-hover:bg-amber-400/70 transition-colors duration-300" />
-
-                    {/* Botón — mismo tamaño que el badge */}
-                    <button
-                      type="button"
-                      onClick={() => scrollToSection("contacto")}
-                      className="relative inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium text-sm px-4 py-1.5 rounded-full shadow-lg border border-amber-300/40 whitespace-nowrap transition-colors"
-                      style={{ fontFamily: "Montserrat, sans-serif" }}
-                      aria-label="Pedí tu turno aquí"
-                    >
-                      <CalendarPlus className="w-4 h-4" />
-                      Pedí tu turno aquí
-                    </button>
-                  </div>
-                </motion.div>
-
-                {/* Badge — fila del medio */}
-                <div className="flex justify-center mb-8">
-                  <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                    <Leaf className="w-4 h-4" />
-                    {cmsHeroSlides[currentSlide].badge}
-                  </div>
+                {/* Badge */}
+                <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                  <Leaf className="w-4 h-4" />
+                  {cmsHeroSlides[currentSlide].badge}
                 </div>
 
                 {/* Title */}
@@ -924,6 +891,39 @@ export function LandingPage() {
 
           </div>
         </div>
+
+        {/* === Botón "Pedí tu turno aquí" — overlay absoluto centrado === */}
+        {/* Posicionado de forma absoluta respecto al hero (que es relative).
+            top-1/4 lo ubica en el cuarto superior del hero, centrado
+            horizontalmente con left-1/2 + -translate-x-1/2. Así se ve
+            centrado tanto en PC (hero de 2 columnas) como en mobile
+            (hero de 1 columna). No afecta el flujo del layout del hero
+            ni del carrusel — es un overlay independiente. */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.96 }}
+          className="absolute z-[4] top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        >
+          <div className="relative group">
+            {/* Glow pulsante detrás del botón */}
+            <div className="absolute -inset-0.5 bg-amber-400/50 rounded-full blur-md animate-pulse group-hover:bg-amber-400/70 transition-colors duration-300" />
+
+            {/* Botón — mismo tamaño que el badge */}
+            <button
+              type="button"
+              onClick={() => scrollToSection("contacto")}
+              className="relative inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium text-sm px-4 py-1.5 rounded-full shadow-lg border border-amber-300/40 whitespace-nowrap transition-colors"
+              style={{ fontFamily: "Montserrat, sans-serif" }}
+              aria-label="Pedí tu turno aquí"
+            >
+              <CalendarPlus className="w-4 h-4" />
+              Pedí tu turno aquí
+            </button>
+          </div>
+        </motion.div>
       </section>
 
       {/* ===== NOSOTROS / PHILOSOPHY ===== */}
