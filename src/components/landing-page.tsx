@@ -701,41 +701,10 @@ export function LandingPage() {
           <div className="max-w-3xl flex-1 min-w-0">
             {/* Hero text content - smooth crossfade with CSS */}
             <div className="transition-opacity duration-500 ease-in-out">
-                {/* === Fila superior: Badge + Botón "Pedí tu turno aquí" === */}
-                {/* El badge queda a la izquierda y el botón CTA llamativo a la
-                    derecha, en la misma fila. El botón usa amber (color de
-                    acento institucional) para destacar sobre el fondo verde
-                    oscuro del hero y diferenciarse de los CTAs verdes de abajo. */}
-                <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
-                  {/* Badge */}
-                  <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                    <Leaf className="w-4 h-4" />
-                    {cmsHeroSlides[currentSlide].badge}
-                  </div>
-
-                  {/* Botón "Pedí tu turno aquí" — CTA principal del hero */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.96 }}
-                    className="relative group"
-                  >
-                    {/* Glow pulsante detrás del botón */}
-                    <div className="absolute -inset-0.5 bg-amber-400/50 rounded-full blur-md animate-pulse group-hover:bg-amber-400/70 transition-colors duration-300" />
-
-                    {/* Botón */}
-                    <Button
-                      onClick={() => scrollToSection("contacto")}
-                      className="relative bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-sm sm:text-base px-5 sm:px-7 h-11 sm:h-12 rounded-full shadow-xl border border-amber-300/40 whitespace-nowrap"
-                      style={{ fontFamily: "Montserrat, sans-serif" }}
-                      aria-label="Pedí tu turno aquí"
-                    >
-                      <CalendarPlus className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                      Pedí tu turno aquí
-                    </Button>
-                  </motion.div>
+                {/* Badge */}
+                <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                  <Leaf className="w-4 h-4" />
+                  {cmsHeroSlides[currentSlide].badge}
                 </div>
 
                 {/* Title */}
@@ -747,6 +716,37 @@ export function LandingPage() {
                 <p className="mt-6 text-lg sm:text-xl text-beige-200/90 leading-relaxed max-w-xl font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                   {cmsHeroSlides[currentSlide].description}
                 </p>
+
+                {/* === Botón "Pedí tu turno aquí" — CTA central del hero === */}
+                {/* Ubicado en el medio del hero (entre la descripción y los
+                    CTAs verdes de abajo). Tamaño igual al badge "SIN LISTAS
+                    DE ESPERA" (px-4 py-1.5 text-sm) para mantener armonía
+                    visual. Color amber para diferenciarse de los CTAs verdes. */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.96 }}
+                  className="mt-8 flex justify-center"
+                >
+                  <div className="relative group">
+                    {/* Glow pulsante detrás del botón */}
+                    <div className="absolute -inset-0.5 bg-amber-400/50 rounded-full blur-md animate-pulse group-hover:bg-amber-400/70 transition-colors duration-300" />
+
+                    {/* Botón — mismo tamaño que el badge */}
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection("contacto")}
+                      className="relative inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium text-sm px-4 py-1.5 rounded-full shadow-lg border border-amber-300/40 whitespace-nowrap transition-colors"
+                      style={{ fontFamily: "Montserrat, sans-serif" }}
+                      aria-label="Pedí tu turno aquí"
+                    >
+                      <CalendarPlus className="w-4 h-4" />
+                      Pedí tu turno aquí
+                    </button>
+                  </div>
+                </motion.div>
 
                 {/* CTAs */}
                 <div className="mt-10 flex flex-col sm:flex-row gap-4">
