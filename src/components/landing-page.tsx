@@ -701,36 +701,27 @@ export function LandingPage() {
           <div className="max-w-3xl flex-1 min-w-0">
             {/* Hero text content - smooth crossfade with CSS */}
             <div className="transition-opacity duration-500 ease-in-out">
-                {/* Badge */}
-                <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                  <Leaf className="w-4 h-4" />
-                  {cmsHeroSlides[currentSlide].badge}
-                </div>
+                {/* === Fila superior: Badge + Botón "Pedí tu turno aquí" === */}
+                {/* Ambos elementos centrados horizontalmente en la misma fila.
+                    El botón usa el mismo tamaño que el badge (px-4 py-1.5 text-sm)
+                    para mantener armonía visual. Color amber para diferenciarse
+                    del badge sage y de los CTAs verdes de abajo. */}
+                <div className="flex items-center justify-center gap-3 sm:gap-4 mb-8 flex-wrap">
+                  {/* Badge */}
+                  <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                    <Leaf className="w-4 h-4" />
+                    {cmsHeroSlides[currentSlide].badge}
+                  </div>
 
-                {/* Title */}
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-beige-50 leading-tight">
-                  {renderHeroTitle(cmsHeroSlides[currentSlide].title)}
-                </h1>
-
-                {/* Description */}
-                <p className="mt-6 text-lg sm:text-xl text-beige-200/90 leading-relaxed max-w-xl font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                  {cmsHeroSlides[currentSlide].description}
-                </p>
-
-                {/* === Botón "Pedí tu turno aquí" — CTA central del hero === */}
-                {/* Ubicado en el medio del hero (entre la descripción y los
-                    CTAs verdes de abajo). Tamaño igual al badge "SIN LISTAS
-                    DE ESPERA" (px-4 py-1.5 text-sm) para mantener armonía
-                    visual. Color amber para diferenciarse de los CTAs verdes. */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.85 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.96 }}
-                  className="mt-8 flex justify-center"
-                >
-                  <div className="relative group">
+                  {/* Botón "Pedí tu turno aquí" — CTA principal del hero */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.96 }}
+                    className="relative group"
+                  >
                     {/* Glow pulsante detrás del botón */}
                     <div className="absolute -inset-0.5 bg-amber-400/50 rounded-full blur-md animate-pulse group-hover:bg-amber-400/70 transition-colors duration-300" />
 
@@ -745,8 +736,18 @@ export function LandingPage() {
                       <CalendarPlus className="w-4 h-4" />
                       Pedí tu turno aquí
                     </button>
-                  </div>
-                </motion.div>
+                  </motion.div>
+                </div>
+
+                {/* Title */}
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-beige-50 leading-tight">
+                  {renderHeroTitle(cmsHeroSlides[currentSlide].title)}
+                </h1>
+
+                {/* Description */}
+                <p className="mt-6 text-lg sm:text-xl text-beige-200/90 leading-relaxed max-w-xl font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                  {cmsHeroSlides[currentSlide].description}
+                </p>
 
                 {/* CTAs */}
                 <div className="mt-10 flex flex-col sm:flex-row gap-4">
