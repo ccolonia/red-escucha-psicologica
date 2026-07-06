@@ -918,7 +918,7 @@ export function LandingPage() {
           transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.96 }}
-          className="absolute z-[4] top-[15%] sm:top-[12%] left-1/2 -translate-x-1/2"
+          className="absolute z-[4] top-[13%] sm:top-[12%] left-1/2 -translate-x-1/2"
         >
           <div className="relative group">
             {/* Glow pulsante detrás del botón — sincronizado con el blink */}
