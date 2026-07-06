@@ -1092,9 +1092,9 @@ const MODALITY_EMAIL_MAP: Record<string, string> = {
 // Limpia espacios, guiones, paréntesis y el símbolo +.
 // Si no empieza con 54 (Argentina), asume formato local y agrega 549
 // (código de país + prefijo de celular obligatorio para WhatsApp Argentina).
-// Ej: "+54 11 6866-7898" → "5491168667898"
-//     "1168667898" → "5491168667898"
-//     "5491168667898" → "5491168667898" (sin cambios)
+// Ej: "+54 11 7668-3429" → "5491176683429"
+//     "1176683429" → "5491176683429"
+//     "5491176683429" → "5491176683429" (sin cambios)
 export function formatPhoneForWhatsApp(phone: string | null): string | null {
   if (!phone) return null;
   // Quitar todo lo que no sea dígito
@@ -1112,7 +1112,7 @@ export function formatPhoneForWhatsApp(phone: string | null): string | null {
     // Si es 54 + código de área sin el 9, insertarlo
     return "549" + cleaned.substring(2);
   }
-  // Si empieza con 0 (ej: 01168667898), quitar el 0 y agregar 549
+  // Si empieza con 0 (ej: 01176683429), quitar el 0 y agregar 549
   if (cleaned.startsWith("0")) {
     cleaned = cleaned.substring(1);
   }
