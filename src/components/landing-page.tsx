@@ -115,7 +115,7 @@ const defaultHeroSlides = [
     ctaIcon: ArrowRight,
     secondaryCta: "Contactanos",
     secondaryIcon: Phone,
-    image: "/images/carousel/families.png",
+    image: "/images/carousel/families.jpg",
   },
   {
     badge: "SIN LISTAS DE ESPERA",
@@ -125,7 +125,7 @@ const defaultHeroSlides = [
     ctaIcon: Phone,
     secondaryCta: "Cómo Funciona",
     secondaryIcon: MessageCircle,
-    image: "/images/carousel/jovenes.png",
+    image: "/images/carousel/jovenes.jpg",
   },
   {
     badge: "CONFIDENCIALIDAD GARANTIZADA",
@@ -135,7 +135,7 @@ const defaultHeroSlides = [
     ctaIcon: Phone,
     secondaryCta: "Conocer Especialidades",
     secondaryIcon: ArrowRight,
-    image: "/images/carousel/ninos.png",
+    image: "/images/carousel/ninos.jpg",
   },
 ];
 
