@@ -223,7 +223,15 @@ export function LandingPage() {
             description: s.description,
             cta: s.cta,
             secondaryCta: s.secondaryCta,
-            image: s.imageUrl,
+            // === Convertir .png → .jpg para imágenes del carrusel ===
+            // Las imágenes families, jovenes y ninos se convirtieron de PNG
+            // a JPG para reducir el peso (-91%). El CMS todavía tiene las
+            // rutas .png viejas en la base de datos, así que las convertimos
+            // acá antes de usarlas. nature.png se mantiene como .png.
+            image: s.imageUrl
+              ?.replace('families.png', 'families.jpg')
+              .replace('jovenes.png', 'jovenes.jpg')
+              .replace('ninos.png', 'ninos.jpg') || s.imageUrl,
           })));
         }
         if (data.specialtyTabs?.length) {
@@ -666,17 +674,11 @@ export function LandingPage() {
                 src={slide.image}
                 alt=""
                 className="w-full h-full object-cover"
-                loading="eager"
+                loading={i === 0 ? "eager" : "lazy"}
+                // fetchpriority ayuda al navegador a priorizar la primera imagen
+                // del carrusel (LCP) y postergar las demás
+                {...(i === 0 ? { fetchpriority: "high" as const } : { fetchpriority: "low" as const })}
                 style={{ objectPosition: "center" }}
-                onError={(e) => {
-                  // Fallback: hide broken image, show background color
-                  const target = e.currentTarget;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    parent.style.backgroundColor = '#1a2e1c';
-                  }
-                }}
               />
             </div>
           ))}
