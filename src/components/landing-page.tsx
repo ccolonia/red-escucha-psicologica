@@ -673,12 +673,16 @@ export function LandingPage() {
               <img
                 src={slide.image}
                 alt=""
-                className="w-full h-full object-cover"
+                // object-position responsive:
+                // - Mobile: object-top (muestra la parte superior donde están
+                //   las caras/personas, evita que se corten)
+                // - PC (sm+): object-center (centro de la imagen, se ve bien
+                //   porque la pantalla es horizontal como la imagen)
+                className="w-full h-full object-cover object-top sm:object-center"
                 loading={i === 0 ? "eager" : "lazy"}
                 // fetchpriority ayuda al navegador a priorizar la primera imagen
                 // del carrusel (LCP) y postergar las demás
                 {...(i === 0 ? { fetchpriority: "high" as const } : { fetchpriority: "low" as const })}
-                style={{ objectPosition: "center" }}
               />
             </div>
           ))}
