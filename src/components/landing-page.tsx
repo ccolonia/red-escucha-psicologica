@@ -1654,7 +1654,7 @@ export function LandingPage() {
 
       {/* ===== PROFESIONALES FLOATING BUTTON (top of the stack) ===== */}
       <button
-        onClick={() => { window.location.href = "https://redescuchapsicologica.com/#registro-profesional"; }}
+        onClick={() => { window.location.hash = "registro-profesional"; setCurrentView("professional-register"); }}
         className="fixed z-50 w-14 h-14 bg-sage-500 hover:bg-sage-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
         style={{ bottom: 'max(9.5rem, calc(env(safe-area-inset-bottom, 1.5rem) + 8rem))', right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))' }}
         aria-label="Registro de Profesionales"
