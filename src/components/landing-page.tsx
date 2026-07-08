@@ -731,7 +731,7 @@ export function LandingPage() {
                         scrollToSection("como-funciona");
                       }
                     }}
-                    className="bg-sage-300/40 hover:bg-sage-300/70 backdrop-blur-sm text-forest-900 font-semibold text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full border border-sage-200/30 transition-all" style={{ fontFamily: "Montserrat, sans-serif" }}
+                    className="bg-sage-300/25 hover:bg-sage-300/60 backdrop-blur-sm text-forest-900 font-semibold text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full border border-sage-200/30 transition-all" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
                     {normalizeCta(cmsHeroSlides[currentSlide].cta).includes("contact") && <Phone className="mr-2 w-5 h-5" />}
                     {(normalizeCta(cmsHeroSlides[currentSlide].cta).includes("conocer especialidades") || normalizeCta(cmsHeroSlides[currentSlide].cta).includes("como funciona")) && <ArrowRight className="mr-2 w-5 h-5" />}
@@ -892,26 +892,6 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* === Tagline "Escuchar · Acompañar · Transformar" en el hero ===
-            Reemplaza al botón "Pedí tu turno aquí" que ahora está en el navbar.
-            Texto plano horizontal sin animación, centrado, sobre el fondo del
-            hero. Colores:
-              - Escuchar:    verde claro (sage-300)
-              - Acompañar:   ámbar suave (amber-300)
-              - Transformar: blanco suave (beige-100)
-            Responsive: texto más chico en mobile para que entre en una línea. */}
-        <div className="absolute z-[4] top-[13%] sm:top-[12%] left-1/2 -translate-x-1/2 w-full px-4 text-center">
-          <p
-            className="text-[10px] xs:text-xs sm:text-sm font-semibold tracking-[0.2em] sm:tracking-[0.3em] uppercase whitespace-nowrap"
-            style={{ fontFamily: "Montserrat, sans-serif" }}
-          >
-            <span className="text-sage-300">Escuchar</span>
-            <span className="text-sage-200/50 mx-1">·</span>
-            <span className="text-amber-300">Acompañar</span>
-            <span className="text-sage-200/50 mx-1">·</span>
-            <span className="text-beige-100">Transformar</span>
-          </p>
-        </div>
       </section>
 
       {/* ===== NOSOTROS / PHILOSOPHY ===== */}
@@ -1534,58 +1514,6 @@ export function LandingPage() {
                 Más de 30 años acompañando tu
                 bienestar en Buenos Aires, Argentina.
               </p>
-              {/* Social Media Icons */}
-              {(cmsConfig.social_facebook_url || cmsConfig.social_instagram_url || cmsConfig.social_tiktok_url || cmsConfig.social_linkedin_url) && (
-                <div className="flex items-center gap-3 mt-4">
-                  {cmsConfig.social_facebook_url && (
-                    <a
-                      href={cmsConfig.social_facebook_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-beige-400 hover:text-sage-300 transition-colors duration-200"
-                      aria-label="Facebook"
-                    >
-                      <Facebook className="w-5 h-5" />
-                    </a>
-                  )}
-                  {cmsConfig.social_instagram_url && (
-                    <a
-                      href={cmsConfig.social_instagram_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-beige-400 hover:text-sage-300 transition-colors duration-200"
-                      aria-label="Instagram"
-                    >
-                      <Instagram className="w-5 h-5" />
-                    </a>
-                  )}
-                  {cmsConfig.social_tiktok_url && (
-                    <a
-                      href={cmsConfig.social_tiktok_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-beige-400 hover:text-sage-300 transition-colors duration-200"
-                      aria-label="TikTok"
-                    >
-                      {/* TikTok SVG icon (not available in lucide-react) */}
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                        <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-                      </svg>
-                    </a>
-                  )}
-                  {cmsConfig.social_linkedin_url && (
-                    <a
-                      href={cmsConfig.social_linkedin_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-beige-400 hover:text-sage-300 transition-colors duration-200"
-                      aria-label="LinkedIn"
-                    >
-                      <Linkedin className="w-5 h-5" />
-                    </a>
-                  )}
-                </div>
-              )}
             </div>
             <div>
               <h4 className="font-serif font-semibold text-beige-50 mb-3">Navegación</h4>
@@ -1624,9 +1552,68 @@ export function LandingPage() {
                 <li>{cmsConfig.contact_phone || "+54 11 7668-3429"}</li>
                 <li>{cmsConfig.contact_email || "contacto@redescuchapsicologica.com"}</li>
               </ul>
+              {/* Social Media Icons — debajo de Contacto */}
+              {(cmsConfig.social_facebook_url || cmsConfig.social_instagram_url || cmsConfig.social_tiktok_url || cmsConfig.social_linkedin_url) && (
+                <div className="flex items-center gap-3 mt-4">
+                  {cmsConfig.social_facebook_url && (
+                    <a
+                      href={cmsConfig.social_facebook_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-beige-400 hover:text-sage-300 transition-colors duration-200"
+                      aria-label="Facebook"
+                    >
+                      <Facebook className="w-5 h-5" />
+                    </a>
+                  )}
+                  {cmsConfig.social_instagram_url && (
+                    <a
+                      href={cmsConfig.social_instagram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-beige-400 hover:text-sage-300 transition-colors duration-200"
+                      aria-label="Instagram"
+                    >
+                      <Instagram className="w-5 h-5" />
+                    </a>
+                  )}
+                  {cmsConfig.social_tiktok_url && (
+                    <a
+                      href={cmsConfig.social_tiktok_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-beige-400 hover:text-sage-300 transition-colors duration-200"
+                      aria-label="TikTok"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                        <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+                      </svg>
+                    </a>
+                  )}
+                  {cmsConfig.social_linkedin_url && (
+                    <a
+                      href={cmsConfig.social_linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-beige-400 hover:text-sage-300 transition-colors duration-200"
+                      aria-label="LinkedIn"
+                    >
+                      <Linkedin className="w-5 h-5" />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-10 pt-6 border-t border-beige-50/10 text-center text-sm text-beige-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+            {/* Tagline "Escuchar · Acompañar · Transformar" */}
+            <p className="mb-3 text-base sm:text-lg font-semibold tracking-[0.3em] uppercase">
+              <span className="text-sage-300">Escuchar</span>
+              <span className="text-beige-400/50 mx-2">·</span>
+              <span className="text-amber-300">Acompañar</span>
+              <span className="text-beige-400/50 mx-2">·</span>
+              <span className="text-beige-100">Transformar</span>
+            </p>
             &copy; {new Date().getFullYear()} Red Escucha Psicológica.
             Todos los derechos reservados.
             <span className="mx-1">|</span>
