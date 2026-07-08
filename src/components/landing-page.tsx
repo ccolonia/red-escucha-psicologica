@@ -1607,12 +1607,14 @@ export function LandingPage() {
             </div>
           </div>
           <div className="mt-10 pt-6 border-t border-beige-50/10 text-center text-sm text-beige-400 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
-            {/* Tagline "Escuchar · Acompañar · Transformar" */}
-            <p className="mb-3 text-base sm:text-lg font-semibold tracking-[0.3em] uppercase">
+            {/* Tagline "Escuchar · Acompañar · Transformar" — responsive */}
+            {/* En mobile: texto chico + tracking reducido + separadores con menos margen
+                para que entre en una línea. En sm+: tamaño y tracking normales. */}
+            <p className="mb-3 text-xs xs:text-sm sm:text-base lg:text-lg font-semibold tracking-[0.15em] xs:tracking-[0.2em] sm:tracking-[0.3em] uppercase">
               <span className="text-sage-300">Escuchar</span>
-              <span className="text-beige-400/50 mx-2">·</span>
+              <span className="text-beige-400/50 mx-1 xs:mx-1.5 sm:mx-2">·</span>
               <span className="text-amber-300">Acompañar</span>
-              <span className="text-beige-400/50 mx-2">·</span>
+              <span className="text-beige-400/50 mx-1 xs:mx-1.5 sm:mx-2">·</span>
               <span className="text-beige-100">Transformar</span>
             </p>
             &copy; {new Date().getFullYear()} Red Escucha Psicológica.
