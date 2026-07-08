@@ -501,49 +501,23 @@ export function LandingPage() {
 
             {/* === Botón "Pedí tu turno aquí" en el navbar ===
                 Reemplaza al tagline animado anterior. Centrado entre el logo
-                y el menú de navegación. Mantiene el estilo amber transparente
-                con parpadeo sutil para captar la atención.
+                y el menú de navegación. Estilo amber fijo (sin parpadeo).
                 Al hacer click abre WhatsApp directamente.
                 Visible en todos los tamaños (mobile + PC). */}
             <div className="flex flex-1 items-center justify-center">
-              <motion.a
+              <a
                 href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                animate={{
-                  backgroundColor: "rgba(245, 158, 11, 0)",
-                  borderColor: "rgba(251, 191, 36, 0.6)",
-                }}
-                transition={{
-                  duration: 2.4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  repeatType: "reverse",
-                }}
-                className="relative inline-flex items-center gap-2 text-white font-medium text-sm px-4 py-1.5 rounded-full border whitespace-nowrap backdrop-blur-sm cursor-pointer"
+                className="relative inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium text-sm px-4 py-1.5 rounded-full shadow-md border border-amber-300/40 whitespace-nowrap backdrop-blur-sm cursor-pointer transition-colors"
                 style={{ fontFamily: "Montserrat, sans-serif" }}
                 aria-label="Pedí tu turno aquí por WhatsApp"
               >
-                {/* Capa de fondo que parpadea (prendapague) */}
-                <motion.span
-                  animate={{
-                    opacity: [0, 0.85, 0],
-                  }}
-                  transition={{
-                    duration: 2.4,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    times: [0, 0.5, 1],
-                  }}
-                  className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500 to-amber-600"
-                  style={{ zIndex: 0 }}
-                />
-                {/* Texto e ícono encima del fondo parpadeante */}
-                <CalendarPlus className="w-4 h-4 relative" style={{ zIndex: 1 }} />
-                <span className="relative" style={{ zIndex: 1 }}>
+                <CalendarPlus className="w-4 h-4 relative" />
+                <span className="relative">
                   Pedí tu turno aquí
                 </span>
-              </motion.a>
+              </a>
             </div>
 
             {/* Desktop nav links */}
@@ -920,22 +894,21 @@ export function LandingPage() {
         {/* === Tagline "Escuchar · Acompañar · Transformar" en el hero ===
             Reemplaza al botón "Pedí tu turno aquí" que ahora está en el navbar.
             Texto plano horizontal sin animación, centrado, sobre el fondo del
-            hero. Mantiene los colores institucionales originales del tagline
-            animado del navbar:
-              - Escuchar:   sage-400 (verde suave)
-              - Acompañar:  forest-400 (verde oscuro, claro sobre el hero)
-              - Transformar: amber-500 (ámbar)
+            hero. Colores:
+              - Escuchar:    verde claro (sage-300)
+              - Acompañar:   ámbar suave (amber-300)
+              - Transformar: blanco suave (beige-100)
             Responsive: texto más chico en mobile para que entre en una línea. */}
         <div className="absolute z-[4] top-[13%] sm:top-[12%] left-1/2 -translate-x-1/2 w-full px-4 text-center">
           <p
             className="text-[10px] xs:text-xs sm:text-sm font-semibold tracking-[0.2em] sm:tracking-[0.3em] uppercase whitespace-nowrap"
             style={{ fontFamily: "Montserrat, sans-serif" }}
           >
-            <span className="text-sage-400">Escuchar</span>
-            <span className="text-sage-300/60 mx-1">·</span>
-            <span className="text-forest-300">Acompañar</span>
-            <span className="text-sage-300/60 mx-1">·</span>
-            <span className="text-amber-500">Transformar</span>
+            <span className="text-sage-300">Escuchar</span>
+            <span className="text-sage-200/50 mx-1">·</span>
+            <span className="text-amber-300">Acompañar</span>
+            <span className="text-sage-200/50 mx-1">·</span>
+            <span className="text-beige-100">Transformar</span>
           </p>
         </div>
       </section>
