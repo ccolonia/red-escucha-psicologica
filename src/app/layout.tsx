@@ -79,39 +79,18 @@ export default function RootLayout({
         <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
 
-        {/* === Google Fonts — carga NO bloqueante (web.dev pattern) ===
-            Antes: <link rel="stylesheet"> normal → bloqueaba el renderizado 750ms
-            Ahora: preconnect + preload + media=print trick → no bloquea
-
-            1. preconnect: establece conexión TCP/TLS con Google Fonts
-               temprano, antes de que se necesite el CSS
-            2. preload as="style": le dice al navegador que descargue el
-               CSS de fonts temprano pero sin aplicarlo todavía
-            3. media="print" + onLoad: carga el stylesheet con media=print
-               (que no bloquea el renderizado de pantalla), y cuando termina
-               de cargar, cambia media a "all" para aplicarlo
-            4. noscript: fallback para usuarios sin JavaScript
-            5. display=swap en la URL: muestra texto con fallback font
-               primero, swapea cuando la font real carga */}
+        {/* === Google Fonts — optimizado con preconnect ===
+            preconnect establece la conexión TCP/TLS con Google Fonts
+            temprano, reduciendo el tiempo de carga del CSS de fonts.
+            display=swap en la URL muestra texto con fallback font primero
+            y swapea cuando la font real carga (FOUT en vez de FOIT).
+            Sin onLoad handler (no compatible con Server Components). */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          rel="preload"
-          as="style"
-          href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap"
-        />
-        <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap"
-          media="print"
-          onLoad={(e) => { (e.target as HTMLLinkElement).media = "all"; }}
         />
-        <noscript>
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap"
-          />
-        </noscript>
         {/* Google Tag (gtag.js) - AW-1017920443
             Etiqueta de Google Ads para seguimiento de conversiones. */}
         <Script
