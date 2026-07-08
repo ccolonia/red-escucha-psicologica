@@ -694,30 +694,30 @@ export function LandingPage() {
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 hero-overlay z-[2]" />
 
-        <div className="relative z-[3] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 w-full min-w-0">
+        <div className="relative z-[3] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32 lg:py-40 w-full min-w-0">
           <div className="flex flex-col lg:flex-row lg:items-start lg:gap-12 min-w-0">
           {/* Left column - Hero content */}
           <div className="max-w-3xl flex-1 min-w-0">
             {/* Hero text content - smooth crossfade with CSS */}
             <div className="transition-opacity duration-500 ease-in-out">
                 {/* Badge */}
-                <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-4 py-1.5 rounded-full text-sm font-light mb-8 tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                  <Leaf className="w-4 h-4" />
+                <div className="inline-flex items-center gap-2 border border-sage-300/40 text-sage-200 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-light mb-5 sm:mb-8 tracking-wider" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                  <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {cmsHeroSlides[currentSlide].badge}
                 </div>
 
-                {/* Title */}
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-beige-50 leading-tight">
+                {/* Title — responsive: más chico en mobile chico */}
+                <h1 className="text-3xl xs:text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-beige-50 leading-tight">
                   {renderHeroTitle(cmsHeroSlides[currentSlide].title)}
                 </h1>
 
-                {/* Description */}
-                <p className="mt-6 text-lg sm:text-xl text-beige-200/90 leading-relaxed max-w-xl font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                {/* Description — responsive: más chica en mobile */}
+                <p className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl text-beige-200/90 leading-relaxed max-w-xl font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                   {cmsHeroSlides[currentSlide].description}
                 </p>
 
                 {/* CTAs */}
-                <div className="mt-10 flex flex-col sm:flex-row gap-4">
+                <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <Button
                     size="lg"
                     onClick={() => {
@@ -730,7 +730,7 @@ export function LandingPage() {
                         scrollToSection("como-funciona");
                       }
                     }}
-                    className="btn-sage text-forest-900 font-semibold text-base px-8 h-12 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
+                    className="btn-sage text-forest-900 font-semibold text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
                     {normalizeCta(cmsHeroSlides[currentSlide].cta).includes("contact") && <Phone className="mr-2 w-5 h-5" />}
                     {(normalizeCta(cmsHeroSlides[currentSlide].cta).includes("conocer especialidades") || normalizeCta(cmsHeroSlides[currentSlide].cta).includes("como funciona")) && <ArrowRight className="mr-2 w-5 h-5" />}
@@ -751,7 +751,7 @@ export function LandingPage() {
                         scrollToSection("contacto");
                       }
                     }}
-                    className="border-beige-200/30 text-beige-100 hover:bg-beige-50/10 text-base px-8 h-12 rounded-full bg-transparent" style={{ fontFamily: "Montserrat, sans-serif" }}
+                    className="border-beige-200/30 text-beige-100 hover:bg-beige-50/10 text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full bg-transparent" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
                     {(normalizeCta(cmsHeroSlides[currentSlide].secondaryCta).includes("conocer especialidades") || normalizeCta(cmsHeroSlides[currentSlide].secondaryCta).includes("como funciona")) && <ArrowRight className="mr-2 w-5 h-5" />}
                     {normalizeCta(cmsHeroSlides[currentSlide].secondaryCta).includes("contact") && <Phone className="mr-2 w-5 h-5" />}
@@ -760,18 +760,18 @@ export function LandingPage() {
                 </div>
             </div>
 
-            {/* Carousel controls */}
-            <div className="mt-14 flex flex-wrap items-center gap-4 sm:gap-6">
+            {/* Carousel controls — responsive */}
+            <div className="mt-10 sm:mt-14 flex flex-wrap items-center gap-3 sm:gap-6">
               {/* Dots */}
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2 sm:gap-2.5">
                 {cmsHeroSlides.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => goToSlide(i)}
                     className={`transition-all duration-300 rounded-full ${
                       i === currentSlide
-                        ? "w-8 h-2.5 bg-sage-300"
-                        : "w-2.5 h-2.5 bg-beige-200/30 hover:bg-beige-200/50"
+                        ? "w-6 sm:w-8 h-2 sm:h-2.5 bg-sage-300"
+                        : "w-2 sm:w-2.5 h-2 sm:h-2.5 bg-beige-200/30 hover:bg-beige-200/50"
                     }`}
                     aria-label={`Slide ${i + 1}`}
                   />
@@ -779,20 +779,20 @@ export function LandingPage() {
               </div>
 
               {/* Divider */}
-              <div className="w-px h-6 bg-beige-200/20" />
+              <div className="hidden sm:block w-px h-6 bg-beige-200/20" />
 
               {/* Arrows */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={prevSlide}
-                  className="w-9 h-9 rounded-full border border-beige-200/20 flex items-center justify-center text-beige-200/60 hover:text-sage-300 hover:border-sage-300/40 transition-colors"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-beige-200/20 flex items-center justify-center text-beige-200/60 hover:text-sage-300 hover:border-sage-300/40 transition-colors"
                   aria-label="Slide anterior"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={nextSlide}
-                  className="w-9 h-9 rounded-full border border-beige-200/20 flex items-center justify-center text-beige-200/60 hover:text-sage-300 hover:border-sage-300/40 transition-colors"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-beige-200/20 flex items-center justify-center text-beige-200/60 hover:text-sage-300 hover:border-sage-300/40 transition-colors"
                   aria-label="Siguiente slide"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -800,7 +800,7 @@ export function LandingPage() {
               </div>
 
               {/* Divider */}
-              <div className="w-px h-6 bg-beige-200/20" />
+              <div className="hidden sm:block w-px h-6 bg-beige-200/20" />
 
               {/* Trust badges */}
               <div className="hidden sm:flex items-center gap-4">
