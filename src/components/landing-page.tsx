@@ -106,6 +106,7 @@ const defaultHeroSlides = [
     secondaryCta: "Conocer Especialidades",
     secondaryIcon: ArrowRight,
     image: "/images/carousel/nature.png",
+    imageWebp: null, // nature.png no se beneficia de WebP (era JPEG chico)
   },
   {
     badge: "TERAPIA INDIVIDUAL Y VINCULAR",
@@ -116,6 +117,7 @@ const defaultHeroSlides = [
     secondaryCta: "Contactanos",
     secondaryIcon: Phone,
     image: "/images/carousel/families.png",
+    imageWebp: "/images/carousel/families.webp",
   },
   {
     badge: "SIN LISTAS DE ESPERA",
@@ -126,6 +128,7 @@ const defaultHeroSlides = [
     secondaryCta: "Cómo Funciona",
     secondaryIcon: MessageCircle,
     image: "/images/carousel/jovenes.png",
+    imageWebp: "/images/carousel/jovenes.webp",
   },
   {
     badge: "CONFIDENCIALIDAD GARANTIZADA",
@@ -136,6 +139,7 @@ const defaultHeroSlides = [
     secondaryCta: "Conocer Especialidades",
     secondaryIcon: ArrowRight,
     image: "/images/carousel/ninos.png",
+    imageWebp: "/images/carousel/ninos.webp",
   },
 ];
 
@@ -493,11 +497,14 @@ export function LandingPage() {
           <div className="flex items-center justify-between h-20 md:h-22">
             {/* Logo */}
             <div className="flex items-center flex-shrink-0">
-              <img
-                src="/images/logo.png"
-                alt="Red Escucha Psicológica"
-                className="h-12 sm:h-14 md:h-16 w-auto object-contain"
-              />
+              <picture>
+                <source srcSet="/images/logo.webp" type="image/webp" />
+                <img
+                  src="/images/logo.png"
+                  alt="Red Escucha Psicológica"
+                  className="h-12 sm:h-14 md:h-16 w-auto object-contain"
+                />
+              </picture>
             </div>
 
             {/* === Botón "Pedí tu turno aquí" en el navbar ===
@@ -646,7 +653,10 @@ export function LandingPage() {
         {/* Preload hidden images for instant swapping */}
         <div className="hidden" aria-hidden="true">
           {cmsHeroSlides.map((slide, i) => (
-            <img key={i} src={slide.image} alt="" />
+            <picture key={i}>
+              {slide.imageWebp && <source srcSet={slide.imageWebp} type="image/webp" />}
+              <img src={slide.image} alt="" />
+            </picture>
           ))}
         </div>
 
@@ -662,22 +672,25 @@ export function LandingPage() {
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={slide.image}
-                alt=""
-                className="w-full h-full object-cover"
-                loading="eager"
-                style={{ objectPosition: "center" }}
-                onError={(e) => {
-                  // Fallback: hide broken image, show background color
-                  const target = e.currentTarget;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    parent.style.backgroundColor = '#1a2e1c';
-                  }
-                }}
-              />
+              <picture>
+                {slide.imageWebp && <source srcSet={slide.imageWebp} type="image/webp" />}
+                <img
+                  src={slide.image}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                  style={{ objectPosition: "center" }}
+                  onError={(e) => {
+                    // Fallback: hide broken image, show background color
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.style.backgroundColor = '#1a2e1c';
+                    }
+                  }}
+                />
+              </picture>
             </div>
           ))}
         </div>
@@ -919,11 +932,14 @@ export function LandingPage() {
               className="order-2 lg:order-1"
             >
               <div className="rounded-2xl overflow-hidden shadow-xl border border-beige-200/50 lg:sticky lg:top-24">
-                <img
-                  src="/images/quienes-somos.jpg"
-                  alt="Profesionales de la salud mental"
-                  className="w-full max-h-[480px] object-cover object-top"
-                />
+                <picture>
+                  <source srcSet="/images/quienes-somos.webp" type="image/webp" />
+                  <img
+                    src="/images/quienes-somos.jpg"
+                    alt="Profesionales de la salud mental"
+                    className="w-full max-h-[480px] object-cover object-top"
+                  />
+                </picture>
               </div>
             </motion.div>
 
@@ -1505,11 +1521,14 @@ export function LandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             <div>
               <div className="mb-4 bg-beige-100/90 rounded-lg p-2 inline-block">
-                <img
-                  src="/images/logo.png"
-                  alt="Red Escucha Psicológica"
-                  className="h-14 w-auto object-contain"
-                />
+                <picture>
+                  <source srcSet="/images/logo.webp" type="image/webp" />
+                  <img
+                    src="/images/logo.png"
+                    alt="Red Escucha Psicológica"
+                    className="h-14 w-auto object-contain"
+                  />
+                </picture>
               </div>
               <p className="text-beige-300 text-sm font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 Más de 30 años acompañando tu
