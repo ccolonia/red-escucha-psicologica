@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Leaf,
   ArrowRight,
+  ArrowUp,
   Menu,
   X,
   CalendarPlus,
@@ -730,7 +731,7 @@ export function LandingPage() {
                         scrollToSection("como-funciona");
                       }
                     }}
-                    className="btn-sage text-forest-900 font-semibold text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}
+                    className="bg-sage-300/70 hover:bg-sage-300/90 backdrop-blur-sm text-forest-900 font-semibold text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full border border-sage-200/30 transition-all" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
                     {normalizeCta(cmsHeroSlides[currentSlide].cta).includes("contact") && <Phone className="mr-2 w-5 h-5" />}
                     {(normalizeCta(cmsHeroSlides[currentSlide].cta).includes("conocer especialidades") || normalizeCta(cmsHeroSlides[currentSlide].cta).includes("como funciona")) && <ArrowRight className="mr-2 w-5 h-5" />}
@@ -1640,6 +1641,26 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* ===== VOLVER ARRIBA (scroll-to-top) FLOATING BUTTON ===== */}
+      {/* Aparece cuando el usuario scrollea fuera del hero (scrolled = true).
+          Se ubica en el lado izquierdo para no chocar con los botones
+          flotantes de la derecha (Profesionales, Turno, WhatsApp).
+          Al hacer click, hace scroll suave hasta el inicio del hero. */}
+      {scrolled && (
+        <button
+          onClick={() => scrollToSection("inicio")}
+          className="fixed z-50 w-12 h-12 bg-forest-700/80 hover:bg-forest-700 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 backdrop-blur-sm border border-forest-500/30"
+          style={{
+            bottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))',
+            left: 'max(1.5rem, env(safe-area-inset-left, 1.5rem))'
+          }}
+          aria-label="Volver al inicio del carrusel"
+          title="Volver al inicio"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </button>
+      )}
 
       {/* ===== PROFESIONALES FLOATING BUTTON (top of the stack) ===== */}
       <button
