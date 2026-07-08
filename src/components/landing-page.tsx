@@ -731,7 +731,7 @@ export function LandingPage() {
                         scrollToSection("como-funciona");
                       }
                     }}
-                    className="bg-sage-300/70 hover:bg-sage-300/90 backdrop-blur-sm text-forest-900 font-semibold text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full border border-sage-200/30 transition-all" style={{ fontFamily: "Montserrat, sans-serif" }}
+                    className="bg-sage-300/40 hover:bg-sage-300/70 backdrop-blur-sm text-forest-900 font-semibold text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full border border-sage-200/30 transition-all" style={{ fontFamily: "Montserrat, sans-serif" }}
                   >
                     {normalizeCta(cmsHeroSlides[currentSlide].cta).includes("contact") && <Phone className="mr-2 w-5 h-5" />}
                     {(normalizeCta(cmsHeroSlides[currentSlide].cta).includes("conocer especialidades") || normalizeCta(cmsHeroSlides[currentSlide].cta).includes("como funciona")) && <ArrowRight className="mr-2 w-5 h-5" />}
