@@ -503,8 +503,9 @@ export function LandingPage() {
                 Reemplaza al tagline animado anterior. Centrado entre el logo
                 y el menú de navegación. Mantiene el estilo amber transparente
                 con parpadeo sutil para captar la atención.
-                Al hacer click abre WhatsApp directamente. */}
-            <div className="hidden sm:flex flex-1 items-center justify-center">
+                Al hacer click abre WhatsApp directamente.
+                Visible en todos los tamaños (mobile + PC). */}
+            <div className="flex flex-1 items-center justify-center">
               <motion.a
                 href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
                 target="_blank"
@@ -919,14 +920,22 @@ export function LandingPage() {
         {/* === Tagline "Escuchar · Acompañar · Transformar" en el hero ===
             Reemplaza al botón "Pedí tu turno aquí" que ahora está en el navbar.
             Texto plano horizontal sin animación, centrado, sobre el fondo del
-            hero. Usa los colores institucionales (sage) para mantener la
-            identidad visual. */}
-        <div className="absolute z-[4] top-[13%] sm:top-[12%] left-1/2 -translate-x-1/2">
+            hero. Mantiene los colores institucionales originales del tagline
+            animado del navbar:
+              - Escuchar:   sage-400 (verde suave)
+              - Acompañar:  forest-400 (verde oscuro, claro sobre el hero)
+              - Transformar: amber-500 (ámbar)
+            Responsive: texto más chico en mobile para que entre en una línea. */}
+        <div className="absolute z-[4] top-[13%] sm:top-[12%] left-1/2 -translate-x-1/2 w-full px-4 text-center">
           <p
-            className="text-sm sm:text-base font-light tracking-[0.3em] uppercase text-sage-200/90 whitespace-nowrap text-center"
+            className="text-[10px] xs:text-xs sm:text-sm font-semibold tracking-[0.2em] sm:tracking-[0.3em] uppercase whitespace-nowrap"
             style={{ fontFamily: "Montserrat, sans-serif" }}
           >
-            Escuchar · Acompañar · Transformar
+            <span className="text-sage-400">Escuchar</span>
+            <span className="text-sage-300/60 mx-1">·</span>
+            <span className="text-forest-300">Acompañar</span>
+            <span className="text-sage-300/60 mx-1">·</span>
+            <span className="text-amber-500">Transformar</span>
           </p>
         </div>
       </section>
