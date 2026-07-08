@@ -499,26 +499,50 @@ export function LandingPage() {
               />
             </div>
 
-            {/* Animated tagline - centered between logo and menu */}
-            <div className="hidden sm:flex flex-1 items-center justify-center h-8 overflow-hidden" style={{ fontFamily: "Montserrat, sans-serif" }}>
-              <AnimatePresence mode="wait">
+            {/* === Botón "Pedí tu turno aquí" en el navbar ===
+                Reemplaza al tagline animado anterior. Centrado entre el logo
+                y el menú de navegación. Mantiene el estilo amber transparente
+                con parpadeo sutil para captar la atención.
+                Al hacer click abre WhatsApp directamente. */}
+            <div className="hidden sm:flex flex-1 items-center justify-center">
+              <motion.a
+                href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                animate={{
+                  backgroundColor: "rgba(245, 158, 11, 0)",
+                  borderColor: "rgba(251, 191, 36, 0.6)",
+                }}
+                transition={{
+                  duration: 2.4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                }}
+                className="relative inline-flex items-center gap-2 text-white font-medium text-sm px-4 py-1.5 rounded-full border whitespace-nowrap backdrop-blur-sm cursor-pointer"
+                style={{ fontFamily: "Montserrat, sans-serif" }}
+                aria-label="Pedí tu turno aquí por WhatsApp"
+              >
+                {/* Capa de fondo que parpadea (prendapague) */}
                 <motion.span
-                  key={taglineIndex}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.5, ease: "easeInOut" }}
-                  className={`text-sm font-semibold tracking-widest uppercase whitespace-nowrap ${
-                    taglineIndex === 0
-                      ? "text-sage-400"
-                      : taglineIndex === 1
-                      ? "text-forest-400"
-                      : "text-amber-500"
-                  }`}
-                >
-                  {taglines[taglineIndex]}
-                </motion.span>
-              </AnimatePresence>
+                  animate={{
+                    opacity: [0, 0.85, 0],
+                  }}
+                  transition={{
+                    duration: 2.4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    times: [0, 0.5, 1],
+                  }}
+                  className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500 to-amber-600"
+                  style={{ zIndex: 0 }}
+                />
+                {/* Texto e ícono encima del fondo parpadeante */}
+                <CalendarPlus className="w-4 h-4 relative" style={{ zIndex: 1 }} />
+                <span className="relative" style={{ zIndex: 1 }}>
+                  Pedí tu turno aquí
+                </span>
+              </motion.a>
             </div>
 
             {/* Desktop nav links */}
@@ -892,87 +916,19 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* === Botón "Pedí tu turno aquí" — overlay absoluto centrado === */}
-        {/* Posicionado de forma absoluta respecto al hero (que es relative).
-            Posición responsive:
-              - Mobile (default): top-[15%] — bajado un cachito para que no
-                toque el badge 'SIN LISTAS DE ESPERA'
-              - PC (sm: y superior): top-[12%] — posición original que se
-                ve bien en pantallas grandes
-            Centrado horizontalmente con left-1/2 + -translate-x-1/2.
-            No afecta el flujo del layout del hero ni del carrusel — es
-            un overlay independiente.
-
-            Estilo: botón transparente con borde amber, texto blanco. Efecto
-            de parpadeo sutil (blink) que prende y apaga el fondo amber para
-            captar la atención del usuario sin ser invasivo. El ciclo dura
-            2.4s: 1.2s apagado (transparente) + 1.2s prendido (amber suave).
-
-            Comportamiento: al hacer click abre WhatsApp directamente con
-            un mensaje pre-rellenado. Usa la misma configuración que el
-            botón flotante de WhatsApp del footer (cmsConfig.whatsapp_number
-            y cmsConfig.whatsapp_message). */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.96 }}
-          className="absolute z-[4] top-[13%] sm:top-[12%] left-1/2 -translate-x-1/2"
-        >
-          <div className="relative group">
-            {/* Glow pulsante detrás del botón — sincronizado con el blink */}
-            <motion.div
-              animate={{ opacity: [0.2, 0.6, 0.2] }}
-              transition={{
-                duration: 2.4,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="absolute -inset-0.5 bg-amber-400/40 rounded-full blur-md"
-            />
-
-            {/* Botón transparente con parpadeo sutil — abre WhatsApp al click */}
-            <motion.a
-              href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              animate={{
-                backgroundColor: "rgba(245, 158, 11, 0)",
-                borderColor: "rgba(251, 191, 36, 0.6)",
-              }}
-              transition={{
-                duration: 2.4,
-                repeat: Infinity,
-                ease: "easeInOut",
-                repeatType: "reverse",
-              }}
-              className="relative inline-flex items-center gap-2 text-white font-medium text-sm px-4 py-1.5 rounded-full border whitespace-nowrap backdrop-blur-sm cursor-pointer"
-              style={{ fontFamily: "Montserrat, sans-serif" }}
-              aria-label="Pedí tu turno aquí por WhatsApp"
-            >
-              {/* Capa de fondo que parpadea (prendapague) */}
-              <motion.span
-                animate={{
-                  opacity: [0, 0.85, 0],
-                }}
-                transition={{
-                  duration: 2.4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  times: [0, 0.5, 1],
-                }}
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500 to-amber-600"
-                style={{ zIndex: 0 }}
-              />
-              {/* Texto e ícono encima del fondo parpadeante */}
-              <CalendarPlus className="w-4 h-4 relative" style={{ zIndex: 1 }} />
-              <span className="relative" style={{ zIndex: 1 }}>
-                Pedí tu turno aquí
-              </span>
-            </motion.a>
-          </div>
-        </motion.div>
+        {/* === Tagline "Escuchar · Acompañar · Transformar" en el hero ===
+            Reemplaza al botón "Pedí tu turno aquí" que ahora está en el navbar.
+            Texto plano horizontal sin animación, centrado, sobre el fondo del
+            hero. Usa los colores institucionales (sage) para mantener la
+            identidad visual. */}
+        <div className="absolute z-[4] top-[13%] sm:top-[12%] left-1/2 -translate-x-1/2">
+          <p
+            className="text-sm sm:text-base font-light tracking-[0.3em] uppercase text-sage-200/90 whitespace-nowrap text-center"
+            style={{ fontFamily: "Montserrat, sans-serif" }}
+          >
+            Escuchar · Acompañar · Transformar
+          </p>
+        </div>
       </section>
 
       {/* ===== NOSOTROS / PHILOSOPHY ===== */}
