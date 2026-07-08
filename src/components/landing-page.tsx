@@ -718,25 +718,8 @@ export function LandingPage() {
                 </p>
 
                 {/* CTAs */}
+                {/* Orden: arriba botón transparente (outline), abajo botón verde */}
                 <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <Button
-                    size="lg"
-                    onClick={() => {
-                      const cta = normalizeCta(cmsHeroSlides[currentSlide].cta);
-                      if (cta.includes("conocer especialidades")) {
-                        scrollToSection("especialidades");
-                      } else if (cta.includes("contact")) {
-                        scrollToSection("contacto");
-                      } else if (cta.includes("como funciona")) {
-                        scrollToSection("como-funciona");
-                      }
-                    }}
-                    className="bg-sage-300/25 hover:bg-sage-300/60 backdrop-blur-sm text-forest-900 font-semibold text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full border border-sage-200/30 transition-all" style={{ fontFamily: "Montserrat, sans-serif" }}
-                  >
-                    {normalizeCta(cmsHeroSlides[currentSlide].cta).includes("contact") && <Phone className="mr-2 w-5 h-5" />}
-                    {(normalizeCta(cmsHeroSlides[currentSlide].cta).includes("conocer especialidades") || normalizeCta(cmsHeroSlides[currentSlide].cta).includes("como funciona")) && <ArrowRight className="mr-2 w-5 h-5" />}
-                    {cmsHeroSlides[currentSlide].cta}
-                  </Button>
                   <Button
                     size="lg"
                     variant="outline"
@@ -757,6 +740,24 @@ export function LandingPage() {
                     {(normalizeCta(cmsHeroSlides[currentSlide].secondaryCta).includes("conocer especialidades") || normalizeCta(cmsHeroSlides[currentSlide].secondaryCta).includes("como funciona")) && <ArrowRight className="mr-2 w-5 h-5" />}
                     {normalizeCta(cmsHeroSlides[currentSlide].secondaryCta).includes("contact") && <Phone className="mr-2 w-5 h-5" />}
                     {cmsHeroSlides[currentSlide].secondaryCta}
+                  </Button>
+                  <Button
+                    size="lg"
+                    onClick={() => {
+                      const cta = normalizeCta(cmsHeroSlides[currentSlide].cta);
+                      if (cta.includes("conocer especialidades")) {
+                        scrollToSection("especialidades");
+                      } else if (cta.includes("contact")) {
+                        scrollToSection("contacto");
+                      } else if (cta.includes("como funciona")) {
+                        scrollToSection("como-funciona");
+                      }
+                    }}
+                    className="bg-sage-300/25 hover:bg-sage-300/60 backdrop-blur-sm text-forest-900 font-semibold text-sm sm:text-base px-6 sm:px-8 h-11 sm:h-12 rounded-full border border-sage-200/30 transition-all" style={{ fontFamily: "Montserrat, sans-serif" }}
+                  >
+                    {normalizeCta(cmsHeroSlides[currentSlide].cta).includes("contact") && <Phone className="mr-2 w-5 h-5" />}
+                    {(normalizeCta(cmsHeroSlides[currentSlide].cta).includes("conocer especialidades") || normalizeCta(cmsHeroSlides[currentSlide].cta).includes("como funciona")) && <ArrowRight className="mr-2 w-5 h-5" />}
+                    {cmsHeroSlides[currentSlide].cta}
                   </Button>
                 </div>
             </div>
