@@ -4,6 +4,20 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 
+// === Helpers de validación de DNI ===
+// Limpia el DNI: quita puntos, guiones y espacios. Devuelve solo dígitos.
+// Ej: "12.345.678" → "12345678", "45-555-666" → "45555666"
+export function sanitizeDni(raw: string): string {
+  return raw.replace(/[^0-9]/g, "");
+}
+
+// Valida el DNI: 7-8 dígitos numéricos (estándar argentino actual).
+// DNI extranjeros nacionalizados antiguos pueden tener menos, pero el
+// estándar actual requiere este rango. Regex: /^\d{7,8}$/
+export function isValidDni(dni: string): boolean {
+  return /^\d{7,8}$/.test(dni);
+}
+
 // POST /api/admin/patients — Admin manually creates a patient
 // Optional: enableTriage=true also creates a PatientRequest (Triage entry)
 export async function POST(req: NextRequest) {
@@ -23,6 +37,7 @@ export async function POST(req: NextRequest) {
       email,
       phone,
       password,
+      dni,
       dateOfBirth,
       emergencyContact,
       notes,
@@ -37,6 +52,20 @@ export async function POST(req: NextRequest) {
     }
     if (!email?.trim() || !email.includes("@")) {
       return NextResponse.json({ error: "El email es obligatorio y debe ser válido" }, { status: 400 });
+    }
+
+    // === Validación de DNI ===
+    // Si el admin cargó un DNI, sanitizar y validar.
+    // Si no cargó nada, queda como null (no es obligatorio para crear el paciente).
+    let finalDni: string | null = null;
+    if (dni && typeof dni === "string" && dni.trim()) {
+      finalDni = sanitizeDni(dni);
+      if (!isValidDni(finalDni)) {
+        return NextResponse.json(
+          { error: "El DNI debe tener entre 7 y 8 dígitos numéricos (ej: 12345678)" },
+          { status: 400 }
+        );
+      }
     }
 
     // Check for duplicate email
@@ -73,6 +102,7 @@ export async function POST(req: NextRequest) {
       const newPatient = await tx.patient.create({
         data: {
           userId: user.id,
+          dni: finalDni,
           dateOfBirth: dateOfBirth?.trim() || null,
           emergencyContact: emergencyContact?.trim() || null,
           notes: notes?.trim() || null,
@@ -87,24 +117,10 @@ export async function POST(req: NextRequest) {
       let patientRequest: any = null;
       if (shouldEnableTriage) {
         const validModalities = ["online", "presencial", "híbrida"];
-        // === Motivos de consulta reestructurados ===
-        // Antes: ansiedad, vinculos, depresion, duelo, autoestima, estres
-        // (que era 'Estrés / Laboral'), infanto_juvenil, adicciones,
-        // consulta_general.
-        // Ahora: se eliminaron infanto_juvenil (la edad reemplaza la
-        // segmentación), consulta_general y estres viejo; se agregaron
-        // estres (solo 'Estrés'), laboral, orientacion_padres,
-        // evaluaciones, discapacidad, otros. Se mantiene adicciones y
-        // los demás tradicionales.
-        // Los motivos depreciados (infanto_juvenil, consulta_general)
-        // se aceptan como válidos para no romper integraciones que
-        // todavía los manden — el admin los verá con sufijo '(obs.)'
-        // en el panel Triage.
         const validReasons = [
           "ansiedad", "depresion", "vinculos", "duelo", "autoestima",
           "adicciones", "estres", "laboral", "orientacion_padres",
           "evaluaciones", "discapacidad", "otros",
-          // Depreciados pero aceptados (compat hacia atrás)
           "infanto_juvenil", "consulta_general",
         ];
 

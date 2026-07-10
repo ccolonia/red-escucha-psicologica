@@ -115,6 +115,11 @@ model ProfessionalAddress {
 model Patient {
   id               String        @id @default(cuid())
   userId           String        @unique
+  // === DNI (Documento Nacional de Identidad) ===
+  // Formato: 7-8 dígitos numéricos (sin puntos ni guiones).
+  // Ej: 12345678, 34567890. Validado con regex /^\d{7,8}$/.
+  // Null si el paciente todavía no cargó su DNI.
+  dni              String?
   dateOfBirth      String?
   emergencyContact String?
   notes            String?

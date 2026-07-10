@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sanitizeDni, isValidDni } from "@/app/api/admin/patients/route";
 
 // PUT /api/admin/patients/[id] — Edit patient data
 export async function PUT(
@@ -26,7 +27,26 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { name, email, phone, dateOfBirth, emergencyContact, notes, active } = body;
+    const { name, email, phone, dni, dateOfBirth, emergencyContact, notes, active } = body;
+
+    // === Validación de DNI ===
+    // Si el admin cargó un DNI, sanitizar y validar.
+    // Si envió string vacío o null, se borra el DNI (queda null).
+    let finalDni: string | null | undefined = undefined;
+    if (dni !== undefined) {
+      if (typeof dni === "string" && dni.trim()) {
+        finalDni = sanitizeDni(dni);
+        if (!isValidDni(finalDni)) {
+          return NextResponse.json(
+            { error: "El DNI debe tener entre 7 y 8 dígitos numéricos (ej: 12345678)" },
+            { status: 400 }
+          );
+        }
+      } else {
+        // dni es null o string vacío → borrar el DNI
+        finalDni = null;
+      }
+    }
 
     // Verify patient exists
     const existing = await db.patient.findUnique({
@@ -68,6 +88,7 @@ export async function PUT(
       const updatedPatient = await tx.patient.update({
         where: { id },
         data: {
+          ...(finalDni !== undefined && { dni: finalDni }),
           ...(dateOfBirth !== undefined && { dateOfBirth: dateOfBirth?.trim() || null }),
           ...(emergencyContact !== undefined && { emergencyContact: emergencyContact?.trim() || null }),
           ...(notes !== undefined && { notes: notes?.trim() || null }),

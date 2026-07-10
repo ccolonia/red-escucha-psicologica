@@ -1862,6 +1862,7 @@ export function AdminPatients() {
   const [patients, setPatients] = useState<
     {
       id: string;
+      dni: string | null;
       dateOfBirth: string | null;
       emergencyContact: string | null;
       notes: string | null;
@@ -1875,6 +1876,7 @@ export function AdminPatients() {
     name: "",
     email: "",
     phone: "",
+    dni: "",
     dateOfBirth: "",
     emergencyContact: "",
     notes: "",
@@ -1883,14 +1885,13 @@ export function AdminPatients() {
     name: "",
     email: "",
     phone: "",
+    dni: "",
     password: "",
     dateOfBirth: "",
     emergencyContact: "",
     notes: "",
     enableTriage: true,
     modality: "presencial",
-    // Default 'otros' (antes 'consulta_general', depreciado en la
-    // reestructuración de motivos de consulta).
     reason: "otros",
   });
   const [adding, setAdding] = useState(false);
@@ -1931,7 +1932,7 @@ export function AdminPatients() {
       if (res.ok) {
         toast.success(data.message || "Paciente creado exitosamente");
         setShowAdd(false);
-        setAddForm({ name: "", email: "", phone: "", password: "", dateOfBirth: "", emergencyContact: "", notes: "", enableTriage: true, modality: "presencial", reason: "otros" });
+        setAddForm({ name: "", email: "", phone: "", dni: "", password: "", dateOfBirth: "", emergencyContact: "", notes: "", enableTriage: true, modality: "presencial", reason: "otros" });
         loadPatients();
       } else {
         toast.error(data.error || "Error al crear paciente");
@@ -1949,6 +1950,7 @@ export function AdminPatients() {
       name: patient.user.name,
       email: patient.user.email,
       phone: patient.user.phone || "",
+      dni: patient.dni || "",
       dateOfBirth: patient.dateOfBirth || "",
       emergencyContact: patient.emergencyContact || "",
       notes: patient.notes || "",
@@ -2069,8 +2071,9 @@ export function AdminPatients() {
                       {patient.user.phone && (
                         <p className="text-sm text-teal-500">{patient.user.phone}</p>
                       )}
-                      {(patient.dateOfBirth || patient.emergencyContact || patient.notes) && (
+                      {(patient.dni || patient.dateOfBirth || patient.emergencyContact || patient.notes) && (
                         <div className="mt-1 text-xs text-teal-400 space-y-0.5">
+                          {patient.dni && <p>DNI: {patient.dni}</p>}
                           {patient.dateOfBirth && <p>Fecha nac.: {patient.dateOfBirth}</p>}
                           {patient.emergencyContact && <p>Contacto emerg.: {patient.emergencyContact}</p>}
                           {patient.notes && <p className="truncate max-w-xs">Notas: {patient.notes}</p>}
@@ -2145,15 +2148,31 @@ export function AdminPatients() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Contraseña</Label>
+                <Label>DNI</Label>
                 <Input
-                  type="text"
-                  value={addForm.password}
-                  onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
+                  value={addForm.dni}
+                  onChange={(e) => {
+                    // Sanitizar: solo permitir dígitos mientras el admin escribe
+                    const cleaned = e.target.value.replace(/[^0-9]/g, "");
+                    setAddForm({ ...addForm, dni: cleaned });
+                  }}
                   className="border-teal-200"
-                  placeholder="Se autogenera si queda vacía"
+                  placeholder="12345678"
+                  maxLength={8}
+                  inputMode="numeric"
                 />
+                <p className="text-xs text-teal-400">7-8 dígitos (sin puntos ni guiones)</p>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Contraseña</Label>
+              <Input
+                type="text"
+                value={addForm.password}
+                onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
+                className="border-teal-200"
+                placeholder="Se autogenera si queda vacía"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -2308,14 +2327,29 @@ export function AdminPatients() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Fecha de Nacimiento</Label>
+                <Label>DNI</Label>
                 <Input
-                  type="date"
-                  value={editForm.dateOfBirth}
-                  onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
+                  value={editForm.dni}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/[^0-9]/g, "");
+                    setEditForm({ ...editForm, dni: cleaned });
+                  }}
                   className="border-teal-200"
+                  placeholder="12345678"
+                  maxLength={8}
+                  inputMode="numeric"
                 />
+                <p className="text-xs text-teal-400">7-8 dígitos (sin puntos ni guiones)</p>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Fecha de Nacimiento</Label>
+              <Input
+                type="date"
+                value={editForm.dateOfBirth}
+                onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
+                className="border-teal-200"
+              />
             </div>
             <div className="space-y-2">
               <Label>Contacto de Emergencia</Label>
