@@ -969,6 +969,7 @@ type PrivateNote = {
 
 type PatientWithDetails = {
   id: string;
+  dni?: string | null;
   user: {
     name: string;
     email: string;
@@ -1249,13 +1250,21 @@ export function ProfessionalPatients() {
                     className="border-t border-teal-100 bg-white"
                   >
                     <div className="p-4 space-y-5">
-                      {/* === Datos de contacto (cuando el teléfono no entra en el header) === */}
-                      {patient.user.phone && (
-                        <div className="md:hidden flex items-center gap-1 text-sm text-teal-600">
-                          <Phone className="w-3 h-3" />
-                          {patient.user.phone}
-                        </div>
-                      )}
+                      {/* === Datos del paciente (DNI + teléfono mobile) === */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-teal-600">
+                        {patient.dni && (
+                          <span className="flex items-center gap-1">
+                            <span className="text-teal-400 text-xs font-medium">DNI:</span>
+                            <span className="text-teal-800 font-medium">{patient.dni}</span>
+                          </span>
+                        )}
+                        {patient.user.phone && (
+                          <span className="md:hidden flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            {patient.user.phone}
+                          </span>
+                        )}
+                      </div>
 
                       {/* === Historial de sesiones === */}
                       <div>
