@@ -326,6 +326,7 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: MessageCircle, label: "Trastorno del Lenguaje", desc: "Dificultades en la comprensión o producción del lenguaje que afectan la comunicación y el desarrollo social." },
       { icon: Ear, label: "Mutismo Selectivo", desc: "Incapacidad de hablar en ciertas situaciones sociales pese a poder hacerlo en contextos familiares, generando ansiedad y aislamiento." },
       { icon: AlertCircle, label: "Trastorno Oposicionista Desafiante", desc: "Patrón persistente de conducta desafiante, irritable y desobediente hacia figuras de autoridad que afecta las relaciones familiares y sociales." },
+      { icon: Eye, label: "EMDR", desc: "Terapia de reprocesamiento y desensibilización mediante movimientos oculares para el abordaje de traumas y experiencias adversas." },
     ],
   },
 ];
