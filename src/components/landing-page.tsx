@@ -135,7 +135,7 @@ const SYNONYMS: Record<string, string[]> = {
   "duelo": ["duelo", "pérdida", "muerte", "fallecimiento"],
   "bullying": ["bullying", "acoso escolar", "matonaje"],
   "acoso laboral": ["acoso laboral", "mobbing", "hostigamiento laboral"],
-  "coparentalidad": ["coparentalidad", "custodia", "separación", "divorcio"],
+  "coparentalidad": ["coparentalidad", "custodia", "separación", "divorcio", "crianza compartida"],
   "revinculaciones": ["revinculaciones", "reconectar", "vínculo familiar", "reconciliación"],
   "autolesiones": ["autolesiones", "autolesión", "cortes", "self-harm"],
   "ideación suicida": ["ideación suicida", "suicidio", "pensamientos de muerte"],
@@ -159,6 +159,15 @@ const SYNONYMS: Record<string, string[]> = {
   "asesoría a empresas": ["asesoría a empresas", "bienestar corporativo", "rrhh", "clima laboral"],
   "grupos terapéuticos": ["grupos terapéuticos", "grupo", "grupal"],
   "talleres": ["talleres", "taller", "curso", "capacitación"],
+  "terapia cognitivo conductual (tcc)": ["tcc", "cognitivo conductual", "conductual", "terapia cognitiva"],
+  "psicodiagnóstico": ["psicodiagnóstico", "diagnóstico psicológico", "evaluación diagnóstica"],
+  "revinculación": ["revinculación", "reconstruir vínculo", "reconectar familia"],
+  "trastorno del espectro autista (tea)": ["tea", "autismo", "espectro autista", "autista"],
+  "trastorno generalizado del desarrollo (tgd)": ["tgd", "generalizado del desarrollo", "desarrollo"],
+  "tdah": ["tdah", "déficit de atención", "hiperactividad", "desatención", "falta de concentración"],
+  "trastorno del lenguaje": ["trastorno del lenguaje", "lenguaje", "habla", "comunicación"],
+  "mutismo selectivo": ["mutismo", "no habla", "mutismo selectivo"],
+  "trastorno oposicionista desafiante": ["tod", "oposicionista", "desafiante", "desobediente", "rebeldía"],
 };
 
 // ===== Índice de búsqueda (flattened) =====
@@ -268,6 +277,7 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: HeartHandshake, label: "Psicología Geriátrica", desc: "Atención psicológica para adultos mayores y sus familias en el envejecimiento." },
       { icon: Globe, label: "Psicología Social / Comunitaria", desc: "Intervención en comunidades, prevención y promoción de la salud mental colectiva." },
       { icon: Compass, label: "Psicología Transcultural", desc: "Abordaje psicológico desde la diversidad cultural, migración y procesos de adaptación." },
+      { icon: Brain, label: "Terapia Cognitivo Conductual (TCC)", desc: "Enfoque terapéutico basado en la identificación y modificación de patrones de pensamiento y conducta disfuncionales." },
     ],
   },
   {
@@ -280,6 +290,9 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: HandHeart, label: "Orientación a Padres", desc: "Acompañamiento y herramientas para padres en la crianza y el vínculo con sus hijos." },
       { icon: Shield, label: "Discapacidad", desc: "Evaluaciones y certificaciones para trámites de discapacidad y adaptaciones necesarias." },
       { icon: Building2, label: "Asesoría a Empresas", desc: "Programas de bienestar corporativo, prevención de riesgos psicosociales y apoyo al empleado." },
+      { icon: Microscope, label: "Psicodiagnóstico", desc: "Proceso de evaluación integral que permite identificar y comprender dificultades emocionales, cognitivas o de conducta." },
+      { icon: Undo2, label: "Revinculación", desc: "Proceso terapéutico orientado a reconstruir vínculos familiares afectados o interrumpidos por conflictos, separaciones o distancia emocional." },
+      { icon: Handshake, label: "Coparentalidad", desc: "Acompañamiento para padres separados en la coordinación, comunicación y crianza compartida de los hijos." },
     ],
   },
   {
@@ -307,6 +320,12 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: Brain, label: "Esquizofrenia", desc: "Trastorno que afecta el pensamiento, las percepciones y el funcionamiento social." },
       { icon: Moon, label: "Hebefrenia", desc: "Forma de esquizofrenia con cambios emocionales y de conducta en la adolescencia." },
       { icon: Scale, label: "Pacientes Judicializados", desc: "Atención psicológica para personas con procesos judiciales o medida de seguridad." },
+      { icon: Brain, label: "Trastorno del Espectro Autista (TEA)", desc: "Dificultades en la comunicación social, intereses restringidos y patrones de conducta repetitivos que requieren abordaje especializado." },
+      { icon: Brain, label: "Trastorno Generalizado del Desarrollo (TGD)", desc: "Alteraciones en el desarrollo que afectan la interacción social, la comunicación y el comportamiento desde edades tempranas." },
+      { icon: Zap, label: "TDAH", desc: "Dificultades persistentes de atención, hiperactividad e impulsividad que interfieren en la vida cotidiana, escolar o laboral." },
+      { icon: MessageCircle, label: "Trastorno del Lenguaje", desc: "Dificultades en la comprensión o producción del lenguaje que afectan la comunicación y el desarrollo social." },
+      { icon: Ear, label: "Mutismo Selectivo", desc: "Incapacidad de hablar en ciertas situaciones sociales pese a poder hacerlo en contextos familiares, generando ansiedad y aislamiento." },
+      { icon: AlertCircle, label: "Trastorno Oposicionista Desafiante", desc: "Patrón persistente de conducta desafiante, irritable y desobediente hacia figuras de autoridad que afecta las relaciones familiares y sociales." },
     ],
   },
 ];
@@ -901,6 +920,21 @@ export function LandingPage() {
     "alucin": ["psicosis"],
     "acoso escolar": ["bullying"],
     "matonaje": ["bullying"],
+    "autismo": ["tea", "trastorno del espectro autista"],
+    "espectro autista": ["tea"],
+    "autista": ["tea"],
+    "hiperactividad": ["tdah"],
+    "déficit de atención": ["tdah"],
+    "desatención": ["tdah"],
+    "no se concentra": ["tdah", "neuropsicología"],
+    "no habla": ["mutismo selectivo", "trastorno del lenguaje"],
+    "desobediente": ["trastorno oposicionista desafiante"],
+    "rebeldía": ["trastorno oposicionista desafiante"],
+    "lenguaje": ["trastorno del lenguaje"],
+    "habla": ["trastorno del lenguaje"],
+    "tcc": ["terapia cognitivo conductual"],
+    "cognitivo conductual": ["terapia cognitivo conductual"],
+    "diagnóstico": ["psicodiagnóstico", "evaluaciones"],
   };
 
   // Detecta si el texto del usuario contiene palabras de riesgo
