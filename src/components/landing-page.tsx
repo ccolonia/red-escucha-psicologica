@@ -770,14 +770,20 @@ export function LandingPage() {
     // 3. Cerrar el buscador
     setSearchOpen(false);
     setSearchQuery(result.label);
-    // 4. Resaltar la tarjeta (se quita después de 2.5s)
-    setSearchHighlight(result.label);
-    setTimeout(() => setSearchHighlight(null), 2500);
-    // 5. Scroll suave a la sección de especialidades
+    // 4. Scroll suave a la sección de especialidades
     setTimeout(() => {
       const el = document.getElementById("especialidades");
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
+    // 5. Resaltar la tarjeta DESPUÉS de que las tarjetas de la nueva
+    //    pestaña estén renderizadas (React necesita un ciclo de render
+    //    para mostrar las tarjetas del tab recién seleccionado).
+    //    350ms da tiempo al render + al scroll suave.
+    setTimeout(() => {
+      setSearchHighlight(result.label);
+      // Quitar el highlight después de 3s
+      setTimeout(() => setSearchHighlight(null), 3000);
+    }, 350);
   }, []);
 
   // Maneja la navegación con teclado dentro de las sugerencias
