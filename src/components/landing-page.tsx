@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
@@ -58,6 +58,8 @@ import {
   Globe,
   Presentation,
   Handshake,
+  Search,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -111,6 +113,106 @@ const defaultSpecialtyTabs = [
 type SpecItem = { icon: React.ComponentType<{ className?: string }>; label: string; desc: string };
 type SpecSubTab = { id: string; label: string; items: SpecItem[] };
 type SpecMainTab = { id: string; label: string; subTabs?: SpecSubTab[]; items?: SpecItem[] };
+
+// ===== Sistema de sinónimos para búsqueda inteligente =====
+// Mapa de palabra clave → array de términos sinónimos relacionados.
+// La búsqueda matchea tanto el label/desc del item como estos sinónimos.
+// Para ampliar en el futuro, simplemente agregar entradas nuevas acá.
+const SYNONYMS: Record<string, string[]> = {
+  "ansiedad": ["ansiedad", "ataques de pánico", "estrés", "nervios", "angustia", "preocupación"],
+  "depresión": ["depresión", "tristeza", "desmotivación", "vacío emocional", "desánimo"],
+  "toc": ["toc", "obsesiones", "compulsiones", "trastorno obsesivo"],
+  "parejas": ["parejas", "matrimonio", "relación", "noviazgo", "vínculo", "pareja"],
+  "niños": ["niños", "niñas", "infantil", "infancia", "infanto"],
+  "adulto mayor": ["adulto mayor", "ancianos", "tercera edad", "geriátrica", "gerontología"],
+  "violencia": ["violencia", "abuso", "maltrato", "abuso sexual"],
+  "adicciones": ["adicciones", "consumo", "dependencia", "sustancias"],
+  "burnout": ["burnout", "estrés laboral", "agotamiento", "síndrome de burnout"],
+  "psiconutrición": ["psiconutrición", "alimentación", "obesidad", "conducta alimentaria"],
+  "neuropsicología": ["neuropsicología", "memoria", "atención", "cognición", "cognitivo"],
+  "emdr": ["emdr", "trauma", "estrés postraumático", "tept"],
+  "tlp": ["tlp", "trastorno límite", "borderline", "inestabilidad emocional"],
+  "duelo": ["duelo", "pérdida", "muerte", "fallecimiento"],
+  "bullying": ["bullying", "acoso escolar", "matonaje"],
+  "acoso laboral": ["acoso laboral", "mobbing", "hostigamiento laboral"],
+  "coparentalidad": ["coparentalidad", "custodia", "separación", "divorcio"],
+  "revinculaciones": ["revinculaciones", "reconectar", "vínculo familiar", "reconciliación"],
+  "autolesiones": ["autolesiones", "autolesión", "cortes", "self-harm"],
+  "ideación suicida": ["ideación suicida", "suicidio", "pensamientos de muerte"],
+  "psicosis": ["psicosis", "delirio", "alucinación"],
+  "esquizofrenia": ["esquizofrenia", "esquizofrénico"],
+  "hebefrenia": ["hebefrenia", "esquizofrenia hebefrénica"],
+  "judicializados": ["judicializados", "judicial", "medida de seguridad", "proceso judicial"],
+  "perinatal": ["perinatal", "embarazo", "parto", "puerperio", "maternidad"],
+  "psicooncología": ["psicooncología", "cáncer", "oncológico", "tumor"],
+  "deportiva": ["deportiva", "deporte", "rendimiento", "atleta"],
+  "forense": ["forense", "judicial", "pericia", "peritaje"],
+  "laboral": ["laboral", "trabajo", "organizacional", "empresa", "recursos humanos"],
+  "educacional": ["educacional", "escuela", "aprendizaje", "rendimiento escolar"],
+  "social": ["social", "comunitaria", "comunidad"],
+  "transcultural": ["transcultural", "migración", "diversidad cultural", "inmigrante"],
+  "evaluaciones": ["evaluaciones", "psicodiagnóstico", "test", "evaluación psicológica"],
+  "pericias": ["pericias", "peritaje", "pericial", "informe judicial"],
+  "orientación vocacional": ["orientación vocacional", "carrera", "vocación", "estudios"],
+  "orientación a padres": ["orientación a padres", "crianza", "parentalidad", "educación de hijos"],
+  "discapacidad": ["discapacidad", "cud", "certificado de discapacidad", "inclusión"],
+  "asesoría a empresas": ["asesoría a empresas", "bienestar corporativo", "rrhh", "clima laboral"],
+  "grupos terapéuticos": ["grupos terapéuticos", "grupo", "grupal"],
+  "talleres": ["talleres", "taller", "curso", "capacitación"],
+};
+
+// ===== Índice de búsqueda (flattened) =====
+// Genera un array plano de todas las tarjetas con su metadata de navegación,
+// para que la búsqueda sea O(n) simple sin recorrer estructuras anidadas.
+type SearchEntry = {
+  label: string;
+  desc: string;
+  searchText: string; // label + desc + sinónimos concatenados en minúsculas
+  mainTabId: string;
+  mainTabLabel: string;
+  subTabId?: string;
+  subTabLabel?: string;
+};
+
+function buildSearchIndex(tabs: SpecMainTab[]): SearchEntry[] {
+  const index: SearchEntry[] = [];
+  for (const tab of tabs) {
+    if (tab.subTabs) {
+      for (const sub of tab.subTabs) {
+        for (const item of sub.items) {
+          const synonyms = SYNONYMS[item.label.toLowerCase()] || [];
+          const searchText = [item.label, item.desc, ...synonyms]
+            .join(" ")
+            .toLowerCase();
+          index.push({
+            label: item.label,
+            desc: item.desc,
+            searchText,
+            mainTabId: tab.id,
+            mainTabLabel: tab.label,
+            subTabId: sub.id,
+            subTabLabel: sub.label,
+          });
+        }
+      }
+    } else if (tab.items) {
+      for (const item of tab.items) {
+        const synonyms = SYNONYMS[item.label.toLowerCase()] || [];
+        const searchText = [item.label, item.desc, ...synonyms]
+          .join(" ")
+          .toLowerCase();
+        index.push({
+          label: item.label,
+          desc: item.desc,
+          searchText,
+          mainTabId: tab.id,
+          mainTabLabel: tab.label,
+        });
+      }
+    }
+  }
+  return index;
+}
 
 const specialtyMainTabs: SpecMainTab[] = [
   {
@@ -304,6 +406,18 @@ export function LandingPage() {
   // === Nuevos estados para la sección de Especialidades rediseñada ===
   const [specialtyMainTab, setSpecialtyMainTab] = useState("atencion");
   const [specialtySubTab, setSpecialtySubTab] = useState("individual");
+  // === Buscador inteligente ===
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchEntry[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchHighlight, setSearchHighlight] = useState<string | null>(null);
+  const [searchFocusedIndex, setSearchFocusedIndex] = useState(-1);
+  const [showNoResults, setShowNoResults] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // === Índice de búsqueda (memoizado para no recalcular en cada render) ===
+  // Se genera una sola vez a partir de specialtyMainTabs
+  const searchIndex = useMemo(() => buildSearchIndex(specialtyMainTabs), []);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState(false);
@@ -618,6 +732,79 @@ export function LandingPage() {
     }
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // === Funciones del buscador inteligente ===
+
+  // Realiza la búsqueda en tiempo real sobre el índice flattened.
+  // Filtra por coincidencia en searchText (label + desc + sinónimos).
+  const handleSpecialtySearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      setShowNoResults(false);
+      setSearchFocusedIndex(-1);
+      return;
+    }
+    const q = query.toLowerCase().trim();
+    const results = searchIndex.filter(
+      (entry) => entry.searchText.includes(q)
+    );
+    // Limitar a 8 resultados para no abrumar al usuario
+    setSearchResults(results.slice(0, 8));
+    setSearchOpen(true);
+    setShowNoResults(results.length === 0);
+    setSearchFocusedIndex(-1);
+  }, [searchIndex]);
+
+  // Navega automáticamente a la pestaña/sub-pestaña correspondiente,
+  // hace scroll suave y resalta la tarjeta encontrada.
+  const navigateToResult = useCallback((result: SearchEntry) => {
+    // 1. Cambiar a la pestaña principal
+    setSpecialtyMainTab(result.mainTabId);
+    // 2. Cambiar sub-pestaña si existe
+    if (result.subTabId) {
+      setSpecialtySubTab(result.subTabId);
+    }
+    // 3. Cerrar el buscador
+    setSearchOpen(false);
+    setSearchQuery(result.label);
+    // 4. Resaltar la tarjeta (se quita después de 2.5s)
+    setSearchHighlight(result.label);
+    setTimeout(() => setSearchHighlight(null), 2500);
+    // 5. Scroll suave a la sección de especialidades
+    setTimeout(() => {
+      const el = document.getElementById("especialidades");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  }, []);
+
+  // Maneja la navegación con teclado dentro de las sugerencias
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (!searchOpen || searchResults.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSearchFocusedIndex((prev) =>
+        prev < searchResults.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSearchFocusedIndex((prev) =>
+        prev > 0 ? prev - 1 : searchResults.length - 1
+      );
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (searchFocusedIndex >= 0 && searchFocusedIndex < searchResults.length) {
+        navigateToResult(searchResults[searchFocusedIndex]);
+      } else if (searchResults.length > 0) {
+        navigateToResult(searchResults[0]);
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setSearchOpen(false);
+      searchInputRef.current?.blur();
+    }
   };
 
   return (
@@ -1156,6 +1343,124 @@ export function LandingPage() {
             </p>
           </motion.div>
 
+          {/* === Buscador inteligente de especialidades === */}
+          {/* Live search con autocompletado, sinónimos, navegación automática,
+              navegación por teclado y estado vacío. */}
+          <div className="max-w-2xl mx-auto mb-8 relative">
+            <div className="relative">
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-forest-400 pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSpecialtySearch(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                onFocus={() => { if (searchResults.length > 0) setSearchOpen(true); }}
+                onBlur={() => { setTimeout(() => setSearchOpen(false), 200); }}
+                placeholder="¿Sobre qué necesitas ayuda hoy?"
+                aria-label="Buscar especialidad, servicio o motivo de consulta"
+                aria-expanded={searchOpen}
+                aria-controls="search-suggestions"
+                aria-autocomplete="list"
+                role="combobox"
+                className="w-full pl-12 pr-4 py-3.5 rounded-full bg-white border border-beige-300 text-forest-700 placeholder:text-forest-300 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-sage-400 focus:border-sage-400 transition-all shadow-sm"
+                style={{ fontFamily: "Montserrat, sans-serif" }}
+                autoComplete="off"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    setSearchOpen(false);
+                    setShowNoResults(false);
+                    searchInputRef.current?.focus();
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-forest-400 hover:text-forest-600 transition-colors"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+
+            {/* === Sugerencias de autocompletado === */}
+            {searchOpen && searchResults.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                id="search-suggestions"
+                role="listbox"
+                className="absolute z-30 w-full mt-2 bg-white rounded-xl shadow-xl border border-beige-200 overflow-hidden max-h-80 overflow-y-auto"
+              >
+                {searchResults.map((result, idx) => (
+                  <button
+                    key={`${result.mainTabId}-${result.label}-${idx}`}
+                    role="option"
+                    aria-selected={idx === searchFocusedIndex}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      navigateToResult(result);
+                    }}
+                    onMouseEnter={() => setSearchFocusedIndex(idx)}
+                    className={`w-full text-left px-4 py-3 transition-colors border-b border-beige-100 last:border-0 ${
+                      idx === searchFocusedIndex
+                        ? "bg-sage-50"
+                        : "bg-white hover:bg-beige-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-forest-700 text-sm" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                        {result.label}
+                      </span>
+                      <span className="text-xs text-forest-400 bg-beige-100 px-2 py-0.5 rounded-full">
+                        {result.mainTabLabel}
+                        {result.subTabLabel ? ` · ${result.subTabLabel}` : ""}
+                      </span>
+                    </div>
+                    <p className="text-xs text-forest-400 mt-0.5 font-light truncate" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                      {result.desc}
+                    </p>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+
+            {/* === Estado vacío === */}
+            {showNoResults && searchQuery && (
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="absolute z-30 w-full mt-2 bg-white rounded-xl shadow-xl border border-beige-200 p-6 text-center"
+              >
+                <p className="text-forest-500 text-sm font-medium mb-1" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                  No encontramos resultados para tu búsqueda.
+                </p>
+                <p className="text-forest-400 text-xs font-light mb-3" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                  Te invitamos a explorar nuestras especialidades o contactarnos para ayudarte a encontrar el profesional adecuado.
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    setShowNoResults(false);
+                    setSpecialtyMainTab("atencion");
+                    setSpecialtySubTab("individual");
+                  }}
+                  className="text-xs text-sage-600 hover:text-sage-700 font-medium underline underline-offset-2"
+                  style={{ fontFamily: "Montserrat, sans-serif" }}
+                >
+                  Ver todas las especialidades
+                </button>
+              </motion.div>
+            )}
+          </div>
+
           {/* === Pestañas principales (4 tabs horizontales) === */}
           {/* En mobile: strip deslizable horizontal con snap.
               En desktop: centrado con flex-wrap. */}
@@ -1244,7 +1549,11 @@ export function LandingPage() {
               return itemsToShow.map((item) => (
                 <div
                   key={item.label}
-                  className="specialty-card bg-beige-100 rounded-xl p-5 sm:p-6 cursor-default transition-all duration-300 hover:shadow-md hover:bg-beige-50"
+                  className={`specialty-card rounded-xl p-5 sm:p-6 cursor-default transition-all duration-500 ${
+                    searchHighlight === item.label
+                      ? "bg-sage-100 ring-2 ring-sage-400 shadow-lg scale-105"
+                      : "bg-beige-100 hover:shadow-md hover:bg-beige-50"
+                  }`}
                 >
                   <div className="w-11 h-11 sm:w-12 sm:h-12 bg-sage-300/15 rounded-xl flex items-center justify-center mb-3 sm:mb-4">
                     <item.icon className="w-5 h-5 sm:w-6 sm:h-6 text-sage-500" />
