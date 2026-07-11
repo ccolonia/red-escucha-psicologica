@@ -165,8 +165,23 @@ export async function DELETE(
     }
 
     // Safe to delete: Patient has no appointments
-    // onDelete: Cascade on Patient → User will also be deleted
-    await db.patient.delete({ where: { id } });
+    // Borrar Patient + User + PasswordTokens explícitamente para evitar
+    // Users huérfanos que bloqueen futuros registros con el mismo email.
+    const patientToDelete = await db.patient.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+
+    if (patientToDelete) {
+      await db.passwordToken.deleteMany({ where: { userId: patientToDelete.userId } });
+      await db.patient.delete({ where: { id } });
+      // Borrar el User también (por si el cascade no funciona)
+      try {
+        await db.user.delete({ where: { id: patientToDelete.userId } });
+      } catch {
+        // El User ya fue borrado por cascade — no hay problema
+      }
+    }
 
     return NextResponse.json({ message: "Paciente eliminado exitosamente" });
   } catch (error: unknown) {
