@@ -415,6 +415,14 @@ export function LandingPage() {
   const [showNoResults, setShowNoResults] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // === Estados del Asistente Inteligente de Orientación ===
+  const [assistantQuery, setAssistantQuery] = useState("");
+  const [assistantResponse, setAssistantResponse] = useState<string | null>(null);
+  const [assistantResults, setAssistantResults] = useState<SearchEntry[]>([]);
+  const [assistantIsRisk, setAssistantIsRisk] = useState(false);
+  const [assistantHasSearched, setAssistantHasSearched] = useState(false);
+  const assistantTextareaRef = useRef<HTMLTextAreaElement>(null);
+
   // === Índice de búsqueda (memoizado para no recalcular en cada render) ===
   // Se genera una sola vez a partir de specialtyMainTabs
   const searchIndex = useMemo(() => buildSearchIndex(specialtyMainTabs), []);
@@ -791,6 +799,101 @@ export function LandingPage() {
       setTimeout(() => setSearchHighlight(null), 3000);
     }, 350);
   }, []);
+
+  // === Funciones del Asistente Inteligente de Orientación ===
+
+  // Palabras clave que indican riesgo (autolesiones, ideación suicida, violencia)
+  const RISK_KEYWORDS = [
+    "suicid", "matarme", "quiero morir", "hacerme daño", "autolesm",
+    "cortarme", "no quiero vivir", "acabar con todo", "violencia", "abuso",
+    "maltrato", "me pega", "me lastima", "riesgo", "emergencia", "urgente",
+    "no puedo más", "perder el control", "hacer daño a", "matarte",
+  ];
+
+  // Detecta si el texto del usuario contiene palabras de riesgo
+  function detectRisk(text: string): boolean {
+    const lower = text.toLowerCase();
+    return RISK_KEYWORDS.some((kw) => lower.includes(kw));
+  }
+
+  // Procesa la consulta del asistente y genera respuesta + navegación
+  const handleAssistantSearch = useCallback(() => {
+    const query = assistantQuery.trim();
+    if (!query) return;
+
+    setAssistantHasSearched(true);
+
+    // 1. Verificar si es un caso de riesgo
+    if (detectRisk(query)) {
+      setAssistantIsRisk(true);
+      setAssistantResponse(
+        "Entendemos que estás atravesando un momento muy difícil. Tu seguridad es nuestra prioridad. Te recomendamos contactarte de inmediato con nuestros profesionales o con los servicios de emergencia de tu zona."
+      );
+      setAssistantResults([]);
+      return;
+    }
+
+    setAssistantIsRisk(false);
+
+    // 2. Buscar en el índice de especialidades usando el mismo sistema
+    // de sinónimos del buscador
+    const q = query.toLowerCase().trim();
+    const results = searchIndex.filter((entry) => entry.searchText.includes(q));
+
+    if (results.length > 0) {
+      // 3. Generar respuesta empática
+      const firstResult = results[0];
+      setAssistantResponse(
+        `Gracias por contarnos lo que estás viviendo. En la Red Escucha Psicológica contamos con profesionales que pueden acompañarte en este proceso. Encontramos opciones que podrían ajustarse a tu necesidad en la categoría "${firstResult.mainTabLabel}".`
+      );
+      setAssistantResults(results.slice(0, 4));
+
+      // 4. Navegar automáticamente a la primera coincidencia
+      // (usar la misma función navigateToResult del buscador)
+      setTimeout(() => {
+        navigateToResult(firstResult);
+      }, 800);
+    } else {
+      // Sin resultados — respuesta genérica
+      setAssistantResponse(
+        "Gracias por compartirnos lo que estás atravesando. Aunque no encontramos una coincidencia específica en nuestra base de especialidades, nuestro equipo está preparado para orientarte. Te invitamos a explorar nuestras especialidades o contactarnos directamente para ayudarte a encontrar el profesional adecuado."
+      );
+      setAssistantResults([]);
+    }
+  }, [assistantQuery, searchIndex, navigateToResult]);
+
+  // Maneja el click en un chip de acceso rápido
+  const handleChipClick = useCallback((term: string) => {
+    setAssistantQuery(term);
+    // Ejecutar búsqueda inmediatamente
+    setTimeout(() => {
+      const q = term.toLowerCase().trim();
+      const results = searchIndex.filter((entry) => entry.searchText.includes(q));
+      setAssistantHasSearched(true);
+      setAssistantIsRisk(false);
+
+      if (results.length > 0) {
+        const firstResult = results[0];
+        setAssistantResponse(
+          `Gracias por contarnos lo que estás viviendo. En la Red Escucha Psicológica contamos con profesionales que pueden acompañarte en este proceso. Encontramos opciones que podrían ajustarse a tu necesidad en la categoría "${firstResult.mainTabLabel}".`
+        );
+        setAssistantResults(results.slice(0, 4));
+        setTimeout(() => navigateToResult(firstResult), 800);
+      } else {
+        setAssistantResponse(
+          "Gracias por compartirnos lo que estás atravesando. Te invitamos a explorar nuestras especialidades o contactarnos directamente."
+        );
+        setAssistantResults([]);
+      }
+    }, 50);
+  }, [searchIndex, navigateToResult]);
+
+  // Chips de acceso rápido
+  const QUICK_CHIPS = [
+    "Ansiedad", "Depresión", "Terapia de Pareja", "Niños",
+    "Adolescentes", "EMDR", "TOC", "Duelo",
+    "Adicciones", "Estrés", "Psiconutrición", "Orientación Vocacional",
+  ];
 
   // Maneja la navegación con teclado dentro de las sugerencias
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
@@ -1232,6 +1335,196 @@ export function LandingPage() {
           </div>
         </div>
 
+      </section>
+
+      {/* ===== ASISTENTE INTELIGENTE DE ORIENTACIÓN ===== */}
+      {/* Primer punto de contacto entre el visitante y la Red.
+          Escucha la necesidad, comprende la intención y guía al
+          profesional/servicio más adecuado. NO es un chatbot: es un
+          espacio de orientación personalizado. */}
+      <section id="asistente" className="bg-beige-50 py-16 sm:py-20">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Encabezado */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-8"
+          >
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-sage-300/15 rounded-full mb-4">
+              <HeartHandshake className="w-7 h-7 text-sage-500" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-forest-500 mb-3">
+              ¿Cómo podemos ayudarte hoy?
+            </h2>
+            <p className="text-forest-400 text-sm sm:text-base font-light max-w-xl mx-auto" style={{ fontFamily: "Montserrat, sans-serif" }}>
+              Contanos qué estás atravesando y te ayudaremos a encontrar el profesional más adecuado para acompañarte.
+            </p>
+          </motion.div>
+
+          {/* Caja conversacional */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="bg-white rounded-2xl shadow-lg border border-beige-200 p-5 sm:p-6"
+          >
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Textarea */}
+              <textarea
+                ref={assistantTextareaRef}
+                value={assistantQuery}
+                onChange={(e) => setAssistantQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleAssistantSearch();
+                  }
+                }}
+                placeholder="Ejemplo: Estoy atravesando un duelo, busco terapia para mi hijo o necesito ayuda con la ansiedad..."
+                aria-label="Contanos qué estás atravesando"
+                rows={3}
+                className="flex-1 w-full px-4 py-3 rounded-xl bg-beige-50 border border-beige-200 text-forest-700 placeholder:text-forest-300 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-sage-400 focus:border-sage-400 transition-all resize-none"
+                style={{ fontFamily: "Montserrat, sans-serif" }}
+              />
+
+              {/* Botones: Buscar + Micrófono */}
+              <div className="flex sm:flex-col gap-2">
+                <button
+                  onClick={handleAssistantSearch}
+                  disabled={!assistantQuery.trim()}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-forest-500 hover:bg-forest-600 disabled:bg-forest-300 disabled:cursor-not-allowed text-white font-medium text-sm px-6 py-3 rounded-xl transition-all shadow-sm"
+                  style={{ fontFamily: "Montserrat, sans-serif" }}
+                  aria-label="Buscar orientación"
+                >
+                  <Search className="w-4 h-4" />
+                  Buscar
+                </button>
+                {/* Placeholder de micrófono para futura búsqueda por voz */}
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center w-12 h-12 sm:w-full sm:h-10 bg-beige-100 hover:bg-beige-200 text-forest-500 rounded-xl transition-colors"
+                  aria-label="Búsqueda por voz (próximamente)"
+                  title="Búsqueda por voz (próximamente)"
+                  onClick={() => {}}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-5 h-5"
+                  >
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Chips de acceso rápido */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {QUICK_CHIPS.map((chip) => (
+                <button
+                  key={chip}
+                  onClick={() => handleChipClick(chip)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium bg-beige-100 text-forest-600 hover:bg-sage-100 hover:text-sage-700 transition-all border border-beige-200"
+                  style={{ fontFamily: "Montserrat, sans-serif" }}
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Respuesta del asistente */}
+          {assistantHasSearched && assistantResponse && (
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className={`mt-5 rounded-2xl border p-5 sm:p-6 ${
+                assistantIsRisk
+                  ? "bg-red-50 border-red-200"
+                  : "bg-sage-50 border-sage-200"
+              }`}
+            >
+              {/* Caso de riesgo */}
+              {assistantIsRisk ? (
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 bg-red-100 rounded-full mb-3">
+                    <AlertCircle className="w-6 h-6 text-red-500" />
+                  </div>
+                  <p className="text-red-700 text-sm sm:text-base font-medium mb-3" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                    {assistantResponse}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center mt-4">
+                    <a
+                      href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent("Necesito hablar con un profesional de urgencia")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-medium text-sm px-5 py-2.5 rounded-full transition-all"
+                      style={{ fontFamily: "Montserrat, sans-serif" }}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Contactar de urgencia
+                    </a>
+                    <a
+                      href="tel:135"
+                      className="inline-flex items-center justify-center gap-2 bg-white hover:bg-beige-50 text-red-600 font-medium text-sm px-5 py-2.5 rounded-full border border-red-200 transition-all"
+                      style={{ fontFamily: "Montserrat, sans-serif" }}
+                    >
+                      <Phone className="w-4 h-4" />
+                      Línea de emergencia 135
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                /* Respuesta normal */
+                <div>
+                  <div className="flex items-start gap-3">
+                    <div className="inline-flex items-center justify-center w-10 h-10 bg-sage-300/20 rounded-full shrink-0">
+                      <HeartHandshake className="w-5 h-5 text-sage-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-forest-600 text-sm sm:text-base leading-relaxed font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                        {assistantResponse}
+                      </p>
+                      {/* Resultados encontrados */}
+                      {assistantResults.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {assistantResults.map((r) => (
+                            <button
+                              key={`${r.mainTabId}-${r.label}`}
+                              onClick={() => navigateToResult(r)}
+                              className="inline-flex items-center gap-1.5 text-xs font-medium bg-white text-forest-600 hover:bg-sage-100 px-3 py-1.5 rounded-full border border-sage-200 transition-all"
+                              style={{ fontFamily: "Montserrat, sans-serif" }}
+                            >
+                              <ArrowRight className="w-3 h-3" />
+                              {r.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Aviso ético */}
+          <p className="text-center mt-5 text-xs text-forest-300 font-light italic max-w-lg mx-auto" style={{ fontFamily: "Montserrat, sans-serif" }}>
+            Este asistente tiene fines exclusivamente orientativos. No realiza diagnósticos ni reemplaza la evaluación de un profesional de la salud mental.
+          </p>
+        </div>
       </section>
 
       {/* ===== NOSOTROS / PHILOSOPHY ===== */}
