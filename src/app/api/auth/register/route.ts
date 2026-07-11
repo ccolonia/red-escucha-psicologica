@@ -278,6 +278,24 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // === Enviar email de notificación al admin ===
+    // Cuando un paciente se registra desde el formulario de contacto,
+    // se le envía un email al admin con todos los datos.
+    try {
+      const { sendContactNotification } = await import("@/lib/email");
+      await sendContactNotification({
+        name,
+        email,
+        phone: phone || null,
+        message: `Nuevo paciente registrado desde la web. DNI: ${finalDni || "No cargado"}. Motivo: ${triageReason || "otros"}. Modalidad: ${triageModality || "presencial"}.${patientNotes ? " Mensaje: " + patientNotes : ""}`,
+        reason: "solicitar_turno",
+        modality: triageModality || "presencial",
+      });
+      console.log(`📧 Notificación de nuevo paciente enviada: ${email}`);
+    } catch (emailError) {
+      console.error("⚠️ Error enviando notificación de paciente (no bloqueante):", emailError);
+    }
+
     return NextResponse.json(
       { message: "Cuenta creada exitosamente", userId: user.id },
       { status: 201 }
