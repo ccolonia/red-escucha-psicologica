@@ -278,6 +278,7 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: Globe, label: "Psicología Social / Comunitaria", desc: "Intervención en comunidades, prevención y promoción de la salud mental colectiva." },
       { icon: Compass, label: "Psicología Transcultural", desc: "Abordaje psicológico desde la diversidad cultural, migración y procesos de adaptación." },
       { icon: Brain, label: "Terapia Cognitivo Conductual (TCC)", desc: "Enfoque terapéutico basado en la identificación y modificación de patrones de pensamiento y conducta disfuncionales." },
+      { icon: HeartPulse, label: "Sexología", desc: "Abordaje psicológico de la sexualidad humana, orientación, identidad y disfunciones sexuales desde una perspectiva integral." },
     ],
   },
   {
@@ -327,6 +328,7 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: Ear, label: "Mutismo Selectivo", desc: "Incapacidad de hablar en ciertas situaciones sociales pese a poder hacerlo en contextos familiares, generando ansiedad y aislamiento." },
       { icon: AlertCircle, label: "Trastorno Oposicionista Desafiante", desc: "Patrón persistente de conducta desafiante, irritable y desobediente hacia figuras de autoridad que afecta las relaciones familiares y sociales." },
       { icon: Eye, label: "EMDR", desc: "Terapia de reprocesamiento y desensibilización mediante movimientos oculares para el abordaje de traumas y experiencias adversas." },
+      { icon: HeartPulse, label: "Trastornos Sexuales", desc: "Dificultades en la respuesta sexual, deseo, excitación o dolor que generan malestar y afectan la intimidad y las relaciones." },
     ],
   },
 ];
