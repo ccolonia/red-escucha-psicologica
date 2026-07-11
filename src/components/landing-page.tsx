@@ -675,6 +675,14 @@ export function LandingPage() {
         return;
       }
 
+      // === Validar teléfono ===
+      const phoneDigits = contactForm.phone.replace(/[^0-9]/g, "");
+      if (phoneDigits.length < 10) {
+        toast.error("El teléfono debe incluir código de área (ej: 11 3008 3247)");
+        setContactSending(false);
+        return;
+      }
+
       // === Crear Paciente + PatientRequest (Triage) ===
       // Se usa el endpoint público /api/auth/register que ya funciona sin
       // autenticación. Se le envían los campos del paciente + DNI + triage.
@@ -2292,16 +2300,21 @@ export function LandingPage() {
                       </div>
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="contact-phone" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Teléfono</Label>
+                          <Label htmlFor="contact-phone" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Teléfono <span className="text-red-500">*</span></Label>
                           <Input
                             id="contact-phone"
+                            required
                             value={contactForm.phone}
-                            onChange={(e) =>
-                              setContactForm({ ...contactForm, phone: e.target.value })
-                            }
-                            placeholder="+54 11 xxxx-xxxx"
+                            onChange={(e) => {
+                              const cleaned = e.target.value.replace(/[^0-9+\s-]/g, "");
+                              setContactForm({ ...contactForm, phone: cleaned });
+                            }}
+                            placeholder="Ej: 11 3008 3247"
                             className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
                           />
+                          <p className="text-xs text-forest-400" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                            Incluí el código de área (ej: 11 para CABA/GBA)
+                          </p>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="contact-dni" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>

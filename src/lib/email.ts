@@ -894,12 +894,13 @@ export async function sendContactNotification({ name, email, phone, message, rea
     ? `
               <div class="field">
                 <div class="label">Teléfono</div>
-                <div class="value" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                <div class="value">
                   <a href="tel:${phone.replace(/[^0-9+]/g, "")}" style="color:#6a8a6a;text-decoration:none;">${phone}</a>
                   ${waUrl ? `
+                  <br/>
                   <a href="${waUrl}" target="_blank" rel="noopener noreferrer"
-                     style="display:inline-block;padding:6px 14px;background-color:#25D366;color:#ffffff;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,0.1);">
-                    <span style="vertical-align:middle;">Enviar WhatsApp</span>
+                     style="display:inline-block;margin-top:8px;padding:6px 14px;background-color:#25D366;color:#ffffff;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,0.1);">
+                    <span>Enviar WhatsApp</span>
                   </a>
                   ` : ""}
                 </div>
