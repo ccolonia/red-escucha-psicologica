@@ -770,17 +770,23 @@ export function LandingPage() {
     // 3. Cerrar el buscador
     setSearchOpen(false);
     setSearchQuery(result.label);
-    // 4. Scroll suave a la sección de especialidades
-    setTimeout(() => {
-      const el = document.getElementById("especialidades");
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
-    // 5. Resaltar la tarjeta DESPUÉS de que las tarjetas de la nueva
+    // 4. Resaltar la tarjeta DESPUÉS de que las tarjetas de la nueva
     //    pestaña estén renderizadas (React necesita un ciclo de render
     //    para mostrar las tarjetas del tab recién seleccionado).
-    //    350ms da tiempo al render + al scroll suave.
+    //    350ms da tiempo al render.
     setTimeout(() => {
       setSearchHighlight(result.label);
+      // 5. Scroll suave a la TARJETA ESPECÍFICA (no a la sección)
+      // Generar el ID del elemento de la tarjeta (mismo formato que el id del div)
+      const cardId = `spec-card-${result.label.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-")}`;
+      const cardEl = document.getElementById(cardId);
+      if (cardEl) {
+        cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else {
+        // Fallback: scroll a la sección si no se encuentra la tarjeta
+        const sectionEl = document.getElementById("especialidades");
+        if (sectionEl) sectionEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
       // Quitar el highlight después de 3s
       setTimeout(() => setSearchHighlight(null), 3000);
     }, 350);
@@ -1552,9 +1558,13 @@ export function LandingPage() {
                 itemsToShow = activeMainTab.items;
               }
 
-              return itemsToShow.map((item) => (
+              return itemsToShow.map((item) => {
+                // Generar ID único para la tarjeta (para scroll del buscador)
+                const cardId = `spec-card-${item.label.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-")}`;
+                return (
                 <div
                   key={item.label}
+                  id={cardId}
                   className={`specialty-card rounded-xl p-5 sm:p-6 cursor-default transition-all duration-500 ${
                     searchHighlight === item.label
                       ? "bg-sage-100 ring-2 ring-sage-400 shadow-lg scale-105"
@@ -1571,7 +1581,8 @@ export function LandingPage() {
                     {item.desc}
                   </p>
                 </div>
-              ));
+                );
+              });
             })()}
           </motion.div>
         </div>
