@@ -810,10 +810,171 @@ export function LandingPage() {
     "no puedo más", "perder el control", "hacer daño a", "matarte",
   ];
 
+  // === Mapa de frases comunes → condiciones ===
+  // Cuando el usuario escribe en lenguaje natural, estas frases se mapean
+  // a términos que SÍ están en el índice de búsqueda (labels/sinónimos).
+  // Ej: "no puedo dormir" → ["ansiedad", "estrés"] → encuentra Ansiedad y Estrés
+  const PHRASE_MAP: Record<string, string[]> = {
+    "no puedo dormir": ["ansiedad", "estrés", "insomnio"],
+    "dormir": ["ansiedad", "estrés"],
+    "no tengo ganas": ["depresión", "desmotivación"],
+    "no tengo energía": ["depresión", "burnout"],
+    "estoy triste": ["depresión", "duelo"],
+    "me siento solo": ["depresión", "duelo"],
+    "discuto mucho": ["parejas", "vincular"],
+    "mi hijo": ["niños", "adolescentes", "educacional"],
+    "mi hija": ["niños", "adolescentes", "educacional"],
+    "problemas en la escuela": ["niños", "educacional", "bullying"],
+    "rendimiento escolar": ["educacional", "niños"],
+    "no sé qué hacer con mi vida": ["orientación vocacional", "depresión"],
+    "elegir carrera": ["orientación vocacional"],
+    "vocación": ["orientación vocacional"],
+    "terapia online": ["online"],
+    "atención online": ["online"],
+    "videollamada": ["online"],
+    "mi pareja": ["parejas", "vincular"],
+    "matrimonio": ["parejas"],
+    "separación": ["coparentalidad", "parejas"],
+    "divorcio": ["coparentalidad", "parejas"],
+    "consumo": ["adicciones"],
+    "dejar de fumar": ["adicciones"],
+    "bebida": ["adicciones"],
+    "memoria": ["neuropsicología"],
+    "me olvido": ["neuropsicología"],
+    "concentración": ["neuropsicología", "tdah"],
+    "no me concentro": ["neuropsicología"],
+    "trauma": ["emdr", "ansiedad"],
+    "estrés postraumático": ["emdr"],
+    "me acelera": ["ansiedad", "estrés"],
+    "nervios": ["ansiedad", "ataques de pánico"],
+    "me ahogo": ["ataques de pánico", "ansiedad"],
+    "oprimido": ["ataques de pánico", "ansiedad"],
+    "trabajo": ["burnout", "acoso laboral", "laboral"],
+    "jefe": ["acoso laboral", "burnout"],
+    "mobbing": ["acoso laboral"],
+    "comer": ["trastornos alimentarios", "psiconutrición"],
+    "comida": ["trastornos alimentarios", "psiconutrición"],
+    "obesidad": ["psiconutrición"],
+    "peso": ["psiconutrición", "trastornos alimentarios"],
+    "cuerpo": ["psiconutrición", "trastornos alimentarios"],
+    "embarazo": ["perinatal"],
+    "parto": ["perinatal"],
+    "posparto": ["perinatal"],
+    "bebé": ["perinatal", "materno filial"],
+    "cáncer": ["psicooncología"],
+    "oncológico": ["psicooncología"],
+    "deporte": ["deportiva"],
+    "rendimiento deportivo": ["deportiva"],
+    "pericia": ["forense", "pericias"],
+    "juicio": ["forense", "judicializados"],
+    "empresa": ["asesoría a empresas", "laboral"],
+    "empleados": ["asesoría a empresas"],
+    "rrhh": ["asesoría a empresas"],
+    "anciano": ["adulto mayor", "geriátrica"],
+    "abuelo": ["adulto mayor"],
+    "abuela": ["adulto mayor"],
+    "migración": ["transcultural"],
+    "inmigrante": ["transcultural"],
+    "comunidad": ["social"],
+    "discapacidad": ["discapacidad"],
+    "cud": ["discapacidad"],
+    "evaluar": ["evaluaciones"],
+    "test": ["evaluaciones"],
+    "padres": ["orientación a padres"],
+    "crianza": ["orientación a padres"],
+    "grupo": ["grupos terapéuticos", "terapia grupal"],
+    "taller": ["talleres"],
+    "obsesión": ["toc"],
+    "obsesiones": ["toc"],
+    "compulsión": ["toc"],
+    "lavarme las manos": ["toc"],
+    "revisar": ["toc"],
+    "inestabilidad": ["tlp"],
+    "borderline": ["tlp"],
+    "corte": ["autolesiones"],
+    "lastimarme": ["autolesiones"],
+    "fallecimiento": ["duelo"],
+    "muerte": ["duelo"],
+    "perdí a": ["duelo"],
+    "esquizofr": ["esquizofrenia"],
+    "delirio": ["psicosis"],
+    "alucin": ["psicosis"],
+    "acoso escolar": ["bullying"],
+    "matonaje": ["bullying"],
+  };
+
   // Detecta si el texto del usuario contiene palabras de riesgo
   function detectRisk(text: string): boolean {
     const lower = text.toLowerCase();
     return RISK_KEYWORDS.some((kw) => lower.includes(kw));
+  }
+
+  // === Búsqueda inteligente con comprensión de lenguaje natural ===
+  // Estrategia:
+  // 1. Revisar PHRASE_MAP para frases comunes → términos de búsqueda
+  // 2. Buscar por frase completa en el índice
+  // 3. Buscar por palabras individuales (tokenización)
+  // 4. Combinar y deduplicar resultados
+  function smartSearch(query: string, index: SearchEntry[]): SearchEntry[] {
+    const q = query.toLowerCase().trim();
+    if (!q) return [];
+
+    const found = new Map<string, SearchEntry>();
+
+    // 1. Revisar PHRASE_MAP: si la query contiene alguna frase mapeada,
+    // agregar los términos asociados como palabras de búsqueda
+    const expandedTerms: string[] = [];
+    for (const [phrase, terms] of Object.entries(PHRASE_MAP)) {
+      if (q.includes(phrase)) {
+        expandedTerms.push(...terms);
+      }
+    }
+
+    // 2. Buscar por frase completa en el índice
+    for (const entry of index) {
+      if (entry.searchText.includes(q)) {
+        found.set(entry.label, entry);
+      }
+    }
+
+    // 3. Buscar por términos expandidos del PHRASE_MAP
+    for (const term of expandedTerms) {
+      const termLower = term.toLowerCase();
+      for (const entry of index) {
+        if (entry.searchText.includes(termLower)) {
+          found.set(entry.label, entry);
+        }
+      }
+    }
+
+    // 4. Buscar por palabras individuales de la query
+    // (solo palabras de 4+ caracteres para evitar ruido con "el", "la", etc.)
+    const words = q.split(/\s+/).filter((w) => w.length >= 4);
+    for (const word of words) {
+      for (const entry of index) {
+        if (entry.searchText.includes(word)) {
+          found.set(entry.label, entry);
+        }
+      }
+    }
+
+    return Array.from(found.values());
+  }
+
+  // Genera una respuesta empática personalizada según los resultados
+  function buildAssistantResponse(results: SearchEntry[]): string {
+    if (results.length === 0) return "";
+
+    const conditionNames = results.slice(0, 3).map((r) => r.label.toLowerCase());
+    const mainTab = results[0].mainTabLabel;
+
+    if (results.length === 1) {
+      return `Podemos ayudarte. Esto suele relacionarse con ${conditionNames[0]}. En la Red Escucha Psicológica contamos con profesionales que pueden acompañarte en este proceso.`;
+    } else if (results.length === 2) {
+      return `Podemos ayudarte. Esto suele relacionarse con ${conditionNames[0]} o ${conditionNames[1]}. En la Red Escucha Psicológica contamos con profesionales especializados en estas áreas que pueden acompañarte.`;
+    } else {
+      return `Podemos ayudarte. Esto suele relacionarse con ${conditionNames[0]}, ${conditionNames[1]} o ${conditionNames[2]}. En la Red Escucha Psicológica contamos con profesionales que pueden acompañarte en este proceso dentro de la categoría "${mainTab}".`;
+    }
   }
 
   // Procesa la consulta del asistente y genera respuesta + navegación
@@ -835,21 +996,17 @@ export function LandingPage() {
 
     setAssistantIsRisk(false);
 
-    // 2. Buscar en el índice de especialidades usando el mismo sistema
-    // de sinónimos del buscador
-    const q = query.toLowerCase().trim();
-    const results = searchIndex.filter((entry) => entry.searchText.includes(q));
+    // 2. Búsqueda inteligente con comprensión de lenguaje natural
+    const results = smartSearch(query, searchIndex);
 
     if (results.length > 0) {
-      // 3. Generar respuesta empática
-      const firstResult = results[0];
-      setAssistantResponse(
-        `Gracias por contarnos lo que estás viviendo. En la Red Escucha Psicológica contamos con profesionales que pueden acompañarte en este proceso. Encontramos opciones que podrían ajustarse a tu necesidad en la categoría "${firstResult.mainTabLabel}".`
-      );
+      // 3. Generar respuesta empática personalizada
+      const response = buildAssistantResponse(results);
+      setAssistantResponse(response);
       setAssistantResults(results.slice(0, 4));
 
       // 4. Navegar automáticamente a la primera coincidencia
-      // (usar la misma función navigateToResult del buscador)
+      const firstResult = results[0];
       setTimeout(() => {
         navigateToResult(firstResult);
       }, 800);
@@ -865,20 +1022,17 @@ export function LandingPage() {
   // Maneja el click en un chip de acceso rápido
   const handleChipClick = useCallback((term: string) => {
     setAssistantQuery(term);
-    // Ejecutar búsqueda inmediatamente
+    // Ejecutar búsqueda inmediatamente usando smartSearch
     setTimeout(() => {
-      const q = term.toLowerCase().trim();
-      const results = searchIndex.filter((entry) => entry.searchText.includes(q));
+      const results = smartSearch(term, searchIndex);
       setAssistantHasSearched(true);
       setAssistantIsRisk(false);
 
       if (results.length > 0) {
-        const firstResult = results[0];
-        setAssistantResponse(
-          `Gracias por contarnos lo que estás viviendo. En la Red Escucha Psicológica contamos con profesionales que pueden acompañarte en este proceso. Encontramos opciones que podrían ajustarse a tu necesidad en la categoría "${firstResult.mainTabLabel}".`
-        );
+        const response = buildAssistantResponse(results);
+        setAssistantResponse(response);
         setAssistantResults(results.slice(0, 4));
-        setTimeout(() => navigateToResult(firstResult), 800);
+        setTimeout(() => navigateToResult(results[0]), 800);
       } else {
         setAssistantResponse(
           "Gracias por compartirnos lo que estás atravesando. Te invitamos a explorar nuestras especialidades o contactarnos directamente."
