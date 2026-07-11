@@ -21,28 +21,29 @@ export function isValidDni(dni: string): boolean {
 // POST /api/admin/patients — Admin manually creates a patient
 // Optional: enableTriage=true also creates a PatientRequest (Triage entry)
 //
-// Acceso:
-//   - Admin/super_admin: puede crear pacientes manualmente desde el panel
-//   - Público (sin sesión): puede crear pacientes desde el formulario de
-//     contacto de la landing page. Se detecta con el header
-//     'x-public-registration: true'. En este caso, se fuerza:
-//     * enableTriage = true (siempre va a triage)
-//     * password autogenerada (no se acepta password del cliente)
-//     * active = false (inactivo hasta que el admin lo revise)
+// Acceso público: si el body incluye `publicRegistration: true`, se
+// permite crear el paciente sin autenticación. Esto se usa desde el
+// formulario de contacto de la landing page.
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const isPublicRegistration = req.headers.get("x-public-registration") === "true";
-    const isAdmin = session?.user && ((session.user as { role: string }).role === "admin" || (session.user as { role: string }).role === "super_admin");
-
-    if (!session?.user && !isPublicRegistration) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-    }
-    if (session?.user && !isAdmin) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-    }
-
     const body = await req.json();
+
+    // === Detectar registro público ===
+    // Si el body incluye publicRegistration=true, se permite sin auth.
+    // Se fuerza: password autogenerada, enableTriage=true, active=false
+    const isPublicRegistration = body.publicRegistration === true;
+
+    if (!isPublicRegistration) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user) {
+        return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+      }
+      const role = (session.user as { role: string }).role;
+      if (role !== "admin" && role !== "super_admin") {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+      }
+    }
+
     const {
       name,
       email,
@@ -99,6 +100,10 @@ export async function POST(req: NextRequest) {
     // Para registros públicos, SIEMPRE crear triage
     const shouldEnableTriage = isPublicRegistration || enableTriage === true;
 
+    // Determine if user should be active
+    // Para registros públicos, active=false (inactivo hasta revisión)
+    const userActive = isPublicRegistration ? false : true;
+
     // Create User + Patient (+ PatientRequest if triage) in a transaction
     const result = await db.$transaction(async (tx) => {
       // 1. Create User
@@ -109,7 +114,7 @@ export async function POST(req: NextRequest) {
           phone: phone?.trim() || null,
           password: hashedPassword,
           role: "patient",
-          active: true,
+          active: userActive,
         },
       });
 

@@ -676,18 +676,19 @@ export function LandingPage() {
       }
 
       // === Crear Paciente + PatientRequest (Triage) ===
-      // Se usa el endpoint público /api/public/register-patient que crea
-      // User + Patient (con DNI) + PatientRequest (triage con motivo de
-      // consulta) en una sola transacción. No requiere autenticación.
-      const prRes = await fetch("/api/public/register-patient", {
+      // Se usa el endpoint /api/admin/patients con publicRegistration: true
+      // para crear el paciente sin necesidad de autenticación.
+      const prRes = await fetch("/api/admin/patients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          publicRegistration: true,
           name: contactForm.name,
           email: contactForm.email,
           phone: contactForm.phone || null,
           dni: contactForm.dni,
           notes: contactForm.message || null,
+          enableTriage: true,
           modality: contactForm.modality || "presencial",
           reason: contactForm.consultReason || "otros",
         }),
