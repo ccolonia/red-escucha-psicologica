@@ -20,14 +20,25 @@ export function isValidDni(dni: string): boolean {
 
 // POST /api/admin/patients — Admin manually creates a patient
 // Optional: enableTriage=true also creates a PatientRequest (Triage entry)
+//
+// Acceso:
+//   - Admin/super_admin: puede crear pacientes manualmente desde el panel
+//   - Público (sin sesión): puede crear pacientes desde el formulario de
+//     contacto de la landing page. Se detecta con el header
+//     'x-public-registration: true'. En este caso, se fuerza:
+//     * enableTriage = true (siempre va a triage)
+//     * password autogenerada (no se acepta password del cliente)
+//     * active = false (inactivo hasta que el admin lo revise)
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const isPublicRegistration = req.headers.get("x-public-registration") === "true";
+    const isAdmin = session?.user && ((session.user as { role: string }).role === "admin" || (session.user as { role: string }).role === "super_admin");
+
+    if (!session?.user && !isPublicRegistration) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
-    const role = (session.user as { role: string }).role;
-    if (role !== "admin" && role !== "super_admin") {
+    if (session?.user && !isAdmin) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -78,11 +89,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate a random password if not provided
-    const finalPassword = password?.trim() || Math.random().toString(36).slice(-10) + "A1!";
+    // Para registros públicos, SIEMPRE autogenerar (ignorar password del cliente)
+    const finalPassword = isPublicRegistration
+      ? Math.random().toString(36).slice(-10) + "A1!"
+      : (password?.trim() || Math.random().toString(36).slice(-10) + "A1!");
     const hashedPassword = await hashPassword(finalPassword);
 
     // Determine if we need to create a triage request
-    const shouldEnableTriage = enableTriage === true;
+    // Para registros públicos, SIEMPRE crear triage
+    const shouldEnableTriage = isPublicRegistration || enableTriage === true;
 
     // Create User + Patient (+ PatientRequest if triage) in a transaction
     const result = await db.$transaction(async (tx) => {

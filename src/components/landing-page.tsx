@@ -675,72 +675,70 @@ export function LandingPage() {
         return;
       }
 
-      // Siempre crear PatientRequest para triage (ya no hay selector de motivo)
-      {
-        const prRes = await fetch("/api/patient-requests", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: contactForm.name,
-            email: contactForm.email,
-            phone: contactForm.phone || null,
-            modality: contactForm.modality || "presencial",
-            notes: contactForm.message || null,
-            // === Edad y Protocolo de Minoridad ===
-            // El backend valida que patientAge sea entero 1-120 y que
-            // guardianName no esté vacío si patientAge < 18.
-            // Fallback 'otros' (antes 'consulta_general', depreciado).
-            patientAge: contactForm.patientAge ? parseInt(contactForm.patientAge, 10) : null,
-            guardianName: contactForm.guardianName || null,
-            reason: contactForm.consultReason || "otros",
-          }),
-        });
-
-        // Si el backend bloquea por email con appointment activo (409),
-        // mostramos el mensaje específico y abortamos el flujo (no mandamos
-        // el /api/contact porque sería confuso mandar el mensaje de éxito).
-        if (prRes.status === 409) {
-          const data = await prRes.json().catch(() => ({}));
-          if (data.code === "EMAIL_HAS_ACTIVE_APPOINTMENT") {
-            setActiveApptError(data.error);
-            // Scroll al form para asegurar que el usuario vea el mensaje
-            return;
-          }
-          // Otro 409 desconocido → tratar como error genérico
-          setContactError(true);
-          return;
-        }
-
-        // Cualquier otro error del POST (500, etc.) → igual mandamos el
-        // /api/contact para que al menos llegue el mensaje al admin, pero
-        // no bloqueamos el flujo. El triage se puede hacer manualmente.
-        if (!prRes.ok && prRes.status !== 201) {
-          console.error("Error al crear PatientRequest:", prRes.status);
-        }
-      }
-
-      const res = await fetch("/api/contact", {
+      // === Crear Paciente + PatientRequest (Triage) ===
+      // Se usa el endpoint /api/admin/patients que crea User + Patient
+      // + PatientRequest en una sola transacción cuando enableTriage=true.
+      // Esto graba al paciente en el panel admin de Pacientes (no en
+      // Consultas de Contacto) y lo ingresa al sistema de Triage.
+      const prRes = await fetch("/api/admin/patients", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-public-registration": "true",
+        },
         body: JSON.stringify({
           name: contactForm.name,
           email: contactForm.email,
-          phone: contactForm.phone,
-          message: contactForm.message,
-          reason: contactForm.reason,
-          // Enviar modality cuando es solicitar_turno (para que el admin
-          // la vea en el panel de Consultas de Contacto)
+          phone: contactForm.phone || null,
+          dni: contactForm.dni,
+          // Password autogenerada por el backend si viene vacía
+          password: "",
+          notes: contactForm.message || null,
+          enableTriage: true,
           modality: contactForm.modality || "presencial",
+          reason: contactForm.consultReason || "otros",
+          // Edad y tutor para el protocolo de minoridad
+          dateOfBirth: null,
+          emergencyContact: contactForm.guardianName || null,
         }),
       });
-      if (res.ok) {
+
+      if (prRes.status === 409) {
+        const data = await prRes.json().catch(() => ({}));
+        if (data.code === "EMAIL_HAS_ACTIVE_APPOINTMENT") {
+          setActiveApptError(data.error);
+          return;
+        }
+        // Email ya existe como usuario
+        toast.error(data.error || "Ya existe un usuario con ese email");
+        setContactError(true);
+        return;
+      }
+
+      if (prRes.ok) {
+        const data = await prRes.json().catch(() => ({}));
+        // Enviar email de notificación al admin via /api/contact
+        // (no crea Consulta de Contacto, solo manda email informativo)
+        try {
+          await fetch("/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: contactForm.name,
+              email: contactForm.email,
+              phone: contactForm.phone,
+              message: `Nuevo paciente registrado desde la web. DNI: ${contactForm.dni}. Motivo: ${contactForm.consultReason || "otros"}. Modalidad: ${contactForm.modality || "presencial"}. Mensaje: ${contactForm.message || "Sin mensaje"}`,
+              reason: "solicitar_turno",
+              modality: contactForm.modality || "presencial",
+            }),
+          });
+        } catch {
+          // El email es no-bloqueante — el paciente ya se creó
+        }
+
         setContactSent(true);
         setContactForm({ name: "", email: "", phone: "", dni: "", message: "", reason: "", modality: "", consultReason: "", patientAge: "", guardianName: "" });
-        // Google Ads conversion: Formulario de Contacto (1)
-        // Cuenta: AW-18195001096 (migrada de AW-1017920443 en commit 5bf1cdb)
-        // Label: hCYcCPbIorscEIjehuRD
-        // Dispara cuando el usuario envía el form de contacto exitosamente
-        // (tanto para consultas generales como para solicitudes de turno).
+        // Google Ads conversion
         if (typeof window !== "undefined" && typeof (window as unknown as Record<string, unknown>).gtag === "function") {
           (window as unknown as Record<string, unknown>).gtag("event", "conversion", {
             send_to: "AW-18195001096/hCYcCPbIorscEIjehuRD",
@@ -748,8 +746,9 @@ export function LandingPage() {
             currency: "ARS",
           });
         }
-        setTimeout(() => setContactSent(false), 4000);
       } else {
+        const errorData = await prRes.json().catch(() => ({}));
+        toast.error(errorData.error || "Error al registrar el paciente");
         setContactError(true);
       }
     } catch {
