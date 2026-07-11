@@ -329,6 +329,7 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: AlertCircle, label: "Trastorno Oposicionista Desafiante", desc: "Patrón persistente de conducta desafiante, irritable y desobediente hacia figuras de autoridad que afecta las relaciones familiares y sociales." },
       { icon: Eye, label: "EMDR", desc: "Terapia de reprocesamiento y desensibilización mediante movimientos oculares para el abordaje de traumas y experiencias adversas." },
       { icon: HeartPulse, label: "Trastornos Sexuales", desc: "Dificultades en la respuesta sexual, deseo, excitación o dolor que generan malestar y afectan la intimidad y las relaciones." },
+      { icon: Scale, label: "ASI", desc: "Adolescentes en Situación de Inferencia: intervención psicológica para jóvenes con medidas judiciales, en conflicto con la ley penal o en contextos de vulnerabilidad social." },
     ],
   },
 ];
