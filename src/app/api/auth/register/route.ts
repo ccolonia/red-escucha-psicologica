@@ -12,10 +12,13 @@ export async function POST(request: NextRequest) {
       name, email, phone, password, role, license, specialty, bio,
       title, cuil, gender, therapyTypes, targetAudience, therapyModality,
       onlineAttention, presentialAttention, homeAttention, zones,
-      // === Detalle de "Otras terapias" ===
-      // Texto libre que el profesional carga cuando selecciona
-      // "Otras terapias" en therapyTypes. Validado abajo.
       otherTherapyDetails,
+      // === Campos para registro público de pacientes desde landing page ===
+      dni,
+      modality: triageModality,
+      reason: triageReason,
+      notes: patientNotes,
+      enableTriage,
     } = body;
 
     if (!name || !email || !password) {
@@ -219,6 +222,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Default: create patient (no session check needed for self-registration)
+    // === Validar DNI si viene ===
+    let finalDni: string | null = null;
+    if (dni && typeof dni === "string" && dni.trim()) {
+      finalDni = dni.replace(/[^0-9]/g, "");
+      if (!/^\d{7,8}$/.test(finalDni)) {
+        return NextResponse.json(
+          { error: "El DNI debe tener entre 7 y 8 dígitos numéricos" },
+          { status: 400 }
+        );
+      }
+    }
+
     const hashedPassword = await hashPassword(password);
     const user = await db.user.create({
       data: {
@@ -233,8 +248,35 @@ export async function POST(request: NextRequest) {
     await db.patient.create({
       data: {
         userId: user.id,
+        dni: finalDni,
+        notes: patientNotes || null,
       },
     });
+
+    // === Crear PatientRequest para Triage si enableTriage ===
+    if (enableTriage) {
+      const validModalities = ["online", "presencial", "híbrida"];
+      const validReasons = [
+        "ansiedad", "depresion", "vinculos", "duelo", "autoestima",
+        "adicciones", "estres", "laboral", "orientacion_padres",
+        "evaluaciones", "discapacidad", "otros",
+        "infanto_juvenil", "consulta_general",
+      ];
+      const finalModality = validModalities.includes(triageModality) ? triageModality : "presencial";
+      const finalReason = validReasons.includes(triageReason) ? triageReason : "otros";
+
+      await db.patientRequest.create({
+        data: {
+          name,
+          email,
+          phone: phone || null,
+          modality: finalModality,
+          reason: finalReason,
+          notes: patientNotes || null,
+          status: "pending",
+        },
+      });
+    }
 
     return NextResponse.json(
       { message: "Cuenta creada exitosamente", userId: user.id },
