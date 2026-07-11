@@ -676,30 +676,20 @@ export function LandingPage() {
       }
 
       // === Crear Paciente + PatientRequest (Triage) ===
-      // Se usa el endpoint /api/admin/patients que crea User + Patient
-      // + PatientRequest en una sola transacción cuando enableTriage=true.
-      // Esto graba al paciente en el panel admin de Pacientes (no en
-      // Consultas de Contacto) y lo ingresa al sistema de Triage.
-      const prRes = await fetch("/api/admin/patients", {
+      // Se usa el endpoint público /api/public/register-patient que crea
+      // User + Patient (con DNI) + PatientRequest (triage con motivo de
+      // consulta) en una sola transacción. No requiere autenticación.
+      const prRes = await fetch("/api/public/register-patient", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-public-registration": "true",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: contactForm.name,
           email: contactForm.email,
           phone: contactForm.phone || null,
           dni: contactForm.dni,
-          // Password autogenerada por el backend si viene vacía
-          password: "",
           notes: contactForm.message || null,
-          enableTriage: true,
           modality: contactForm.modality || "presencial",
           reason: contactForm.consultReason || "otros",
-          // Edad y tutor para el protocolo de minoridad
-          dateOfBirth: null,
-          emergencyContact: contactForm.guardianName || null,
         }),
       });
 
@@ -716,26 +706,6 @@ export function LandingPage() {
       }
 
       if (prRes.ok) {
-        const data = await prRes.json().catch(() => ({}));
-        // Enviar email de notificación al admin via /api/contact
-        // (no crea Consulta de Contacto, solo manda email informativo)
-        try {
-          await fetch("/api/contact", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: contactForm.name,
-              email: contactForm.email,
-              phone: contactForm.phone,
-              message: `Nuevo paciente registrado desde la web. DNI: ${contactForm.dni}. Motivo: ${contactForm.consultReason || "otros"}. Modalidad: ${contactForm.modality || "presencial"}. Mensaje: ${contactForm.message || "Sin mensaje"}`,
-              reason: "solicitar_turno",
-              modality: contactForm.modality || "presencial",
-            }),
-          });
-        } catch {
-          // El email es no-bloqueante — el paciente ya se creó
-        }
-
         setContactSent(true);
         setContactForm({ name: "", email: "", phone: "", dni: "", message: "", reason: "", modality: "", consultReason: "", patientAge: "", guardianName: "" });
         // Google Ads conversion
