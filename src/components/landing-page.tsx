@@ -2192,14 +2192,15 @@ export function LandingPage() {
       </section>
 
       {/* ===== CONTACT ===== */}
-      <section id="contacto" className="paper-texture py-20 sm:py-28">
+      <section id="contacto" className="paper-texture py-12 sm:py-20 lg:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="sage-line max-w-xs mx-auto mb-12" />
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="sage-line max-w-xs mx-auto mb-8 sm:mb-12" />
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
+              className="hidden lg:block"
             >
               <h2 className="text-3xl sm:text-4xl font-serif font-bold text-forest-500">
                 {cmsConfig.contact_title || "Contactanos"}
@@ -2233,6 +2234,15 @@ export function LandingPage() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
+              {/* Título compacto visible solo en mobile (en desktop está en la columna izquierda) */}
+              <div className="lg:hidden mb-4 text-center">
+                <h2 className="text-2xl font-serif font-bold text-forest-500">
+                  {cmsConfig.contact_title || "Contactanos"}
+                </h2>
+                <p className="mt-1 text-forest-400 text-sm font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                  Completá el formulario y nos comunicaremos con vos a la brevedad.
+                </p>
+              </div>
               <Card className="bg-beige-50 border-beige-300/50 shadow-lg">
                 <CardContent className="p-6 sm:p-8">
                   {contactSent ? (
