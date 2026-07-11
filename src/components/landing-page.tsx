@@ -32,6 +32,32 @@ import {
   Facebook,
   Instagram,
   Linkedin,
+  AlertCircle,
+  Activity,
+  Users2,
+  Briefcase,
+  GraduationCap,
+  Gavel,
+  Building2,
+  Compass,
+  HeartPulse,
+  CloudRain,
+  Flame,
+  Waves,
+  Scale,
+  Undo2,
+  Scissors,
+  Stethoscope,
+  Eye,
+  Ear,
+  Moon,
+  Zap,
+  Target,
+  Trophy,
+  Microscope,
+  Globe,
+  Presentation,
+  Handshake,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -76,6 +102,111 @@ const defaultSpecialtyTabs = [
   { id: "individual", label: "Individual", items: [0, 1, 2, 3, 4, 5] },
   { id: "vincular", label: "Vincular", items: [6, 7, 8, 9] },
   { id: "evaluaciones", label: "Evaluaciones", items: [10, 11, 12] },
+];
+
+// ===== Nueva estructura de Especialidades (4 pestañas) =====
+// Cada pestaña tiene un id, label, e items con icono, título y descripción.
+// La pestaña "atencion" tiene sub-categorías (Individual, Vincular, Grupal).
+
+type SpecItem = { icon: React.ComponentType<{ className?: string }>; label: string; desc: string };
+type SpecSubTab = { id: string; label: string; items: SpecItem[] };
+type SpecMainTab = { id: string; label: string; subTabs?: SpecSubTab[]; items?: SpecItem[] };
+
+const specialtyMainTabs: SpecMainTab[] = [
+  {
+    id: "atencion",
+    label: "Atención",
+    subTabs: [
+      {
+        id: "individual",
+        label: "Individual",
+        items: [
+          { icon: Baby, label: "Niños/Niñas", desc: "Psicología infanto-juvenil con abordaje lúdico y adaptado a cada etapa del desarrollo." },
+          { icon: UserCheck, label: "Adolescentes", desc: "Acompañamiento respetuoso en la adolescencia, entendiendo sus necesidades y desafíos." },
+          { icon: Users, label: "Jóvenes", desc: "Terapia para jóvenes que transitan momentos de cambio, búsqueda y crecimiento personal." },
+          { icon: Heart, label: "Adultos", desc: "Terapia individual para adultos en todas las etapas de la vida." },
+          { icon: HeartHandshake, label: "Adulto Mayor", desc: "Acompañamiento psicológico para adultos mayores, atendiendo sus necesidades específicas." },
+          { icon: Shield, label: "Discapacidad (CUD)", desc: "Atención psicológica para personas con discapacidad, con certificado CUD." },
+        ],
+      },
+      {
+        id: "vincular",
+        label: "Vincular",
+        items: [
+          { icon: HeartHandshake, label: "Parejas", desc: "Terapia vincular y de pareja para reconstruir y fortalecer la relación." },
+          { icon: Baby, label: "Materno Filial", desc: "Acompañamiento en el vínculo madre e hijo/a, fortaleciendo la relación y la crianza." },
+          { icon: UserCheck, label: "Paterno Filial", desc: "Acompañamiento en el vínculo padre e hijo/a, fortaleciendo la relación y la crianza." },
+          { icon: Shield, label: "Familias", desc: "Terapia familiar sistémica para armonizar el hogar y mejorar la comunicación." },
+        ],
+      },
+      {
+        id: "grupal",
+        label: "Terapia Grupal",
+        items: [
+          { icon: Users, label: "Grupos Terapéuticos", desc: "Espacios de encuentro con otros que transitan situaciones similares, coordinados por un profesional." },
+          { icon: BookOpen, label: "Talleres", desc: "Encuentros formativos y vivenciales sobre temáticas específicas de salud mental." },
+          { icon: HandHeart, label: "Espacios de Acompañamiento", desc: "Grupos de contención emocional para sostenimiento y prevención." },
+        ],
+      },
+    ],
+  },
+  {
+    id: "especialidades",
+    label: "Especialidades",
+    items: [
+      { icon: Brain, label: "Psicología Clínica", desc: "Abordaje de trastornos emocionales, ansiedad, depresión y procesos de autoconocimiento." },
+      { icon: Microscope, label: "Neuropsicología", desc: "Evaluación y rehabilitación de funciones cognitivas vinculadas al funcionamiento cerebral." },
+      { icon: Baby, label: "Psicología Perinatal", desc: "Acompañamiento en el embarazo, parto, puerperio y vínculo temprano con el bebé." },
+      { icon: HeartPulse, label: "Psiconutrición", desc: "Abordaje psicológico de los trastornos alimentarios y la relación con el cuerpo." },
+      { icon: Heart, label: "Psicooncología", desc: "Apoyo emocional a pacientes oncológicos y sus familias durante el proceso de tratamiento." },
+      { icon: Trophy, label: "Psicología Deportiva", desc: "Optimización del rendimiento deportivo y manejo de la presión competitiva." },
+      { icon: Gavel, label: "Psicología Forense", desc: "Evaluaciones psicológicas para el ámbito judicial, peritajes y informes de parte." },
+      { icon: Briefcase, label: "Psicología Laboral / Organizacional", desc: "Bienestar laboral, prevención de estrés y clima organizacional." },
+      { icon: GraduationCap, label: "Psicología Educacional", desc: "Dificultades de aprendizaje, orientación vocacional y acompañamiento escolar." },
+      { icon: HeartHandshake, label: "Psicología Geriátrica", desc: "Atención psicológica para adultos mayores y sus familias en el envejecimiento." },
+      { icon: Globe, label: "Psicología Social / Comunitaria", desc: "Intervención en comunidades, prevención y promoción de la salud mental colectiva." },
+      { icon: Compass, label: "Psicología Transcultural", desc: "Abordaje psicológico desde la diversidad cultural, migración y procesos de adaptación." },
+    ],
+  },
+  {
+    id: "servicios",
+    label: "Servicios",
+    items: [
+      { icon: FileText, label: "Evaluaciones", desc: "Evaluaciones psicológicas integrales para orientar el diagnóstico y el plan terapéutico." },
+      { icon: Gavel, label: "Pericias", desc: "Pericias psicológicas de parte realizadas por profesionales matriculados con rigor y confidencialidad." },
+      { icon: Compass, label: "Orientación Vocacional", desc: "Proceso de orientación para la elección de carrera y proyectos de vida." },
+      { icon: HandHeart, label: "Orientación a Padres", desc: "Acompañamiento y herramientas para padres en la crianza y el vínculo con sus hijos." },
+      { icon: Shield, label: "Discapacidad", desc: "Evaluaciones y certificaciones para trámites de discapacidad y adaptaciones necesarias." },
+      { icon: Building2, label: "Asesoría a Empresas", desc: "Programas de bienestar corporativo, prevención de riesgos psicosociales y apoyo al empleado." },
+    ],
+  },
+  {
+    id: "motivos",
+    label: "Motivos de Consulta",
+    items: [
+      { icon: CloudRain, label: "Ansiedad", desc: "Preocupación constante, tensión y nerviosismo que interfieren con tu vida diaria." },
+      { icon: Zap, label: "Ataques de Pánico", desc: "Episodios de miedo intenso con síntomas físicos repentinos que generan gran angustia." },
+      { icon: Waves, label: "Depresión", desc: "Tristeza persistente, pérdida de interés y falta de energía que afecta tu bienestar." },
+      { icon: Flame, label: "Estrés", desc: "Sobrecarga emocional y física frente a las demandas de la vida cotidiana." },
+      { icon: AlertCircle, label: "Burnout", desc: "Agotamiento físico y mental por exposición prolongada al estrés laboral." },
+      { icon: Activity, label: "TOC", desc: "Pensamientos intrusivos y comportamientos repetitivos que generan malestar significativo." },
+      { icon: Waves, label: "TLP", desc: "Inestabilidad emocional, relaciones intensas y cambios de humor que afectan tu vida." },
+      { icon: HeartPulse, label: "Trastornos Alimentarios", desc: "Relación conflictiva con la comida, el cuerpo y la autoimagen." },
+      { icon: Scissors, label: "Adicciones", desc: "Dependencia a sustancias o comportamientos que generan pérdida de control." },
+      { icon: CloudRain, label: "Duelo", desc: "Proceso de adaptación tras la pérdida de un ser querido o situaciones significativas." },
+      { icon: Shield, label: "Violencia y Abuso Sexual", desc: "Acompañamiento profesional frente a experiencias de violencia o abuso." },
+      { icon: AlertCircle, label: "Bullying", desc: "Acoso escolar que afecta el bienestar emocional y el rendimiento académico." },
+      { icon: Briefcase, label: "Acoso Laboral", desc: "Mobbing o acoso en el ámbito laboral que impacta la salud mental y el desempeño." },
+      { icon: Handshake, label: "Coparentalidad", desc: "Coordinación y comunicación entre padres separados para la crianza de los hijos." },
+      { icon: Undo2, label: "Revinculaciones", desc: "Proceso de reconstrucción de vínculos familiares afectados o interrumpidos." },
+      { icon: HeartPulse, label: "Autolesiones", desc: "Comportamientos de autolesión como expresión de dolor emocional que requieren contención." },
+      { icon: AlertCircle, label: "Ideación Suicida", desc: "Pensamientos sobre la muerte o el suicidio que necesitan atención profesional inmediata." },
+      { icon: Brain, label: "Psicosis", desc: "Pérdida de contacto con la realidad que requiere abordaje profesional especializado." },
+      { icon: Brain, label: "Esquizofrenia", desc: "Trastorno que afecta el pensamiento, las percepciones y el funcionamiento social." },
+      { icon: Moon, label: "Hebefrenia", desc: "Forma de esquizofrenia con cambios emocionales y de conducta en la adolescencia." },
+      { icon: Scale, label: "Pacientes Judicializados", desc: "Atención psicológica para personas con procesos judiciales o medida de seguridad." },
+    ],
+  },
 ];
 
 const defaultTestimonials = [
@@ -170,6 +301,9 @@ export function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("individual");
+  // === Nuevos estados para la sección de Especialidades rediseñada ===
+  const [specialtyMainTab, setSpecialtyMainTab] = useState("atencion");
+  const [specialtySubTab, setSpecialtySubTab] = useState("individual");
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState(false);
@@ -1009,37 +1143,41 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ===== ESPECIALIDADES ===== */}
-      <section id="especialidades" className="bg-beige-50 py-20 sm:py-28">
+      {/* ===== ESPECIALIDADES — REDISEÑO 4 PESTAÑAS ===== */}
+      <section id="especialidades" className="bg-beige-50 py-16 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="sage-line max-w-xs mx-auto mb-12" />
-          <motion.div className="text-center max-w-2xl mx-auto mb-12" {...fadeInUp}>
+          <div className="sage-line max-w-xs mx-auto mb-10" />
+          <motion.div className="text-center max-w-2xl mx-auto mb-10" {...fadeInUp}>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-forest-500">
               {cmsConfig.specialties_title || "Nuestras Especialidades"}
             </h2>
-            <p className="mt-4 text-forest-400 text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
+            <p className="mt-4 text-forest-400 text-base sm:text-lg font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
               {cmsConfig.specialties_description || "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos y necesidades, garantizando confidencialidad y profesionalismo en cada acompañamiento."}
             </p>
           </motion.div>
 
-          {/* Tabs */}
-          {/* === Strip deslizable en mobile + flex centrado en desktop === */}
-          {/* En mobile (default): flex-nowrap + overflow-x-auto = carrusel
-              horizontal fluido que se desliza con el dedo. Los botones no
-              se amontonan en múltiples renglones (que ensuciaban la UI en
-              celulares con 9 especialidades).
-              En pantallas medianas+ (md:): flex-wrap + justify-center =
-              distribución tradicional centrada en una o más líneas.
-              scrollbar-none oculta la scrollbar nativa fea de Chrome/Safari.
-              snap-x snap-mandatory + snap-align-start en botones = scroll
-              magnético suave al deslizar. */}
-          <div className="flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible md:justify-center gap-2 px-4 md:px-0 pb-3 md:pb-0 scrollbar-none snap-x snap-mandatory mb-10">
-            {cmsSpecialtyTabs.map((tab) => (
+          {/* === Pestañas principales (4 tabs horizontales) === */}
+          {/* En mobile: strip deslizable horizontal con snap.
+              En desktop: centrado con flex-wrap. */}
+          <div
+            role="tablist"
+            aria-label="Categorías de especialidades"
+            className="flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible md:justify-center gap-2 px-2 md:px-0 pb-2 md:pb-0 scrollbar-none snap-x snap-mandatory mb-6"
+          >
+            {specialtyMainTabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap snap-start ${
-                  activeTab === tab.id
+                role="tab"
+                aria-selected={specialtyMainTab === tab.id}
+                aria-controls={`panel-${tab.id}`}
+                id={`tab-${tab.id}`}
+                onClick={() => {
+                  setSpecialtyMainTab(tab.id);
+                  // Reset sub-tab al primer sub-tab de la pestaña
+                  if (tab.subTabs) setSpecialtySubTab(tab.subTabs[0].id);
+                }}
+                className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap snap-start focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400 focus-visible:ring-offset-2 ${
+                  specialtyMainTab === tab.id
                     ? "bg-forest-500 text-beige-50 shadow-md"
                     : "bg-beige-200 text-forest-600 hover:bg-beige-300"
                 }`}
@@ -1050,38 +1188,77 @@ export function LandingPage() {
             ))}
           </div>
 
+          {/* === Sub-pestañas (solo para "Atención") === */}
+          {specialtyMainTab === "atencion" && (
+            <div
+              role="tablist"
+              aria-label="Tipos de atención"
+              className="flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-x-visible md:justify-center gap-2 px-2 md:px-0 pb-2 md:pb-0 scrollbar-none snap-x snap-mandatory mb-6"
+            >
+              {specialtyMainTabs[0].subTabs?.map((sub) => (
+                <button
+                  key={sub.id}
+                  role="tab"
+                  aria-selected={specialtySubTab === sub.id}
+                  aria-controls={`subpanel-${sub.id}`}
+                  onClick={() => setSpecialtySubTab(sub.id)}
+                  className={`px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap snap-start focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400 focus-visible:ring-offset-2 ${
+                    specialtySubTab === sub.id
+                      ? "bg-sage-500 text-white shadow-sm"
+                      : "bg-beige-100 text-forest-500 hover:bg-beige-200"
+                  }`}
+                  style={{ fontFamily: "Montserrat, sans-serif" }}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* === Panel de tarjetas === */}
           <motion.div
-            key={activeTab}
+            key={specialtyMainTab + (specialtyMainTab === "atencion" ? specialtySubTab : "")}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            role="tabpanel"
+            id={`panel-${specialtyMainTab}`}
+            aria-labelledby={`tab-${specialtyMainTab}`}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5"
           >
-            {cmsSpecialtyTabs
-              .find((t) => t.id === activeTab)
-              ?.items.map((idx) => {
-                const spec = cmsSpecialties[idx];
-                return (
-                  <div
-                    key={idx}
-                    className="specialty-card bg-beige-100 rounded-xl p-6 cursor-default"
-                  >
-                    <div className="w-12 h-12 bg-sage-300/15 rounded-xl flex items-center justify-center mb-4">
-                      <spec.icon className="w-6 h-6 text-sage-500" />
-                    </div>
-                    <h3 className="font-serif font-semibold text-forest-500 text-lg">
-                      {spec.label}
-                    </h3>
-                    <p className="text-forest-400 text-sm mt-1.5 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>{spec.desc}</p>
-                  </div>
-                );
-              })}
-          </motion.div>
+            {(() => {
+              // Determinar qué items mostrar
+              const activeMainTab = specialtyMainTabs.find((t) => t.id === specialtyMainTab);
+              if (!activeMainTab) return null;
 
-          {/* Listado de especialidades */}
-          <p className="text-center mt-10 text-forest-400 text-sm font-light italic" style={{ fontFamily: "Montserrat, sans-serif" }}>
-            Depresión, ansiedad, fobias, trastornos alimentarios, discapacidad, psiconutrición, duelos, adicciones, estrés, estrés laboral, autoestima, problemas conductuales, problemas vinculares, crisis vital, autolesión, rendimiento escolar, otros.
-          </p>
+              let itemsToShow: SpecItem[] = [];
+              if (activeMainTab.subTabs) {
+                // Es la pestaña "Atención" con sub-tabs
+                const activeSub = activeMainTab.subTabs.find((s) => s.id === specialtySubTab);
+                if (activeSub) itemsToShow = activeSub.items;
+              } else if (activeMainTab.items) {
+                // Es una pestaña directa sin sub-tabs
+                itemsToShow = activeMainTab.items;
+              }
+
+              return itemsToShow.map((item) => (
+                <div
+                  key={item.label}
+                  className="specialty-card bg-beige-100 rounded-xl p-5 sm:p-6 cursor-default transition-all duration-300 hover:shadow-md hover:bg-beige-50"
+                >
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 bg-sage-300/15 rounded-xl flex items-center justify-center mb-3 sm:mb-4">
+                    <item.icon className="w-5 h-5 sm:w-6 sm:h-6 text-sage-500" />
+                  </div>
+                  <h3 className="font-serif font-semibold text-forest-500 text-base sm:text-lg">
+                    {item.label}
+                  </h3>
+                  <p className="text-forest-400 text-xs sm:text-sm mt-1.5 font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                    {item.desc}
+                  </p>
+                </div>
+              ));
+            })()}
+          </motion.div>
         </div>
       </section>
 
