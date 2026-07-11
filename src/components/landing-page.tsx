@@ -74,6 +74,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAppStore } from "@/lib/store";
+import { toast } from "sonner";
 
 // ===== Icon map for dynamic CMS content =====
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -407,13 +408,11 @@ export function LandingPage() {
     name: "",
     email: "",
     phone: "",
+    dni: "",
     message: "",
     reason: "",
     modality: "",
     consultReason: "",
-    // === Edad y Protocolo de Minoridad ===
-    // patientAge y guardianName se mandan al backend solo cuando el
-    // usuario eligió "Solicitar Turno" en el combo principal.
     patientAge: "",
     guardianName: "",
   });
@@ -668,8 +667,16 @@ export function LandingPage() {
     setContactError(false);
     setActiveApptError(null);
     try {
-      // If requesting an appointment, also create a PatientRequest for triage
-      if (contactForm.reason === "solicitar_turno") {
+      // === Validar DNI ===
+      const dniRegex = /^\d{7,8}$/;
+      if (!dniRegex.test(contactForm.dni)) {
+        toast.error("El DNI debe tener entre 7 y 8 dígitos numéricos");
+        setContactSending(false);
+        return;
+      }
+
+      // Siempre crear PatientRequest para triage (ya no hay selector de motivo)
+      {
         const prRes = await fetch("/api/patient-requests", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -723,12 +730,12 @@ export function LandingPage() {
           reason: contactForm.reason,
           // Enviar modality cuando es solicitar_turno (para que el admin
           // la vea en el panel de Consultas de Contacto)
-          modality: contactForm.reason === "solicitar_turno" ? (contactForm.modality || "presencial") : null,
+          modality: contactForm.modality || "presencial",
         }),
       });
       if (res.ok) {
         setContactSent(true);
-        setContactForm({ name: "", email: "", phone: "", message: "", reason: "", modality: "", consultReason: "", patientAge: "", guardianName: "" });
+        setContactForm({ name: "", email: "", phone: "", dni: "", message: "", reason: "", modality: "", consultReason: "", patientAge: "", guardianName: "" });
         // Google Ads conversion: Formulario de Contacto (1)
         // Cuenta: AW-18195001096 (migrada de AW-1017920443 en commit 5bf1cdb)
         // Label: hCYcCPbIorscEIjehuRD
@@ -2314,28 +2321,29 @@ export function LandingPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="contact-reason" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Solicitar</Label>
-                          <Select
-                            value={contactForm.reason}
-                            onValueChange={(value) =>
-                              setContactForm({ ...contactForm, reason: value })
-                            }
-                          >
-                            <SelectTrigger className="border-beige-300 bg-beige-100 focus:ring-sage-300/20">
-                              <SelectValue placeholder="Seleccioná una opción" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="solicitar_turno">
-                                Solicitar Turno
-                              </SelectItem>
-                              <SelectItem value="informacion">
-                                Información
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label htmlFor="contact-dni" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                            DNI <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="contact-dni"
+                            type="text"
+                            value={contactForm.dni}
+                            onChange={(e) => {
+                              // Sanitizar: solo permitir dígitos mientras el usuario escribe
+                              const cleaned = e.target.value.replace(/[^0-9]/g, "");
+                              setContactForm({ ...contactForm, dni: cleaned });
+                            }}
+                            placeholder="12345678"
+                            maxLength={8}
+                            inputMode="numeric"
+                            className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
+                          />
+                          <p className="text-xs text-forest-400" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                            7-8 dígitos (sin puntos ni guiones)
+                          </p>
                         </div>
                       </div>
-                      {contactForm.reason === "solicitar_turno" && (
+                      {(
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="contact-modality" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Modalidad preferida</Label>
@@ -2390,7 +2398,7 @@ export function LandingPage() {
                           usuario público ninguna etiqueta de etapa vital (Niñez,
                           Adolescencia, etc.). Esa inteligencia de categorización
                           es exclusiva del panel Triage admin (ver admin-triage.tsx). */}
-                      {contactForm.reason === "solicitar_turno" && (
+                      {(
                         <div className="space-y-3">
                           <div className="space-y-2">
                             <Label htmlFor="patient-age" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
@@ -2448,7 +2456,7 @@ export function LandingPage() {
                         </div>
                       )}
                       <div className="space-y-2">
-                        <Label htmlFor="contact-message" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Mensaje {contactForm.reason === "solicitar_turno" ? "" : "*"}</Label>
+                        <Label htmlFor="contact-message" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Mensaje</Label>
                         <Textarea
                           id="contact-message"
                           required
