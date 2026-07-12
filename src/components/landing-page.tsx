@@ -280,6 +280,7 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: Compass, label: "Psicología Transcultural", desc: "Abordaje psicológico desde la diversidad cultural, migración y procesos de adaptación." },
       { icon: Brain, label: "Terapia Cognitivo Conductual (TCC)", desc: "Enfoque terapéutico basado en la identificación y modificación de patrones de pensamiento y conducta disfuncionales." },
       { icon: HeartPulse, label: "Sexología", desc: "Abordaje psicológico de la sexualidad humana, orientación, identidad y disfunciones sexuales desde una perspectiva integral." },
+      { icon: Users, label: "Terapia Sistémica", desc: "Abordaje terapéutico centrado en las relaciones y dinámicas entre los miembros de un sistema familiar, social o laboral para generar cambios sostenibles." },
     ],
   },
   {
