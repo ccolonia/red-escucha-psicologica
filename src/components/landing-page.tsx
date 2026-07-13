@@ -2056,9 +2056,9 @@ export function LandingPage() {
                     {item.desc}
                   </p>
                   {/* Overlay "Solicitar Turno" al hacer hover */}
-                  <div className="absolute inset-0 bg-forest-500/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl">
-                    <span className="text-white font-semibold text-sm sm:text-base flex items-center gap-2" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                      <CalendarPlus className="w-5 h-5" />
+                  <div className="absolute inset-0 bg-sage-300/20 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
+                    <span className="text-forest-600 font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-white/80 px-3 py-1.5 rounded-full" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                      <CalendarPlus className="w-4 h-4" />
                       Solicitar Turno
                     </span>
                   </div>
