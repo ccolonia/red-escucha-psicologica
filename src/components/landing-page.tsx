@@ -2039,10 +2039,11 @@ export function LandingPage() {
                 <div
                   key={item.label}
                   id={cardId}
-                  className={`specialty-card rounded-xl p-5 sm:p-6 cursor-default transition-all duration-500 ${
+                  onClick={() => scrollToSection("contacto")}
+                  className={`specialty-card rounded-xl p-5 sm:p-6 cursor-pointer transition-all duration-500 group relative overflow-hidden ${
                     searchHighlight === item.label
                       ? "bg-sage-100 ring-2 ring-sage-400 shadow-lg scale-105"
-                      : "bg-beige-100 hover:shadow-md hover:bg-beige-50"
+                      : "bg-beige-100 hover:shadow-lg hover:bg-beige-50"
                   }`}
                 >
                   <div className="w-11 h-11 sm:w-12 sm:h-12 bg-sage-300/15 rounded-xl flex items-center justify-center mb-3 sm:mb-4">
@@ -2054,6 +2055,13 @@ export function LandingPage() {
                   <p className="text-forest-400 text-xs sm:text-sm mt-1.5 font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
                     {item.desc}
                   </p>
+                  {/* Overlay "Solicitar Turno" al hacer hover */}
+                  <div className="absolute inset-0 bg-forest-500/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl">
+                    <span className="text-white font-semibold text-sm sm:text-base flex items-center gap-2" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                      <CalendarPlus className="w-5 h-5" />
+                      Solicitar Turno
+                    </span>
+                  </div>
                 </div>
                 );
               });
