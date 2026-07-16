@@ -22,6 +22,7 @@ import {
   Settings2,
   AlertCircle,
   DollarSign,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ const ADMIN_NAV: NavItem[] = [
   { view: "admin-dashboard", label: "Inicio", icon: LayoutDashboard },
   { view: "admin-triage", label: "Triage", icon: AlertCircle },
   { view: "admin-agenda-central", label: "Agenda Central", icon: LayoutGrid },
+  { view: "admin-derivador", label: "Derivador", icon: Zap },
   { view: "admin-appointments", label: "Turnos", icon: Calendar },
   { view: "admin-professionals", label: "Profesionales", icon: Stethoscope },
   { view: "admin-patients", label: "Pacientes", icon: Users },

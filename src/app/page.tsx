@@ -34,6 +34,7 @@ import { AdminPlanilla } from "@/components/admin-planilla";
 import { AdminLiquidation } from "@/components/admin-liquidation";
 import { AdminTriage } from "@/components/admin-triage";
 import { AdminAgendaCentral } from "@/components/admin-agenda-central";
+import { DerivadorInteligente } from "@/components/admin-derivador";
 import { ProfessionalRegister } from "@/components/professional-register";
 import { AppNavigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
@@ -64,6 +65,7 @@ function DashboardContent() {
     "admin-cms": <AdminCMS />,
     "admin-profile": <AdminProfile />,
     "admin-agenda-central": <AdminAgendaCentral />,
+    "admin-derivador": <DerivadorInteligente />,
   };
 
   return (

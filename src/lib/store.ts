@@ -25,6 +25,7 @@ export type AppView =
   | "admin-cms"
   | "admin-profile"
   | "admin-agenda-central"
+  | "admin-derivador"
   | "forgot-password"
   | "professional-register";
 
