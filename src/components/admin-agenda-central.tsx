@@ -915,20 +915,37 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
     return slots;
   };
 
-  // === Calcular slotDuration más común (igual que el profesional) ===
-  // El profesional usa el slotDuration MÁS COMÚN de sus schedules.
-  // NO usar MCD (causaba grids demasiado densos).
+  // === Calcular timeSlots: RÉPLICA EXACTA del profesional ===
+  // El profesional usa generateTimeSlotsForSchedule() que alinea los slots
+  // al startTime de cada schedule. Esto garantiza que las filas de la grilla
+  // coincidan exactamente con los slots configurados.
+  // Antes usábamos generateTimeSlotsDynamic() que arrancaba desde 06:00
+  // con múltiplos de slotDuration → 14:00 no era múltiplo de 45 desde 06:00
+  // y se mostraba como 14:15 (desalineado).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawSchedules = (professional as any)?.schedules || [];
   const timeSlots = useMemo(() => {
     if (rawSchedules.length === 0) return generateTimeSlotsDynamic(45);
-    const counts: Record<number, number> = {};
+
+    // Para cada schedule, generar sus slots alineados a su startTime
+    // (igual que professional-weekly-agenda.tsx línea 472-487)
+    const allSlotsSet = new Set<string>();
     for (const s of rawSchedules) {
-      counts[s.slotDuration] = (counts[s.slotDuration] || 0) + 1;
+      const [startH, startM] = s.startTime.split(":").map(Number);
+      const [endH, endM] = s.endTime.split(":").map(Number);
+      const startMin = startH * 60 + startM;
+      const endMin = endH * 60 + endM;
+      let current = startMin;
+      while (current < endMin) {
+        const h = Math.floor(current / 60);
+        const m = current % 60;
+        allSlotsSet.add(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
+        current += s.slotDuration;
+      }
     }
-    const mostCommon = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-    const slotDuration = mostCommon ? parseInt(mostCommon[0], 10) : 45;
-    return generateTimeSlotsDynamic(slotDuration);
+
+    if (allSlotsSet.size === 0) return generateTimeSlotsDynamic(45);
+    return Array.from(allSlotsSet).sort();
   }, [rawSchedules]);
 
   // === isSlotInSchedule: RÉPLICA EXACTA del profesional ===
