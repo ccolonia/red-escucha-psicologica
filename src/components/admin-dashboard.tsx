@@ -2069,7 +2069,25 @@ export function AdminPatients() {
                       </div>
                       <p className="text-sm text-teal-600">{patient.user.email}</p>
                       {patient.user.phone && (
-                        <p className="text-sm text-teal-500">{patient.user.phone}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm text-teal-500">{patient.user.phone}</p>
+                          {(() => {
+                            const waPhone = formatPhoneForWhatsApp(patient.user.phone);
+                            const waMsg = encodeURIComponent(`Hola ${patient.user.name}, te contacto desde Red Escucha Psicológica`);
+                            return (
+                              <a
+                                href={`https://wa.me/${waPhone}?text=${waMsg}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-medium rounded-full transition-colors"
+                                title={`Enviar WhatsApp a ${patient.user.name}`}
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                WhatsApp
+                              </a>
+                            );
+                          })()}
+                        </div>
                       )}
                       {(patient.dni || patient.dateOfBirth || patient.emergencyContact || patient.notes) && (
                         <div className="mt-1 text-xs text-teal-400 space-y-0.5">
