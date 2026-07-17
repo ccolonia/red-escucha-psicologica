@@ -1480,6 +1480,22 @@ export function AdminProfessionals() {
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
+                            {/* === Botón WhatsApp (acceso rápido sin expandir ficha) === */}
+                            {prof.user.phone && (() => {
+                              const waPhone = formatPhoneForWhatsApp(prof.user.phone);
+                              const waMsg = encodeURIComponent(`Hola ${prof.user.name}, te contacto desde Red Escucha Psicológica`);
+                              return (
+                                <a
+                                  href={`https://wa.me/${waPhone}?text=${waMsg}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center h-8 px-2.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-medium rounded-md transition-colors"
+                                  title={`Enviar WhatsApp a ${prof.user.name}`}
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                </a>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -1510,9 +1526,27 @@ export function AdminProfessionals() {
                                 </div>
                               )}
                               {prof.user.phone && (
-                                <div>
-                                  <span className="text-teal-500">Teléfono:</span>{" "}
-                                  <span className="text-teal-800">{prof.user.phone}</span>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div>
+                                    <span className="text-teal-500">Teléfono:</span>{" "}
+                                    <span className="text-teal-800">{prof.user.phone}</span>
+                                  </div>
+                                  {(() => {
+                                    const waPhone = formatPhoneForWhatsApp(prof.user.phone);
+                                    const waMsg = encodeURIComponent(`Hola ${prof.user.name}, te contacto desde Red Escucha Psicológica`);
+                                    return (
+                                      <a
+                                        href={`https://wa.me/${waPhone}?text=${waMsg}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-medium rounded-full transition-colors"
+                                        title={`Enviar WhatsApp a ${prof.user.name}`}
+                                      >
+                                        <MessageCircle className="w-3 h-3" />
+                                        WhatsApp
+                                      </a>
+                                    );
+                                  })()}
                                 </div>
                               )}
                             </div>
