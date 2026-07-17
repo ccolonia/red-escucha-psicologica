@@ -139,6 +139,17 @@ export function DerivadorInteligente() {
       // cada día tiene availableSlots[]. El frontend necesita un array plano de slots
       // con {date, time, endTime, modality}.
       // Bug original: el componente esperaba p.slots (array) pero el endpoint devuelve p.weeklySlots (objeto).
+      //
+      // === FILTRO DE SLOTS PASADOS (bug 17/07/2026) ===
+      // El endpoint NO filtra días pasados (porque la Agenda Central necesita mostrarlos
+      // en la grilla con marca 'past'). El derivador SÍ debe mostrar solo slots futuros.
+      // Forzamos timezone Argentina (UTC-3) porque el servidor Vercel está en UTC y el
+      // admin puede estar navegando desde cualquier tz.
+      const ARG_TZ = "America/Argentina/Buenos_Aires";
+      const nowArg = new Date();
+      const todayStr = nowArg.toLocaleDateString("sv-SE", { timeZone: ARG_TZ }); // "2026-07-16"
+      const nowArgTime = nowArg.toLocaleTimeString("en-GB", { timeZone: ARG_TZ, hour: "2-digit", minute: "2-digit" }); // "14:30"
+
       const mapped: ProfesionalSugerido[] = data.professionals.map((p: any) => {
         const weeklySlots = p.weeklySlots || {};
         const flatSlots: SlotDisponible[] = [];
@@ -147,15 +158,25 @@ export function DerivadorInteligente() {
           const dayData = weeklySlots[dayKey];
           if (!dayData || !dayData.availableSlots) continue;
           for (const slot of dayData.availableSlots) {
+            const slotDate = dayData.date; // "2026-07-13"
+            const slotTime = slot.time;    // "14:00"
+
+            // === FILTRO TEMPORAL ===
+            // 1) Día pasado → descartar
+            if (slotDate < todayStr) continue;
+            // 2) Hoy pero slot ya pasado → descartar
+            if (slotDate === todayStr && slotTime <= nowArgTime) continue;
+            // 3) Futuro (hoy+y o días futuros) → mantener
+
             flatSlots.push({
-              date: dayData.date,
-              time: slot.time,
+              date: slotDate,
+              time: slotTime,
               endTime: slot.endTime,
               modality: slot.modality,
             });
           }
         }
-        // Ordenar slots por fecha y hora
+        // Ordenar slots por fecha y hora (los más próximos primero)
         flatSlots.sort((a, b) => {
           if (a.date !== b.date) return a.date.localeCompare(b.date);
           return a.time.localeCompare(b.time);
