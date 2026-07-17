@@ -248,11 +248,12 @@ export function DerivadorInteligente() {
         filtered = filtered.filter((p: ProfesionalSugerido) => p.slots && p.slots.length > 0);
       }
 
-      // Limitar a 6 slots por profesional (los más próximos)
-      filtered = filtered.map((p: ProfesionalSugerido) => ({
-        ...p,
-        slots: p.slots.slice(0, 6),
-      }));
+      // === Sin límite de slots por profesional ===
+      // Antes había un .slice(0, 6) que cortaba los últimos 2 slots de profesionales
+      // con 8 turnos (caso María Monge: 14:00-19:30 / 45min → 8 slots, pero se cortaba en 17:45).
+      // El contenedor del frontend ya tiene flex flex-wrap gap-2, así que los slots
+      // adicionales bajan ordenadamente a una segunda fila sin romper el diseño.
+      // Ordenados por proximidad temporal (los más próximos primero).
 
       setResults(filtered);
     } catch (err) {
