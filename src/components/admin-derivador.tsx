@@ -81,10 +81,13 @@ const ZONAS = [
 ];
 
 // === Franjas horarias ===
+// Ampliada "Tarde" hasta 20:00 para incluir slots como 18:30 y 19:15
+// (caso María Monge 14:00-19:30 / 45min → último slot 19:15)
 const FRANJAS = [
   { value: "manana", label: "Mañana (08:00 - 12:00)", start: "08:00", end: "12:00" },
-  { value: "tarde", label: "Tarde (12:00 - 18:00)", start: "12:00", end: "18:00" },
+  { value: "tarde", label: "Tarde (12:00 - 20:00)", start: "12:00", end: "20:00" },
   { value: "noche", label: "Noche (18:00 - 22:00)", start: "18:00", end: "22:00" },
+  { value: "cualquiera", label: "Cualquier franja (todo el día)", start: "00:00", end: "23:59" },
 ];
 
 export function DerivadorInteligente() {
@@ -92,7 +95,7 @@ export function DerivadorInteligente() {
     patientName: "",
     modality: "presencial",
     zone: "",
-    timeSlot: "manana",
+    timeSlot: "cualquiera",
   });
   const [results, setResults] = useState<ProfesionalSugerido[]>([]);
   const [loading, setLoading] = useState(false);
@@ -110,11 +113,19 @@ export function DerivadorInteligente() {
     setHasSearched(true);
     try {
       // Construir params para el endpoint de search-professionals
+      // El endpoint usa modality en el sentido de "presencial" | "online" | "híbrida" | "ambas"
+      // "domicilio" no es un valor que entienda, así que lo mapeamos a "presencial"
+      // (porque el backend filtra por OR presentialAttention/homeAttention en "presencial")
       const params = new URLSearchParams();
       params.set("all", "true");
-      if (filters.modality === "online") params.set("modality", "online");
-      if (filters.modality === "presencial") params.set("modality", "presencial");
-      if (filters.modality === "domicilio") params.set("modality", "híbrida");
+      if (filters.modality === "online") {
+        params.set("modality", "online");
+      } else if (filters.modality === "presencial") {
+        params.set("modality", "presencial");
+      } else if (filters.modality === "domicilio") {
+        // "domicilio" → "presencial" en el backend filtra por presentialAttention OR homeAttention
+        params.set("modality", "presencial");
+      }
 
       const res = await fetch(`/api/admin/search-professionals?${params.toString()}`);
       const data = await res.json();
@@ -124,14 +135,58 @@ export function DerivadorInteligente() {
         return;
       }
 
-      // Filtrar por zona si es presencial o domicilio
-      let filtered = data.professionals;
+      // === MAPEO CRÍTICO: el endpoint devuelve weeklySlots (objeto keyed por dayOfWeek 0-6),
+      // cada día tiene availableSlots[]. El frontend necesita un array plano de slots
+      // con {date, time, endTime, modality}.
+      // Bug original: el componente esperaba p.slots (array) pero el endpoint devuelve p.weeklySlots (objeto).
+      const mapped: ProfesionalSugerido[] = data.professionals.map((p: any) => {
+        const weeklySlots = p.weeklySlots || {};
+        const flatSlots: SlotDisponible[] = [];
+        // Iterar los 7 días (0=Dom, 1=Lun, ..., 6=Sab)
+        for (const dayKey of Object.keys(weeklySlots)) {
+          const dayData = weeklySlots[dayKey];
+          if (!dayData || !dayData.availableSlots) continue;
+          for (const slot of dayData.availableSlots) {
+            flatSlots.push({
+              date: dayData.date,
+              time: slot.time,
+              endTime: slot.endTime,
+              modality: slot.modality,
+            });
+          }
+        }
+        // Ordenar slots por fecha y hora
+        flatSlots.sort((a, b) => {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          return a.time.localeCompare(b.time);
+        });
+
+        return {
+          id: p.id,
+          name: p.name,
+          profession: p.profession,
+          specialty: p.specialty,
+          zones: [], // El endpoint no devuelve zones como array; el frontend las puede obtener del schedules si hace falta
+          onlineAttention: p.modalityBadges?.includes("Online") ?? false,
+          presentialAttention: p.modalityBadges?.includes("Presencial") ?? false,
+          homeAttention: p.modalityBadges?.includes("A Domicilio") ?? false,
+          phone: p.phone,
+          email: p.email,
+          slots: flatSlots,
+        } as ProfesionalSugerido;
+      });
+
+      // === Filtrar por zona si es presencial o domicilio ===
+      // (El endpoint no filtra por zona porque las zones están dentro de schedules.direccionId,
+      // no como campo directo del professional. Por ahora dejamos el filtro flexible
+      // en el frontend, pero si el profesional no tiene zona cargada, lo incluimos igual
+      // para no perder profesionales válidos.)
+      let filtered: ProfesionalSugerido[] = mapped;
       if ((filters.modality === "presencial" || filters.modality === "domicilio") && filters.zone) {
         filtered = filtered.filter((p: ProfesionalSugerido) => {
-          // Verificar si la zona está en las zones del profesional
-          const zonesStr = p.zones?.join(" ").toLowerCase() || "";
+          if (!p.zones || p.zones.length === 0) return true; // No filtrar si el profesional no cargó zonas
+          const zonesStr = p.zones.join(" ").toLowerCase();
           const zoneLower = filters.zone.toLowerCase();
-          // Mapeo flexible: si busca "GBA Zona Oeste" y el profesional tiene "Merlo" o "Moreno"
           const zoneMap: Record<string, string[]> = {
             "capital federal (caba)": ["caba", "capital federal", "flores", "palermo", "caballito", "belgrano", "recoleta"],
             "gba zona norte": ["tigre", "pilar", "san isidro", "vicente lópez", "san fernando", "nordelta"],
@@ -147,20 +202,19 @@ export function DerivadorInteligente() {
         });
       }
 
-      // Filtrar por modalidad
+      // === Filtrar por modalidad (redundante con backend, pero por seguridad) ===
       if (filters.modality === "online") {
         filtered = filtered.filter((p: ProfesionalSugerido) => p.onlineAttention);
       } else if (filters.modality === "presencial") {
         filtered = filtered.filter((p: ProfesionalSugerido) => p.presentialAttention);
       } else if (filters.modality === "domicilio") {
-        filtered = filtered.filter((p: ProfesionalSugerido) => p.homeAttention);
+        filtered = filtered.filter((p: ProfesionalSugerido) => p.homeAttention || p.presentialAttention);
       }
 
-      // Filtrar por franja horaria en los slots disponibles
+      // === Filtrar por franja horaria en los slots disponibles ===
       const franja = FRANJAS.find(f => f.value === filters.timeSlot);
-      if (franja) {
+      if (franja && franja.value !== "cualquiera") {
         filtered = filtered.map((p: ProfesionalSugerido) => {
-          // Filtrar slots que caen dentro de la franja horaria
           const filteredSlots = (p.slots || []).filter((s: SlotDisponible) => {
             return s.time >= franja.start && s.time < franja.end;
           });
@@ -168,12 +222,15 @@ export function DerivadorInteligente() {
         });
         // Solo mostrar profesionales que tienen al menos 1 slot en la franja
         filtered = filtered.filter((p: ProfesionalSugerido) => p.slots && p.slots.length > 0);
+      } else {
+        // Si la franja es "cualquiera", igual filtramos profesionales sin slots
+        filtered = filtered.filter((p: ProfesionalSugerido) => p.slots && p.slots.length > 0);
       }
 
-      // Limitar a 3 slots por profesional (los más próximos)
+      // Limitar a 6 slots por profesional (los más próximos)
       filtered = filtered.map((p: ProfesionalSugerido) => ({
         ...p,
-        slots: p.slots.slice(0, 3),
+        slots: p.slots.slice(0, 6),
       }));
 
       setResults(filtered);
