@@ -2660,48 +2660,66 @@ export function LandingPage() {
       )}
 
       {/* ===== PROFESIONALES FLOATING BUTTON (top of the stack) ===== */}
-      <button
-        onClick={() => { window.location.hash = "registro-profesional"; setCurrentView("professional-register"); }}
-        className="fixed z-50 w-14 h-14 bg-sage-500 hover:bg-sage-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+      <div
+        className="fixed z-50 group"
         style={{ bottom: 'max(9.5rem, calc(env(safe-area-inset-bottom, 1.5rem) + 8rem))', right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))' }}
-        aria-label="Registro de Profesionales"
       >
-        <span className="relative w-full h-full flex items-center justify-center">
-          <svg viewBox="0 0 56 56" className="absolute inset-0 w-full h-full animate-[spin_20s_linear_infinite]">
-            <defs>
-              <path id="prof-circle" d="M 28,28 m -21,0 a 21,21 0 1,1 42,0 a 21,21 0 1,1 -42,0" />
-            </defs>
-            <text fontSize="9.5" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="1.8">
-              <textPath href="#prof-circle" startOffset="0%">
-                Profesionales ✦
-              </textPath>
-            </text>
-          </svg>
-          <Users className="w-4 h-4 relative z-10" />
+        {/* Tooltip blanco/negrita que aparece al hover */}
+        <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 whitespace-nowrap bg-sage-700 text-white text-sm font-bold px-3 py-1.5 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
+          Registrate como profesional
         </span>
-      </button>
+        <button
+          onClick={() => { window.location.hash = "registro-profesional"; setCurrentView("professional-register"); }}
+          className="block w-14 h-14 bg-sage-500 hover:bg-sage-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+          aria-label="Registro de Profesionales"
+          title="Registrate como profesional"
+        >
+          <span className="relative w-full h-full flex items-center justify-center">
+            <svg viewBox="0 0 56 56" className="absolute inset-0 w-full h-full animate-[spin_20s_linear_infinite]">
+              <defs>
+                <path id="prof-circle" d="M 28,28 m -21,0 a 21,21 0 1,1 42,0 a 21,21 0 1,1 -42,0" />
+              </defs>
+              <text fontSize="9.5" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="1.8">
+                <textPath href="#prof-circle" startOffset="0%">
+                  Profesionales ✦
+                </textPath>
+              </text>
+            </svg>
+            <Users className="w-4 h-4 relative z-10" />
+          </span>
+        </button>
+      </div>
 
       {/* ===== TURNO AQUÍ FLOATING BUTTON (middle of the stack) ===== */}
-      <button
-        onClick={() => scrollToSection("contacto")}
-        className="fixed z-50 w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+      <div
+        className="fixed z-50 group"
         style={{ bottom: 'max(5.5rem, calc(env(safe-area-inset-bottom, 1.5rem) + 4rem))', right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))' }}
-        aria-label="Solicitar Turno"
       >
-        <span className="relative w-full h-full flex items-center justify-center">
-          <svg viewBox="0 0 56 56" className="absolute inset-0 w-full h-full animate-[spin_20s_linear_infinite]">
-            <defs>
-              <path id="turno-circle" d="M 28,28 m -21,0 a 21,21 0 1,1 42,0 a 21,21 0 1,1 -42,0" />
-            </defs>
-            <text fontSize="10.2" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="1.8">
-              <textPath href="#turno-circle" startOffset="0%">
-                Turno aquí ✦
-              </textPath>
-            </text>
-          </svg>
-          <CalendarPlus className="w-4 h-4 relative z-10" />
+        {/* Tooltip blanco/negrita que aparece al hover */}
+        <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 whitespace-nowrap bg-amber-600 text-white text-sm font-bold px-3 py-1.5 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
+          Solicita tu turno
         </span>
-      </button>
+        <button
+          onClick={() => scrollToSection("contacto")}
+          className="block w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+          aria-label="Solicitar Turno"
+          title="Solicita tu turno"
+        >
+          <span className="relative w-full h-full flex items-center justify-center">
+            <svg viewBox="0 0 56 56" className="absolute inset-0 w-full h-full animate-[spin_20s_linear_infinite]">
+              <defs>
+                <path id="turno-circle" d="M 28,28 m -21,0 a 21,21 0 1,1 42,0 a 21,21 0 1,1 -42,0" />
+              </defs>
+              <text fontSize="10.2" fontWeight="700" fontFamily="Montserrat, sans-serif" fill="white" letterSpacing="1.8">
+                <textPath href="#turno-circle" startOffset="0%">
+                  Turno aquí ✦
+                </textPath>
+              </text>
+            </svg>
+            <CalendarPlus className="w-4 h-4 relative z-10" />
+          </span>
+        </button>
+      </div>
 
       {/* ===== WHATSAPP FLOATING BUTTON (bottom of the stack) ===== */}
       {cmsConfig.whatsapp_enabled !== "false" && (
