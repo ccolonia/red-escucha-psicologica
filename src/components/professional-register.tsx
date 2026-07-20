@@ -1299,7 +1299,7 @@ export function ProfessionalRegister() {
                         <li>Supervisión grupal online semanal de una hora de duración.</li>
                         <li>A cargo de profesionales supervisores de vasta experiencia.</li>
                         <li>Amplia grilla de horarios a elección del profesional.</li>
-                        <li><strong>Espacio arancelado:</strong> Valor actual: $12.000 por supervisión (Supervisión Grupal).</li>
+                        <li><strong>Espacio arancelado:</strong> Valor actual: $15.000 por supervisión (Supervisión Grupal).</li>
                       </ul>
                       <hr className="border-slate-200 my-4" />
 
