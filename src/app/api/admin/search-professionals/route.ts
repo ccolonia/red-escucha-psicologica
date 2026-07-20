@@ -390,6 +390,13 @@ export async function GET(request: NextRequest) {
         presentialAttention: true,
         homeAttention: true,
         therapyModality: true,
+        // === Datos clínicos para el Derivador Inteligente ===
+        // El frontend los usa para mostrar micro-badges de especialidades y
+        // público objetivo en las tarjetas de resultados, ayudando al admin
+        // a entender por qué el sistema recomendó a ese profesional.
+        therapyTypes: true,
+        targetAudience: true,
+        zones: true,
         user: { select: { id: true, name: true, email: true, phone: true } },
         // Traer TODOS los schedules (sin filtro dayOfWeek) — necesitamos los 7 días
         schedules: true,
@@ -547,6 +554,14 @@ export async function GET(request: NextRequest) {
         specialty: prof.specialty,
         profession: prof.profession,
         modalityBadges,
+        // === Datos clínicos crudos (JSON array string) ===
+        // El frontend los parsea con JSON.parse para armar los micro-badges.
+        // Se mandan como string crudo (no parseado acá) para mantener la
+        // consistencia con el resto del schema y dejar que el frontend decida
+        // cómo mostrarlos.
+        therapyTypes: prof.therapyTypes,
+        targetAudience: prof.targetAudience,
+        zones: prof.zones,
         weeklySlots,
         // === Schedules crudos para que el frontend use isSlotInSchedule ===
         // El frontend necesita los schedules originales (startTime, endTime,

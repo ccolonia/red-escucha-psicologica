@@ -42,9 +42,11 @@ import { formatPhoneForWhatsApp } from "@/lib/email";
 // === Tipos ===
 type DerivacionFilters = {
   patientName: string;
-  modality: string; // "online" | "presencial" | "domicilio"
+  modality: string; // "online" | "presencial" | "domicilio" | "cualquiera"
   zone: string;
-  timeSlot: string; // "manana" | "tarde" | "noche"
+  timeSlot: string; // "manana" | "tarde" | "noche" | "cualquiera"
+  therapyType: string;   // "" = cualquiera, o un valor de TIPOS_TERAPIA
+  targetAudience: string; // "" = cualquiera, o un valor de PUBLICO_OBJETIVO
 };
 
 type SlotDisponible = {
@@ -60,6 +62,8 @@ type ProfesionalSugerido = {
   profession: string;
   specialty: string;
   zones: string[];
+  therapyTypes: string[];   // Array de tipos de terapia que maneja el profesional
+  targetAudience: string[]; // Array de públicos a los que atiende
   onlineAttention: boolean;
   presentialAttention: boolean;
   homeAttention: boolean;
@@ -80,6 +84,49 @@ const ZONAS = [
   "Prov. de Santa Fe",
 ];
 
+// === Tipos de Terapia (valores canónicos del schema, misma lista que professional-register.tsx) ===
+// Se usan tanto para el select de filtros como para los micro-badges de la tarjeta.
+const TIPOS_TERAPIA = [
+  "Adicciones",
+  "Deportología",
+  "EMDR",
+  "Logoterapia",
+  "Mindfulness",
+  "Neuropsicología",
+  "Psicooncología",
+  "Psicoanálisis",
+  "Psicocorporal Reichiana",
+  "Psicodrama",
+  "Psicología clínica",
+  "Psicología deportiva",
+  "Psicología forense",
+  "Psicología geriátrica",
+  "Psicología laboral / organizacional",
+  "Psicología perinatal",
+  "Psicología positiva",
+  "Psicoterapia Integral",
+  "Psiconutrición",
+  "Terapia cognitivo-conductual",
+  "Terapia constructivista",
+  "Terapia gestáltica",
+  "Terapia humanista",
+  "Terapia junguiana",
+  "Terapia sistémica",
+  "Sexología y Trastornos Sexuales",
+];
+
+// === Público Objetivo (valores canónicos del schema) ===
+const PUBLICO_OBJETIVO = [
+  "Adolescentes",
+  "Adultos",
+  "Adultos mayores",
+  "Familias",
+  "Jóvenes",
+  "Niños/as",
+  "Orientación a padres",
+  "Parejas",
+];
+
 // === Franjas horarias ===
 // Ampliada "Tarde" hasta 20:00 para incluir slots como 18:30 y 19:15
 // (caso María Monge 14:00-19:30 / 45min → último slot 19:15)
@@ -90,12 +137,28 @@ const FRANJAS = [
   { value: "cualquiera", label: "Cualquier franja (todo el día)", start: "00:00", end: "23:59" },
 ];
 
+// === Helper: parsear JSON array string del endpoint (therapyTypes, targetAudience) ===
+// El schema los guarda como String? con JSON.stringify(array). El endpoint los
+// devuelve como string crudo. Hay que parsearlos de forma segura.
+function parseJsonArray(raw: any): string[] {
+  if (Array.isArray(raw)) return raw as string[];
+  if (typeof raw !== "string") return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export function DerivadorInteligente() {
   const [filters, setFilters] = useState<DerivacionFilters>({
     patientName: "",
-    modality: "presencial",
+    modality: "cualquiera",
     zone: "",
     timeSlot: "cualquiera",
+    therapyType: "",
+    targetAudience: "",
   });
   const [results, setResults] = useState<ProfesionalSugerido[]>([]);
   const [loading, setLoading] = useState(false);
@@ -116,6 +179,7 @@ export function DerivadorInteligente() {
       // El endpoint usa modality en el sentido de "presencial" | "online" | "híbrida" | "ambas"
       // "domicilio" no es un valor que entienda, así que lo mapeamos a "presencial"
       // (porque el backend filtra por OR presentialAttention/homeAttention en "presencial")
+      // "cualquiera" → no mandamos modality → el backend no filtra por modalidad
       const params = new URLSearchParams();
       params.set("all", "true");
       if (filters.modality === "online") {
@@ -125,6 +189,18 @@ export function DerivadorInteligente() {
       } else if (filters.modality === "domicilio") {
         // "domicilio" → "presencial" en el backend filtra por presentialAttention OR homeAttention
         params.set("modality", "presencial");
+      }
+      // filters.modality === "cualquiera" → no mandamos param, backend no filtra
+
+      // === Filtros clínicos (therapyTypes, targetAudience) ===
+      // El backend ya soporta estos como comma-separated. Si el admin selecciona
+      // un valor específico, lo mandamos. Si deja "Cualquiera", no mandamos el param
+      // y el backend trae todos los profesionales sin filtrar por ese campo.
+      if (filters.therapyType) {
+        params.set("therapyTypes", filters.therapyType);
+      }
+      if (filters.targetAudience) {
+        params.set("targetAudience", filters.targetAudience);
       }
 
       const res = await fetch(`/api/admin/search-professionals?${params.toString()}`);
@@ -187,7 +263,12 @@ export function DerivadorInteligente() {
           name: p.name,
           profession: p.profession,
           specialty: p.specialty,
-          zones: [], // El endpoint no devuelve zones como array; el frontend las puede obtener del schedules si hace falta
+          // === Zones del endpoint (JSON array string) ===
+          // Antes estaba vacío porque el endpoint no los devolvía. Ahora sí.
+          zones: parseJsonArray(p.zones),
+          // === Datos clínicos para los micro-badges ===
+          therapyTypes: parseJsonArray(p.therapyTypes),
+          targetAudience: parseJsonArray(p.targetAudience),
           onlineAttention: p.modalityBadges?.includes("Online") ?? false,
           presentialAttention: p.modalityBadges?.includes("Presencial") ?? false,
           homeAttention: p.modalityBadges?.includes("A Domicilio") ?? false,
@@ -356,7 +437,7 @@ export function DerivadorInteligente() {
               />
             </div>
 
-            {/* Modalidad */}
+            {/* Modalidad (expandida con "Cualquiera") */}
             <div className="space-y-2">
               <Label className="text-teal-700 text-xs font-medium">Modalidad</Label>
               <Select
@@ -367,6 +448,7 @@ export function DerivadorInteligente() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="cualquiera">Cualquiera (todas)</SelectItem>
                   <SelectItem value="presencial">Presencial</SelectItem>
                   <SelectItem value="online">Online</SelectItem>
                   <SelectItem value="domicilio">A Domicilio</SelectItem>
@@ -374,8 +456,8 @@ export function DerivadorInteligente() {
               </Select>
             </div>
 
-            {/* Zona (solo si no es online) */}
-            {filters.modality !== "online" && (
+            {/* Zona (solo si no es online ni "cualquiera") */}
+            {filters.modality !== "online" && filters.modality !== "cualquiera" && (
               <div className="space-y-2">
                 <Label className="text-teal-700 text-xs font-medium">Zona</Label>
                 <Select
@@ -393,6 +475,44 @@ export function DerivadorInteligente() {
                 </Select>
               </div>
             )}
+
+            {/* === NUEVO: Tipo de Terapia (filtro clínico) === */}
+            <div className="space-y-2">
+              <Label className="text-teal-700 text-xs font-medium">Tipo de Terapia</Label>
+              <Select
+                value={filters.therapyType}
+                onValueChange={(v) => setFilters({ ...filters, therapyType: v })}
+              >
+                <SelectTrigger className="border-teal-200 text-sm">
+                  <SelectValue placeholder="Cualquiera" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="">Cualquiera</SelectItem>
+                  {TIPOS_TERAPIA.map(t => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* === NUEVO: Dirigido A / Público Objetivo === */}
+            <div className="space-y-2">
+              <Label className="text-teal-700 text-xs font-medium">Dirigido A</Label>
+              <Select
+                value={filters.targetAudience}
+                onValueChange={(v) => setFilters({ ...filters, targetAudience: v })}
+              >
+                <SelectTrigger className="border-teal-200 text-sm">
+                  <SelectValue placeholder="Cualquiera" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="">Cualquiera</SelectItem>
+                  {PUBLICO_OBJETIVO.map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Franja horaria */}
             <div className="space-y-2">
@@ -484,6 +604,42 @@ export function DerivadorInteligente() {
                               )}
                             </div>
                             <p className="text-xs text-teal-600">{prof.specialty}</p>
+
+                            {/* === Micro-badges clínicos: Tipos de Terapia === */}
+                            {/* Ayuda al admin a entender al instante por qué el sistema
+                                recomendó a este profesional (match con el filtro clínico). */}
+                            {prof.therapyTypes && prof.therapyTypes.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {prof.therapyTypes.slice(0, 5).map((t, i) => (
+                                  <span
+                                    key={`therapy-${i}`}
+                                    className="inline-flex items-center bg-gray-100 text-gray-700 text-[10px] px-2 py-0.5 rounded font-medium"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                                {prof.therapyTypes.length > 5 && (
+                                  <span className="inline-flex items-center bg-gray-50 text-gray-500 text-[10px] px-2 py-0.5 rounded">
+                                    +{prof.therapyTypes.length - 5}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* === Micro-badges clínicos: Público Objetivo === */}
+                            {prof.targetAudience && prof.targetAudience.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {prof.targetAudience.map((p, i) => (
+                                  <span
+                                    key={`aud-${i}`}
+                                    className="inline-flex items-center bg-amber-50 text-amber-700 text-[10px] px-2 py-0.5 rounded font-medium border border-amber-200"
+                                  >
+                                    {p}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
                             {/* Badges de zonas */}
                             {prof.zones && prof.zones.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1.5">
