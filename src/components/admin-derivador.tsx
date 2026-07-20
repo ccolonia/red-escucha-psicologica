@@ -480,14 +480,14 @@ export function DerivadorInteligente() {
             <div className="space-y-2">
               <Label className="text-teal-700 text-xs font-medium">Tipo de Terapia</Label>
               <Select
-                value={filters.therapyType}
-                onValueChange={(v) => setFilters({ ...filters, therapyType: v })}
+                value={filters.therapyType || "__cualquiera__"}
+                onValueChange={(v) => setFilters({ ...filters, therapyType: v === "__cualquiera__" ? "" : v })}
               >
                 <SelectTrigger className="border-teal-200 text-sm">
-                  <SelectValue placeholder="Cualquiera" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  <SelectItem value="">Cualquiera</SelectItem>
+                  <SelectItem value="__cualquiera__">Cualquiera</SelectItem>
                   {TIPOS_TERAPIA.map(t => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
@@ -499,14 +499,14 @@ export function DerivadorInteligente() {
             <div className="space-y-2">
               <Label className="text-teal-700 text-xs font-medium">Dirigido A</Label>
               <Select
-                value={filters.targetAudience}
-                onValueChange={(v) => setFilters({ ...filters, targetAudience: v })}
+                value={filters.targetAudience || "__cualquiera__"}
+                onValueChange={(v) => setFilters({ ...filters, targetAudience: v === "__cualquiera__" ? "" : v })}
               >
                 <SelectTrigger className="border-teal-200 text-sm">
-                  <SelectValue placeholder="Cualquiera" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  <SelectItem value="">Cualquiera</SelectItem>
+                  <SelectItem value="__cualquiera__">Cualquiera</SelectItem>
                   {PUBLICO_OBJETIVO.map(p => (
                     <SelectItem key={p} value={p}>{p}</SelectItem>
                   ))}
