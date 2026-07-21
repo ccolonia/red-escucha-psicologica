@@ -16,6 +16,8 @@ import {
   Stethoscope,
   MessageCircle,
   Loader2,
+  UserPlus,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,17 +38,47 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { toast } from "sonner";
 import { formatPhoneForWhatsApp } from "@/lib/email";
 
 // === Tipos ===
 type DerivacionFilters = {
-  patientName: string;
+  // === Paciente seleccionado ===
+  // Antes era patientName: string (input libre). Ahora es un objeto con los
+  // datos del paciente seleccionado desde el combobox, o null si no se ha
+  // seleccionado ninguno. Esto evita que se ingresen nombres ficticios.
+  patient: PacienteSeleccionado | null;
   modality: string; // "online" | "presencial" | "domicilio" | "cualquiera"
   zone: string;
   timeSlot: string; // "manana" | "tarde" | "noche" | "cualquiera"
   therapyType: string;   // "" = cualquiera, o un valor de TIPOS_TERAPIA
   targetAudience: string; // "" = cualquiera, o un valor de PUBLICO_OBJETIVO
+};
+
+// === Paciente seleccionado desde el combobox ===
+// Puede ser:
+// - Un paciente existente (con id, name, email, phone)
+// - Un paciente nuevo creado al vuelo desde el modal de registro rápido
+//   (sin id, pero con name, email, phone)
+type PacienteSeleccionado = {
+  id?: string;       // Solo si es paciente existente en la DB
+  name: string;
+  email: string;
+  phone: string;
+  isNew?: boolean;   // true si se creó al vuelo desde el modal de registro rápido
 };
 
 type SlotDisponible = {
@@ -153,7 +185,7 @@ function parseJsonArray(raw: any): string[] {
 
 export function DerivadorInteligente() {
   const [filters, setFilters] = useState<DerivacionFilters>({
-    patientName: "",
+    patient: null,
     modality: "cualquiera",
     zone: "",
     timeSlot: "cualquiera",
@@ -169,6 +201,100 @@ export function DerivadorInteligente() {
     slot: SlotDisponible | null;
   }>({ open: false, profesional: null, slot: null });
   const [confirming, setConfirming] = useState(false);
+
+  // === Estado del Combobox de pacientes ===
+  const [patientComboboxOpen, setPatientComboboxOpen] = useState(false);
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [patientSearchResults, setPatientSearchResults] = useState<PacienteSeleccionado[]>([]);
+  const [patientSearchLoading, setPatientSearchLoading] = useState(false);
+
+  // === Modal "Registrar nuevo paciente" ===
+  const [newPatientDialog, setNewPatientDialog] = useState(false);
+  const [newPatientForm, setNewPatientForm] = useState({ name: "", email: "", phone: "" });
+  const [newPatientSaving, setNewPatientSaving] = useState(false);
+
+  // === Debounced search de pacientes ===
+  // Cada vez que cambia el query del combobox, esperar 300ms y buscar en /api/patients?search=
+  useEffect(() => {
+    if (!patientComboboxOpen) return;
+    if (patientSearchQuery.trim().length < 2) {
+      setPatientSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setPatientSearchLoading(true);
+      try {
+        const res = await fetch(`/api/patients?search=${encodeURIComponent(patientSearchQuery.trim())}`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // Mapear a PacienteSeleccionado
+          const mapped: PacienteSeleccionado[] = data.map((p: any) => ({
+            id: p.id,
+            name: p.user?.name || "Sin nombre",
+            email: p.user?.email || "",
+            phone: p.user?.phone || "",
+          }));
+          setPatientSearchResults(mapped);
+        } else {
+          setPatientSearchResults([]);
+        }
+      } catch (err) {
+        console.error("Error buscando pacientes:", err);
+        setPatientSearchResults([]);
+      } finally {
+        setPatientSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [patientSearchQuery, patientComboboxOpen]);
+
+  // === Seleccionar paciente existente ===
+  const handleSelectPatient = (paciente: PacienteSeleccionado) => {
+    setFilters({ ...filters, patient: paciente });
+    setPatientComboboxOpen(false);
+    setPatientSearchQuery("");
+    setPatientSearchResults([]);
+  };
+
+  // === Abrir modal de nuevo paciente ===
+  const handleOpenNewPatientDialog = () => {
+    // Pre-llenar con lo que el admin ya había escrito en el combobox
+    setNewPatientForm({
+      name: patientSearchQuery.trim(),
+      email: "",
+      phone: "",
+    });
+    setNewPatientDialog(true);
+    setPatientComboboxOpen(false);
+  };
+
+  // === Crear nuevo paciente (desde el modal) ===
+  // NO llama al backend para crear el paciente — solo arma el objeto
+  // PacienteSeleccionado con isNew=true. El paciente se crea automáticamente
+  // en el endpoint /api/admin/quick-assign cuando se confirma la derivación
+  // (ese endpoint hace upsert por email).
+  const handleCreateNewPatient = () => {
+    if (!newPatientForm.name.trim() || !newPatientForm.email.trim() || !newPatientForm.phone.trim()) {
+      toast.error("Completá nombre, email y teléfono");
+      return;
+    }
+    // Validar email básico
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newPatientForm.email.trim())) {
+      toast.error("El email no es válido");
+      return;
+    }
+    const nuevoPaciente: PacienteSeleccionado = {
+      name: newPatientForm.name.trim(),
+      email: newPatientForm.email.trim().toLowerCase(),
+      phone: newPatientForm.phone.trim(),
+      isNew: true,
+    };
+    setFilters({ ...filters, patient: nuevoPaciente });
+    setNewPatientDialog(false);
+    setNewPatientForm({ name: "", email: "", phone: "" });
+    toast.success(`Paciente "${nuevoPaciente.name}" agregado. Se creará al confirmar la derivación.`);
+  };
 
   // === Búsqueda de profesionales con slots disponibles ===
   const handleSearch = useCallback(async () => {
@@ -348,7 +474,7 @@ export function DerivadorInteligente() {
 
   // === Confirmar derivación ===
   const handleConfirmDerivacion = async () => {
-    if (!confirmDialog.profesional || !confirmDialog.slot || !filters.patientName.trim()) {
+    if (!confirmDialog.profesional || !confirmDialog.slot || !filters.patient) {
       toast.error("Faltan datos para confirmar la derivación");
       return;
     }
@@ -356,12 +482,17 @@ export function DerivadorInteligente() {
     setConfirming(true);
     try {
       // Crear el turno usando el endpoint de quick-assign
+      // El endpoint hace upsert del paciente por email (si no existe, lo crea)
+      // y crea el appointment con status "confirmed".
+      // También envía emails automáticos al paciente y al profesional.
       const res = await fetch("/api/admin/quick-assign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           professionalId: confirmDialog.profesional.id,
-          patientName: filters.patientName,
+          patientName: filters.patient.name,
+          patientEmail: filters.patient.email,
+          patientPhone: filters.patient.phone,
           date: confirmDialog.slot.date,
           time: confirmDialog.slot.time,
           modality: confirmDialog.slot.modality,
@@ -371,9 +502,13 @@ export function DerivadorInteligente() {
 
       const data = await res.json();
       if (res.ok) {
-        toast.success(`Derivación confirmada: ${filters.patientName} con ${confirmDialog.profesional.name} para el ${confirmDialog.slot.date} a las ${confirmDialog.slot.time}`);
+        const createdMsg = data.created ? " (nuevo paciente creado)" : "";
+        toast.success(
+          `Derivación confirmada${createdMsg}: ${filters.patient.name} (${filters.patient.email}) ` +
+          `con ${confirmDialog.profesional.name} para el ${confirmDialog.slot.date} a las ${confirmDialog.slot.time}`
+        );
         setConfirmDialog({ open: false, profesional: null, slot: null });
-        // Remover el slot de los resultados
+        // Remover el slot de los resultados (ya está ocupado)
         setResults(prev => prev.map(p => {
           if (p.id === confirmDialog.profesional?.id) {
             return { ...p, slots: p.slots.filter(s => s.time !== confirmDialog.slot?.time || s.date !== confirmDialog.slot?.date) };
@@ -426,15 +561,110 @@ export function DerivadorInteligente() {
               <h3 className="font-semibold text-teal-900 text-sm">Filtros de Derivación</h3>
             </div>
 
-            {/* Nombre del paciente */}
+            {/* === Paciente (Combobox buscable) === */}
+            {/* Reemplaza al input de texto libre para evitar nombres ficticios.
+                Permite buscar por nombre, email o teléfono y seleccionar un
+                paciente real de la DB. Si no existe, botón "+ Registrar nuevo". */}
             <div className="space-y-2">
-              <Label className="text-teal-700 text-xs font-medium">Nombre del Paciente</Label>
-              <Input
-                value={filters.patientName}
-                onChange={(e) => setFilters({ ...filters, patientName: e.target.value })}
-                placeholder="Ej: Juan Pérez"
-                className="border-teal-200 text-sm"
-              />
+              <Label className="text-teal-700 text-xs font-medium">Paciente</Label>
+              <Popover open={patientComboboxOpen} onOpenChange={setPatientComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={patientComboboxOpen}
+                    className="w-full justify-between border-teal-200 text-sm font-normal h-9"
+                  >
+                    {filters.patient ? (
+                      <span className="flex items-center gap-2 truncate">
+                        <User className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+                        <span className="truncate">
+                          {filters.patient.name}
+                          {filters.patient.isNew && (
+                            <span className="ml-1 text-[10px] text-amber-600 font-medium">(nuevo)</span>
+                          )}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-teal-400">Buscar paciente por nombre, email o teléfono...</span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Buscar por nombre, email o teléfono..."
+                      value={patientSearchQuery}
+                      onValueChange={setPatientSearchQuery}
+                    />
+                    <CommandList>
+                      {patientSearchLoading && (
+                        <div className="py-6 text-center text-sm text-teal-500">
+                          <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                          Buscando...
+                        </div>
+                      )}
+                      {!patientSearchLoading && patientSearchQuery.trim().length < 2 && (
+                        <div className="py-6 text-center text-sm text-teal-400">
+                          Escribí al menos 2 caracteres para buscar
+                        </div>
+                      )}
+                      {!patientSearchLoading && patientSearchQuery.trim().length >= 2 && patientSearchResults.length === 0 && (
+                        <CommandEmpty>No se encontraron pacientes con ese criterio.</CommandEmpty>
+                      )}
+                      {!patientSearchLoading && patientSearchResults.length > 0 && (
+                        <CommandGroup heading="Pacientes existentes">
+                          {patientSearchResults.map((p) => (
+                            <CommandItem
+                              key={p.id || p.email}
+                              value={p.id || p.email}
+                              onSelect={() => handleSelectPatient(p)}
+                              className="flex flex-col items-start gap-0.5 py-2"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <User className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+                                <span className="font-medium text-teal-900 text-sm">{p.name}</span>
+                              </div>
+                              <div className="text-[11px] text-teal-500 pl-5">
+                                {p.email}{p.phone && ` · ${p.phone}`}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                      {/* === Botón "+ Registrar nuevo paciente" === */}
+                      {/* Aparece siempre que el admin haya escrito algo, incluso
+                          si hay resultados. Permite registrar uno nuevo al vuelo. */}
+                      {patientSearchQuery.trim().length >= 2 && (
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={handleOpenNewPatientDialog}
+                            className="bg-amber-50 hover:bg-amber-100 border-t border-amber-200 text-amber-800 font-medium"
+                          >
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Registrar nuevo paciente
+                            {patientSearchQuery.trim() && (
+                              <span className="ml-1 text-amber-600">"{patientSearchQuery.trim()}"</span>
+                            )}
+                          </CommandItem>
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {/* Botón para limpiar la selección si ya hay un paciente elegido */}
+              {filters.patient && (
+                <button
+                  type="button"
+                  onClick={() => setFilters({ ...filters, patient: null })}
+                  className="text-xs text-teal-500 hover:text-red-600 inline-flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  Quitar selección
+                </button>
+              )}
             </div>
 
             {/* Modalidad (expandida con "Cualquiera") */}
@@ -535,16 +765,16 @@ export function DerivadorInteligente() {
             {/* Botón buscar */}
             <Button
               onClick={handleSearch}
-              disabled={loading || !filters.patientName.trim()}
+              disabled={loading || !filters.patient}
               className="w-full bg-teal-600 hover:bg-teal-700 text-white"
             >
               {loading ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : <Search className="mr-2 w-4 h-4" />}
               {loading ? "Buscando..." : "Buscar Profesionales"}
             </Button>
 
-            {!filters.patientName.trim() && (
+            {!filters.patient && (
               <p className="text-xs text-teal-400 text-center">
-                Ingresá el nombre del paciente para comenzar
+                Seleccioná un paciente para comenzar
               </p>
             )}
           </CardContent>
@@ -707,29 +937,36 @@ export function DerivadorInteligente() {
               Confirmar Derivación
             </DialogTitle>
           </DialogHeader>
-          {confirmDialog.profesional && confirmDialog.slot && (
+          {confirmDialog.profesional && confirmDialog.slot && filters.patient && (
             <div className="space-y-3 py-2">
               <div className="bg-teal-50 rounded-xl p-4 space-y-2">
                 <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-teal-500" />
-                  <span className="text-sm text-teal-700">
-                    <strong>Paciente:</strong> {filters.patientName}
+                  <User className="w-4 h-4 text-teal-500 shrink-0" />
+                  <span className="text-sm text-teal-700 break-all">
+                    <strong>Paciente:</strong> {filters.patient.name}
+                    {filters.patient.isNew && (
+                      <span className="ml-1 text-[10px] text-amber-600 font-medium">(nuevo — se creará al confirmar)</span>
+                    )}
+                    <br />
+                    <span className="text-teal-500 text-xs">
+                      {filters.patient.email}{filters.patient.phone && ` · ${filters.patient.phone}`}
+                    </span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Stethoscope className="w-4 h-4 text-teal-500" />
+                  <Stethoscope className="w-4 h-4 text-teal-500 shrink-0" />
                   <span className="text-sm text-teal-700">
                     <strong>Profesional:</strong> {confirmDialog.profesional.name}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-teal-500" />
+                  <Calendar className="w-4 h-4 text-teal-500 shrink-0" />
                   <span className="text-sm text-teal-700">
                     <strong>Fecha:</strong> {formatFecha(confirmDialog.slot.date)} a las {confirmDialog.slot.time} hs
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-teal-500" />
+                  <MapPin className="w-4 h-4 text-teal-500 shrink-0" />
                   <span className="text-sm text-teal-700">
                     <strong>Modalidad:</strong> {confirmDialog.slot.modality === "OL" ? "Online" : confirmDialog.slot.modality === "P" ? "Presencial" : confirmDialog.slot.modality}
                   </span>
@@ -746,11 +983,87 @@ export function DerivadorInteligente() {
             </Button>
             <Button
               onClick={handleConfirmDerivacion}
-              disabled={confirming || !filters.patientName.trim()}
+              disabled={confirming || !filters.patient}
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               {confirming ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : <CheckCircle2 className="mr-2 w-4 h-4" />}
               {confirming ? "Confirmando..." : "Confirmar Derivación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* === Modal "Registrar nuevo paciente" === */}
+      {/* Perite al admin cargar un paciente nuevo al vuelo (sin salir del derivador).
+          El paciente NO se crea en la DB acá — se arma el objeto PacienteSeleccionado
+          con isNew=true y se guarda en el estado. Cuando se confirma la derivación,
+          el endpoint /api/admin/quick-assign hace upsert por email y lo crea. */}
+      <Dialog open={newPatientDialog} onOpenChange={setNewPatientDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-teal-900 flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-amber-500" />
+              Registrar nuevo paciente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-teal-500">
+              El paciente se creará automáticamente al confirmar la derivación.
+              No es necesario cargar DNI ni otros datos ahora — el paciente podrá
+              completarlos después desde su panel.
+            </p>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-teal-700 text-xs font-medium">Nombre y Apellido *</Label>
+                <Input
+                  value={newPatientForm.name}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, name: e.target.value })}
+                  placeholder="Ej: Juan Pérez"
+                  className="border-teal-200 text-sm"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-teal-700 text-xs font-medium">Email *</Label>
+                <Input
+                  type="email"
+                  value={newPatientForm.email}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, email: e.target.value })}
+                  placeholder="juan.perez@email.com"
+                  className="border-teal-200 text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-teal-700 text-xs font-medium">Teléfono *</Label>
+                <Input
+                  value={newPatientForm.phone}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, phone: e.target.value })}
+                  placeholder="+54 11 1234-5678"
+                  className="border-teal-200 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setNewPatientDialog(false);
+                setNewPatientForm({ name: "", email: "", phone: "" });
+                // Reabrir el combobox para que el admin pueda buscar de nuevo
+                setTimeout(() => setPatientComboboxOpen(true), 100);
+              }}
+              className="border-teal-300"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateNewPatient}
+              disabled={newPatientSaving || !newPatientForm.name.trim() || !newPatientForm.email.trim() || !newPatientForm.phone.trim()}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              <UserPlus className="mr-2 w-4 h-4" />
+              Agregar paciente
             </Button>
           </DialogFooter>
         </DialogContent>

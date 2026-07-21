@@ -54,11 +54,14 @@ export async function GET(request: NextRequest) {
     // Admins see all patients — no where filter needed
 
     // Apply search filter
+    // Búsqueda flexible por nombre, email o teléfono — permite al admin
+    // encontrar pacientes desde cualquier dato que tenga a mano.
     if (search) {
       where.user = {
         OR: [
           { name: { contains: search, mode: "insensitive" } },
           { email: { contains: search, mode: "insensitive" } },
+          { phone: { contains: search, mode: "insensitive" } },
         ],
       };
     }
