@@ -8,36 +8,36 @@ import { ChevronsUpDown, Check } from "lucide-react";
 // El código se guarda sin el '+' porque la utilidad formatPhoneForWhatsApp
 // trabaja con dígitos, pero el input muestra el '+' para claridad visual.
 const COUNTRIES = [
-  { code: "54",  iso: "AR", flag: "🇦🇷", name: "Argentina" },
-  { code: "598", iso: "UY", flag: "🇺🇾", name: "Uruguay" },
-  { code: "595", iso: "PY", flag: "🇵🇾", name: "Paraguay" },
-  { code: "591", iso: "BO", flag: "🇧🇴", name: "Bolivia" },
-  { code: "56",  iso: "CL", flag: "🇨🇱", name: "Chile" },
-  { code: "51",  iso: "PE", flag: "🇵🇪", name: "Perú" },
-  { code: "593", iso: "EC", flag: "🇪🇨", name: "Ecuador" },
-  { code: "57",  iso: "CO", flag: "🇨🇴", name: "Colombia" },
-  { code: "58",  iso: "VE", flag: "🇻🇪", name: "Venezuela" },
-  { code: "52",  iso: "MX", flag: "🇲🇽", name: "México" },
-  { code: "503", iso: "SV", flag: "🇸🇻", name: "El Salvador" },
-  { code: "504", iso: "HN", flag: "🇭🇳", name: "Honduras" },
-  { code: "505", iso: "NI", flag: "🇳🇮", name: "Nicaragua" },
-  { code: "506", iso: "CR", flag: "🇨🇷", name: "Costa Rica" },
-  { code: "507", iso: "PA", flag: "🇵🇦", name: "Panamá" },
-  { code: "1",   iso: "US", flag: "🇺🇸", name: "Estados Unidos" },
-  { code: "1",   iso: "CA", flag: "🇨🇦", name: "Canadá" },
-  { code: "34",  iso: "ES", flag: "🇪🇸", name: "España" },
-  { code: "55",  iso: "BR", flag: "🇧🇷", name: "Brasil" },
-  { code: "44",  iso: "GB", flag: "🇬🇧", name: "Reino Unido" },
-  { code: "33",  iso: "FR", flag: "🇫🇷", name: "Francia" },
-  { code: "49",  iso: "DE", flag: "🇩🇪", name: "Alemania" },
-  { code: "39",  iso: "IT", flag: "🇮🇹", name: "Italia" },
+  { code: "54",  iso: "AR", flag: "🇦🇷", name: "Argentina",      placeholder: "11 7668 3429" },
+  { code: "598", iso: "UY", flag: "🇺🇾", name: "Uruguay",        placeholder: "94 123 456" },
+  { code: "595", iso: "PY", flag: "🇵🇾", name: "Paraguay",       placeholder: "981 123 456" },
+  { code: "591", iso: "BO", flag: "🇧🇴", name: "Bolivia",         placeholder: "712 34567" },
+  { code: "56",  iso: "CL", flag: "🇨🇱", name: "Chile",          placeholder: "9 1234 5678" },
+  { code: "51",  iso: "PE", flag: "🇵🇪", name: "Perú",           placeholder: "987 654 321" },
+  { code: "593", iso: "EC", flag: "🇪🇨", name: "Ecuador",        placeholder: "99 123 4567" },
+  { code: "57",  iso: "CO", flag: "🇨🇴", name: "Colombia",       placeholder: "321 123 4567" },
+  { code: "58",  iso: "VE", flag: "🇻🇪", name: "Venezuela",      placeholder: "412 123 4567" },
+  { code: "52",  iso: "MX", flag: "🇲🇽", name: "México",         placeholder: "55 1234 5678" },
+  { code: "503", iso: "SV", flag: "🇸🇻", name: "El Salvador",    placeholder: "7012 3456" },
+  { code: "504", iso: "HN", flag: "🇭🇳", name: "Honduras",       placeholder: "9123 4567" },
+  { code: "505", iso: "NI", flag: "🇳🇮", name: "Nicaragua",      placeholder: "8123 4567" },
+  { code: "506", iso: "CR", flag: "🇨🇷", name: "Costa Rica",     placeholder: "8123 4567" },
+  { code: "507", iso: "PA", flag: "🇵🇦", name: "Panamá",         placeholder: "6123 4567" },
+  { code: "1",   iso: "US", flag: "🇺🇸", name: "Estados Unidos", placeholder: "(212) 555-1234" },
+  { code: "1",   iso: "CA", flag: "🇨🇦", name: "Canadá",         placeholder: "(416) 555-1234" },
+  { code: "34",  iso: "ES", flag: "🇪🇸", name: "España",         placeholder: "612 34 56 78" },
+  { code: "55",  iso: "BR", flag: "🇧🇷", name: "Brasil",         placeholder: "11 91234 5678" },
+  { code: "44",  iso: "GB", flag: "🇬🇧", name: "Reino Unido",    placeholder: "7700 900123" },
+  { code: "33",  iso: "FR", flag: "🇫🇷", name: "Francia",        placeholder: "6 12 34 56 78" },
+  { code: "49",  iso: "DE", flag: "🇩🇪", name: "Alemania",       placeholder: "151 23456789" },
+  { code: "39",  iso: "IT", flag: "🇮🇹", name: "Italia",         placeholder: "312 345 6789" },
 ];
 
 type PhoneInputProps = {
-  value: string;          // Solo el número local, SIN el código de país
-  onChange: (fullPhone: string) => void;  // Devuelve el número completo en formato E.164 (ej: "51998465686")
+  value: string;          // Número completo en formato E.164 (ej: "5491176683429" o "51998465686")
+  onChange: (fullPhone: string) => void;  // Devuelve el número completo en formato E.164
   defaultCountryCode?: string; // Por defecto "54" (Argentina)
-  placeholder?: string;
+  placeholder?: string;   // Opcional — si no se pasa, usa el placeholder del país seleccionado
   id?: string;
   className?: string;
   required?: boolean;
@@ -47,18 +47,48 @@ export function PhoneInput({
   value,
   onChange,
   defaultCountryCode = "54",
-  placeholder = "Ej: 11 7668 3429",
+  placeholder,
   id,
   className = "",
   required = false,
 }: PhoneInputProps) {
-  // === Detectar el código de país inicial ===
-  // Si el valor que viene ya tiene un código de país (ej: "51998465686"),
-  // intentar detectarlo y separar el número local. Si no, usar el default.
-  const detectInitialCountry = (): { countryCode: string; localNumber: string } => {
-    if (!value) {
-      return { countryCode: defaultCountryCode, localNumber: "" };
+  // === Estado interno separado limpiamente ===
+  // CRÍTICO: NO inicializar con el código de país como número local.
+  // - countryCode: solo el código (ej: "54", "51", "1")
+  // - localNumber: solo el número local SIN el código (ej: "1176683429", "998465686")
+  // El bug anterior inicializaba localNumber con "54" porque detectInitialCountry
+  // caía en el fallback y devolvía defaultCountryCode como localNumber.
+  const [countryCode, setCountryCode] = useState(defaultCountryCode);
+  const [localNumber, setLocalNumber] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // === Ref para evitar loop infinito en la sincronización ===
+  // Sin esto, el flujo es: input cambia → useEffect propaga al parent → parent
+  // actualiza value → useEffect de sync detecta cambio → vuelve a setear estado
+  // → loop infinito. Con la ref, solo sincronizamos cuando el valor que viene
+  // del parent es DISTINTO al último que propagamos.
+  const lastPropagatedRef = useRef<string>("");
+
+  // === Sincronización UNIDIRECCIONAL: parent → interno ===
+  // Solo se ejecuta cuando el value del parent cambia desde afuera
+  // (ej: carga inicial con un teléfono ya guardado, o reset del form a "").
+  // No se ejecuta cuando nosotros mismos propagamos un cambio al parent.
+  useEffect(() => {
+    // Si el value que viene es igual al último que propagamos, ignorar
+    // (es el eco del nuestro propio onChange → no hacer nada)
+    if (value === lastPropagatedRef.current) return;
+
+    // Si el value es vacío (reset del form), limpiar el número local
+    // pero MANTENER el countryCode (default Argentina)
+    if (!value || value.trim() === "") {
+      setLocalNumber("");
+      lastPropagatedRef.current = "";
+      return;
     }
+
+    // Intentar detectar el código de país del value entrante
     const cleaned = value.replace(/[^0-9]/g, "");
     // Probar códigos de 3 dígitos primero (para no confundir 598 con 54)
     const sortedCodes = [...COUNTRIES]
@@ -66,23 +96,35 @@ export function PhoneInput({
       .sort((a, b) => b.length - a.length);
     for (const code of sortedCodes) {
       if (cleaned.startsWith(code) && cleaned.length > code.length) {
-        return { countryCode: code, localNumber: cleaned.substring(code.length) };
+        // Encontramos el código — separar
+        if (code !== countryCode) setCountryCode(code);
+        const newLocal = cleaned.substring(code.length);
+        if (newLocal !== localNumber) setLocalNumber(newLocal);
+        lastPropagatedRef.current = cleaned;
+        return;
       }
     }
-    return { countryCode: defaultCountryCode, localNumber: cleaned };
-  };
+    // No se detectó código — asumir que es solo número local
+    if (cleaned !== localNumber) setLocalNumber(cleaned);
+    lastPropagatedRef.current = cleaned;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
-  const initial = detectInitialCountry();
-  const [countryCode, setCountryCode] = useState(initial.countryCode);
-  const [localNumber, setLocalNumber] = useState(initial.localNumber);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // === Cuando cambia el código o el número, propagar al parent ===
+  // === Propagación interna → parent ===
+  // Cada vez que cambia el countryCode o el localNumber, armar el E.164
+  // y mandarlo al parent. Usar la ref para recordar qué propagamos y
+  // evitar que el useEffect anterior lo vuelva a procesar.
   useEffect(() => {
-    const fullPhone = `${countryCode}${localNumber}`.replace(/[^0-9]/g, "");
-    onChange(fullPhone);
+    // Limpiar el número local: solo dígitos, sin ceros a la izquierda
+    // si el usuario escribió "011..." (formato argentino con 0 inicial).
+    const cleanLocal = localNumber.replace(/[^0-9]/g, "").replace(/^0+/, "");
+    const fullPhone = `${countryCode}${cleanLocal}`.replace(/[^0-9]/g, "");
+
+    // Solo propagar si cambió realmente
+    if (fullPhone !== lastPropagatedRef.current) {
+      lastPropagatedRef.current = fullPhone;
+      onChange(fullPhone);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countryCode, localNumber]);
 
@@ -99,17 +141,9 @@ export function PhoneInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropdownOpen]);
 
-  // === Si el value cambia desde afuera (ej: reset del form), sincronizar ===
-  useEffect(() => {
-    const detected = detectInitialCountry();
-    if (detected.countryCode !== countryCode || detected.localNumber !== localNumber) {
-      setCountryCode(detected.countryCode);
-      setLocalNumber(detected.localNumber);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
-
   const selectedCountry = COUNTRIES.find((c) => c.code === countryCode) || COUNTRIES[0];
+  // Placeholder dinámico: si el parent no pasa uno, usar el del país seleccionado
+  const effectivePlaceholder = placeholder || selectedCountry.placeholder;
 
   // === Filtrar países por búsqueda ===
   const filteredCountries = COUNTRIES.filter((c) => {
@@ -181,17 +215,18 @@ export function PhoneInput({
       </div>
 
       {/* === Input del número local === */}
+      {/* SOLO dígitos, espacios y guiones. El código de país NUNCA va acá. */}
       <input
         id={id}
         type="tel"
         required={required}
         value={localNumber}
         onChange={(e) => {
-          // Solo permitir dígitos, espacios y guiones (se sanitizan al enviar)
+          // Solo permitir dígitos, espacios y guiones (se sanitizan al propagar)
           const cleaned = e.target.value.replace(/[^0-9\s-]/g, "");
           setLocalNumber(cleaned);
         }}
-        placeholder={placeholder}
+        placeholder={effectivePlaceholder}
         className="flex-1 min-w-0 h-9 px-3 border border-l-0 border-beige-300 bg-beige-100 rounded-r-md text-sm text-forest-500 placeholder:text-forest-300 focus:outline-none focus:border-sage-300 focus:ring-2 focus:ring-sage-300/20"
       />
     </div>
