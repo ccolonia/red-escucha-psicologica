@@ -2319,7 +2319,6 @@ export function LandingPage() {
                             required
                             value={contactForm.phone}
                             onChange={(fullPhone) => setContactForm({ ...contactForm, phone: fullPhone })}
-                            placeholder="Ej: 11 7668 3429"
                             className="w-full"
                           />
                           <p className="text-xs text-forest-400" style={{ fontFamily: "Montserrat, sans-serif" }}>

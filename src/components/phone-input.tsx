@@ -150,7 +150,14 @@ export function PhoneInput({
 
   const selectedCountry = COUNTRIES.find((c) => c.code === countryCode) || COUNTRIES[0];
   // Placeholder dinámico: si el parent no pasa uno, usar el del país seleccionado
-  const effectivePlaceholder = placeholder || selectedCountry.placeholder;
+  // === Placeholder dinámico con prioridad absoluta ===
+  // SIEMPRE usa el placeholder del país seleccionado, ignorando el prop
+  // `placeholder` que venga del parent. Esto es clave para que el selector
+  // de país tenga sentido: si el admin pasa un placeholder fijo, el
+  // placeholder no cambiaría al cambiar de país y el selector perdería
+  // utilidad. El prop `placeholder` queda solo para fallback si el país
+  // no está en la lista (caso edge que no debería pasar).
+  const effectivePlaceholder = selectedCountry.placeholder || placeholder || "Ej: 123456789";
 
   // === Filtrar países por búsqueda ===
   const filteredCountries = COUNTRIES.filter((c) => {
