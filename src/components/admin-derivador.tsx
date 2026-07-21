@@ -573,10 +573,10 @@ export function DerivadorInteligente() {
                     variant="outline"
                     role="combobox"
                     aria-expanded={patientComboboxOpen}
-                    className="w-full justify-between border-teal-200 text-sm font-normal h-9"
+                    className="relative w-full justify-start border-teal-200 bg-white text-sm font-normal h-9 pl-3 pr-9 truncate focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   >
                     {filters.patient ? (
-                      <span className="flex items-center gap-2 truncate">
+                      <span className="flex items-center gap-2 truncate min-w-0">
                         <User className="w-3.5 h-3.5 text-teal-500 shrink-0" />
                         <span className="truncate">
                           {filters.patient.name}
@@ -586,15 +586,18 @@ export function DerivadorInteligente() {
                         </span>
                       </span>
                     ) : (
-                      <span className="text-teal-400">Buscar paciente por nombre, email o teléfono...</span>
+                      <span className="text-slate-400 truncate">Buscar paciente...</span>
                     )}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    {/* Icono de flechas posicionado absolutamente dentro del botón */}
+                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      <ChevronsUpDown className="h-4 w-4" />
+                    </div>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                   <Command shouldFilter={false}>
                     <CommandInput
-                      placeholder="Buscar por nombre, email o teléfono..."
+                      placeholder="Buscar por nombre o email..."
                       value={patientSearchQuery}
                       onValueChange={setPatientSearchQuery}
                     />
