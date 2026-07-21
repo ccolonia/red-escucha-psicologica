@@ -66,6 +66,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/phone-input";
 import {
   Select,
   SelectContent,
@@ -677,9 +678,12 @@ export function LandingPage() {
       }
 
       // === Validar teléfono ===
+      // El phone viene en formato E.164 (ej: "5491176683429" para AR,
+      // "51998465686" para PE). Validar que tenga al menos 8 dígitos
+      // después del código de país (códigos van de 1 a 3 dígitos).
       const phoneDigits = contactForm.phone.replace(/[^0-9]/g, "");
-      if (phoneDigits.length < 10) {
-        toast.error("El teléfono debe incluir código de área (ej: 11 3008 3247)");
+      if (phoneDigits.length < 8) {
+        toast.error("El teléfono debe incluir código de país + número local (ej: +54 11 7668 3429)");
         setContactSending(false);
         return;
       }
@@ -2310,19 +2314,16 @@ export function LandingPage() {
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="contact-phone" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Teléfono <span className="text-red-500">*</span></Label>
-                          <Input
+                          <PhoneInput
                             id="contact-phone"
                             required
                             value={contactForm.phone}
-                            onChange={(e) => {
-                              const cleaned = e.target.value.replace(/[^0-9+\s-]/g, "");
-                              setContactForm({ ...contactForm, phone: cleaned });
-                            }}
-                            placeholder="Ej: 11 3008 3247"
-                            className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
+                            onChange={(fullPhone) => setContactForm({ ...contactForm, phone: fullPhone })}
+                            placeholder="Ej: 11 7668 3429"
+                            className="w-full"
                           />
                           <p className="text-xs text-forest-400" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                            Incluí el código de área (ej: 11 para CABA/GBA)
+                            Seleccioná el país y escribí tu número sin código de área internacional
                           </p>
                         </div>
                         <div className="space-y-2">

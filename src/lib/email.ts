@@ -1098,26 +1098,77 @@ const MODALITY_EMAIL_MAP: Record<string, string> = {
 //     "5491176683429" → "5491176683429" (sin cambios)
 export function formatPhoneForWhatsApp(phone: string | null): string | null {
   if (!phone) return null;
-  // Quitar todo lo que no sea dígito
+  // === Quitar todo lo que no sea dígito ===
+  // Se eliminan espacios, guiones, paréntesis, etc.
+  // Se respeta el '+' que indica formato internacional E.164.
   let cleaned = phone.replace(/[^0-9]/g, "");
   if (cleaned.length === 0) return null;
 
-  // Si ya empieza con 549, dejarlo así
+  // === Detección de código de país ===
+  // Ya no se hardcodea '549' a todos los números. Se respeta el código
+  // de país que viene guardado en la DB. Solo se aplica el fallback
+  // argentino si el número es claramente local (sin código de país).
+
+  // 1. Argentina móvil: ya tiene el prefijo 549 → dejar así
   if (cleaned.startsWith("549")) {
     return cleaned;
   }
-  // Si empieza con 54 (pero no 549), agregar el 9
-  if (cleaned.startsWith("54") && cleaned.length > 2) {
-    // Verificar si el 3er dígito es 9 (ya tiene el prefijo de celular)
-    if (cleaned.startsWith("549")) return cleaned;
-    // Si es 54 + código de área sin el 9, insertarlo
-    return "549" + cleaned.substring(2);
+  // 2. Argentina fijo: ya tiene 54 pero no 549 → dejar así (línea fija)
+  //    (no agregar el 9 porque es solo para celulares)
+  if (cleaned.startsWith("54") && cleaned.length >= 12) {
+    return cleaned;
   }
-  // Si empieza con 0 (ej: 01176683429), quitar el 0 y agregar 549
+  // 3. Otros países con código de país explícito (longitud >= 11 dígitos):
+  //    - Perú (+51): 51998465686 → 12 dígitos
+  //    - Chile (+56): 56912345678 → 11 dígitos
+  //    - México (+52): 521234567890 → 13 dígitos
+  //    - España (+34): 34612345678 → 11 dígitos
+  //    - EE.UU. (+1): 12125551234 → 11 dígitos
+  //    Si empieza con un código de país conocido, dejarlo así.
+  const knownCountryCodes = [
+    "51",  // Perú
+    "52",  // México
+    "53",  // Cuba
+    "54",  // Argentina (ya manejado arriba)
+    "55",  // Brasil
+    "56",  // Chile
+    "57",  // Colombia
+    "58",  // Venezuela
+    "1",   // EE.UU. / Canadá
+    "34",  // España
+    "44",  // UK
+    "33",  // Francia
+    "49",  // Alemania
+    "39",  // Italia
+    "598", // Uruguay
+    "595", // Paraguay
+    "591", // Bolivia
+    "593", // Ecuador
+    "503", // El Salvador
+    "504", // Honduras
+    "505", // Nicaragua
+    "506", // Costa Rica
+    "507", // Panamá
+  ];
+  // Si el número tiene 11+ dígitos y empieza con un código conocido,
+  // asumir que ya viene con código de país → no tocar
+  if (cleaned.length >= 11) {
+    for (const code of knownCountryCodes) {
+      if (cleaned.startsWith(code)) {
+        return cleaned;
+      }
+    }
+  }
+
+  // 4. Número local argentino sin código de país:
+  //    - Si empieza con 0 (ej: 01176683429), quitar el 0 y agregar 549
+  //    - Si tiene 10 dígitos (ej: 1176683429), agregar 549
+  //    - Si tiene 9 dígitos y empieza con 9 (ej: 91176683429), agregar 54
   if (cleaned.startsWith("0")) {
     cleaned = cleaned.substring(1);
   }
-  // Asumir Argentina: agregar 549
+  // Asumir Argentina: agregar 549 (celular) como fallback
+  // Esto es retrocompatible con números ya guardados sin código de país
   return "549" + cleaned;
 }
 
