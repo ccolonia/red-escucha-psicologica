@@ -7,30 +7,37 @@ import { ChevronsUpDown, Check } from "lucide-react";
 // Ordenados por relevancia para REP (Argentina primero, luego LATAM, luego resto).
 // El código se guarda sin el '+' porque la utilidad formatPhoneForWhatsApp
 // trabaja con dígitos, pero el input muestra el '+' para claridad visual.
+//
+// Cada país tiene un placeholder con formato local realista, normalizado con
+// prefijo "Ej: " para mayor claridad. El placeholder se inyecta dinámicamente
+// en el input según el país seleccionado (commit 5d2b0ab ya implementa el
+// mecanismo; este commit solo alinea los valores a los estándares solicitados).
 const COUNTRIES = [
-  { code: "54",  iso: "AR", flag: "🇦🇷", name: "Argentina",      placeholder: "11 7668 3429" },
-  { code: "598", iso: "UY", flag: "🇺🇾", name: "Uruguay",        placeholder: "94 123 456" },
-  { code: "595", iso: "PY", flag: "🇵🇾", name: "Paraguay",       placeholder: "981 123 456" },
-  { code: "591", iso: "BO", flag: "🇧🇴", name: "Bolivia",         placeholder: "712 34567" },
-  { code: "56",  iso: "CL", flag: "🇨🇱", name: "Chile",          placeholder: "9 1234 5678" },
-  { code: "51",  iso: "PE", flag: "🇵🇪", name: "Perú",           placeholder: "987 654 321" },
-  { code: "593", iso: "EC", flag: "🇪🇨", name: "Ecuador",        placeholder: "99 123 4567" },
-  { code: "57",  iso: "CO", flag: "🇨🇴", name: "Colombia",       placeholder: "321 123 4567" },
-  { code: "58",  iso: "VE", flag: "🇻🇪", name: "Venezuela",      placeholder: "412 123 4567" },
-  { code: "52",  iso: "MX", flag: "🇲🇽", name: "México",         placeholder: "55 1234 5678" },
-  { code: "503", iso: "SV", flag: "🇸🇻", name: "El Salvador",    placeholder: "7012 3456" },
-  { code: "504", iso: "HN", flag: "🇭🇳", name: "Honduras",       placeholder: "9123 4567" },
-  { code: "505", iso: "NI", flag: "🇳🇮", name: "Nicaragua",      placeholder: "8123 4567" },
-  { code: "506", iso: "CR", flag: "🇨🇷", name: "Costa Rica",     placeholder: "8123 4567" },
-  { code: "507", iso: "PA", flag: "🇵🇦", name: "Panamá",         placeholder: "6123 4567" },
-  { code: "1",   iso: "US", flag: "🇺🇸", name: "Estados Unidos", placeholder: "(212) 555-1234" },
-  { code: "1",   iso: "CA", flag: "🇨🇦", name: "Canadá",         placeholder: "(416) 555-1234" },
-  { code: "34",  iso: "ES", flag: "🇪🇸", name: "España",         placeholder: "612 34 56 78" },
-  { code: "55",  iso: "BR", flag: "🇧🇷", name: "Brasil",         placeholder: "11 91234 5678" },
-  { code: "44",  iso: "GB", flag: "🇬🇧", name: "Reino Unido",    placeholder: "7700 900123" },
-  { code: "33",  iso: "FR", flag: "🇫🇷", name: "Francia",        placeholder: "6 12 34 56 78" },
-  { code: "49",  iso: "DE", flag: "🇩🇪", name: "Alemania",       placeholder: "151 23456789" },
-  { code: "39",  iso: "IT", flag: "🇮🇹", name: "Italia",         placeholder: "312 345 6789" },
+  { code: "54",   iso: "AR", flag: "🇦🇷", name: "Argentina",         placeholder: "Ej: 11 2345 6789" },
+  { code: "598",  iso: "UY", flag: "🇺🇾", name: "Uruguay",           placeholder: "Ej: 99 123 456" },
+  { code: "595",  iso: "PY", flag: "🇵🇾", name: "Paraguay",          placeholder: "Ej: 981 123 456" },
+  { code: "591",  iso: "BO", flag: "🇧🇴", name: "Bolivia",            placeholder: "Ej: 7012 3456" },
+  { code: "56",   iso: "CL", flag: "🇨🇱", name: "Chile",             placeholder: "Ej: 9 1234 5678" },
+  { code: "51",   iso: "PE", flag: "🇵🇪", name: "Perú",              placeholder: "Ej: 912 345 678" },
+  { code: "593",  iso: "EC", flag: "🇪🇨", name: "Ecuador",           placeholder: "Ej: 99 123 4567" },
+  { code: "57",   iso: "CO", flag: "🇨🇴", name: "Colombia",          placeholder: "Ej: 300 123 4567" },
+  { code: "58",   iso: "VE", flag: "🇻🇪", name: "Venezuela",         placeholder: "Ej: 412 123 4567" },
+  { code: "52",   iso: "MX", flag: "🇲🇽", name: "México",            placeholder: "Ej: 55 1234 5678" },
+  { code: "503",  iso: "SV", flag: "🇸🇻", name: "El Salvador",       placeholder: "Ej: 7012 3456" },
+  { code: "504",  iso: "HN", flag: "🇭🇳", name: "Honduras",          placeholder: "Ej: 9012 3456" },
+  { code: "505",  iso: "NI", flag: "🇳🇮", name: "Nicaragua",         placeholder: "Ej: 8012 3456" },
+  { code: "506",  iso: "CR", flag: "🇨🇷", name: "Costa Rica",        placeholder: "Ej: 8312 3456" },
+  { code: "507",  iso: "PA", flag: "🇵🇦", name: "Panamá",            placeholder: "Ej: 6012 3456" },
+  { code: "502",  iso: "GT", flag: "🇬🇹", name: "Guatemala",         placeholder: "Ej: 5012 3456" },
+  { code: "1809", iso: "DO", flag: "🇩🇴", name: "Rep. Dominicana",   placeholder: "Ej: 809 123 4567" },
+  { code: "1",    iso: "US", flag: "🇺🇸", name: "Estados Unidos",    placeholder: "Ej: 202 555 0123" },
+  { code: "1",    iso: "CA", flag: "🇨🇦", name: "Canadá",            placeholder: "Ej: 202 555 0123" },
+  { code: "34",   iso: "ES", flag: "🇪🇸", name: "España",            placeholder: "Ej: 612 34 56 78" },
+  { code: "55",   iso: "BR", flag: "🇧🇷", name: "Brasil",            placeholder: "Ej: 11 91234 5678" },
+  { code: "44",   iso: "GB", flag: "🇬🇧", name: "Reino Unido",       placeholder: "Ej: 7700 900123" },
+  { code: "33",   iso: "FR", flag: "🇫🇷", name: "Francia",           placeholder: "Ej: 6 12 34 56 78" },
+  { code: "49",   iso: "DE", flag: "🇩🇪", name: "Alemania",          placeholder: "Ej: 151 23456789" },
+  { code: "39",   iso: "IT", flag: "🇮🇹", name: "Italia",            placeholder: "Ej: 312 345 6789" },
 ];
 
 type PhoneInputProps = {

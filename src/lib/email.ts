@@ -1149,6 +1149,8 @@ export function formatPhoneForWhatsApp(phone: string | null): string | null {
     "505", // Nicaragua
     "506", // Costa Rica
     "507", // Panamá
+    "502", // Guatemala
+    "1809", // Rep. Dominicana
   ];
   // Si el número tiene 11+ dígitos y empieza con un código conocido,
   // asumir que ya viene con código de país → no tocar
