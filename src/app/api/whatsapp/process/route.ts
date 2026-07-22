@@ -1,40 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import ZAI from "z-ai-web-dev-sdk";
+import OpenAI from "openai";
 import { getUpcomingAvailableSlots, formatSlotForWhatsApp } from "@/lib/available-slots";
 
-// === Inicializar ZAI SDK con credenciales desde variables de entorno ===
-// El SDK por defecto busca un archivo .z-ai-config en /etc/ o en el home,
-// pero en Vercel no podemos escribir archivos en esas ubicaciones.
-// Solución: instanciar ZAI directamente con `new ZAI(config)` en vez de
-// `ZAI.create()`, pasando las credenciales desde variables de entorno.
+// === Cliente universal OpenAI con baseURL configurable ===
 //
-// Variables requeridas en Vercel:
-// - Z_AI_BASE_URL: URL del API (ej: https://internal-api.z.ai/v1)
-// - Z_AI_API_KEY: API key de Z.ai
-// - Z_AI_USER_ID: (opcional) ID de usuario para tracking
-// - Z_AI_CHAT_ID: (opcional) ID de chat para tracking
-let zaiInstance: InstanceType<typeof ZAI> | null = null;
+// Usamos el SDK `openai` (estándar de la industria) que es compatible con
+// cualquier proveedor que hable el protocolo OpenAI:
+//   - OpenAI (api.openai.com/v1)
+//   - Groq (api.groq.com/openai/v1) — recomendado para WhatsApp (ultra rápido)
+//   - Google Gemini (generativelanguage.googleapis.com/v1beta/openai/)
+//   - OpenRouter (openrouter.ai/api/v1)
+//   - Cualquier proxy OpenAI-compatible
+//
+// El proveedor se elige con variables de entorno:
+//   AI_API_KEY  → API key del proveedor
+//   AI_BASE_URL → URL base (default: https://api.groq.com/openai/v1)
+//   AI_MODEL    → nombre del modelo (default: llama-3.3-70b-versatile)
+//
+// La instancia se cachea a nivel de módulo porque las credenciales no
+// cambian entre invocaciones en serverless.
+let openaiClient: OpenAI | null = null;
 
-function getZaiClient(): InstanceType<typeof ZAI> {
-  if (zaiInstance) return zaiInstance;
+function getOpenAIClient(): OpenAI {
+  if (openaiClient) return openaiClient;
 
-  const baseUrl = process.env.Z_AI_BASE_URL;
-  const apiKey = process.env.Z_AI_API_KEY;
-
-  if (!baseUrl || !apiKey) {
-    throw new Error("Faltan variables de entorno Z_AI_BASE_URL o Z_AI_API_KEY");
+  const apiKey = process.env.AI_API_KEY;
+  if (!apiKey) {
+    throw new Error("Falta variable de entorno AI_API_KEY");
   }
 
-  // Instanciar directamente — el constructor es público
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  zaiInstance = new (ZAI as any)({
-    baseUrl,
+  openaiClient = new OpenAI({
     apiKey,
-    userId: process.env.Z_AI_USER_ID || undefined,
-    chatId: process.env.Z_AI_CHAT_ID || undefined,
-    token: process.env.Z_AI_TOKEN || undefined,
+    baseURL: process.env.AI_BASE_URL || "https://api.groq.com/openai/v1",
   });
-  return zaiInstance;
+  return openaiClient;
 }
 
 // === POST /api/whatsapp/process ===
@@ -248,41 +247,55 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // === 5. Llamar a la IA (z-ai-web-dev-sdk) ===
-    let zai;
+    // === 5. Llamar a la IA con cliente universal OpenAI ===
+    let openai;
     try {
-      zai = getZaiClient();
+      openai = getOpenAIClient();
     } catch (err) {
-      console.error("Error inicializando ZAI SDK:", err);
+      console.error("Error inicializando cliente OpenAI:", err);
       return NextResponse.json(
         { error: "Servicio de IA no configurado" },
         { status: 500 }
       );
     }
 
-    const response = await zai.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: REP_SYSTEM_PROMPT + slotsContext,
-        },
-        {
-          role: "user",
-          content: message,
-        },
-      ],
-      stream: false,
-      thinking: { type: "disabled" },
-    });
+    const model = process.env.AI_MODEL || "llama-3.3-70b-versatile";
 
-    const reply = response.choices?.[0]?.message?.content;
+    let reply: string | null = null;
+    try {
+      const response = await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: "system",
+            content: REP_SYSTEM_PROMPT + slotsContext,
+          },
+          {
+            role: "user",
+            content: `[Paciente - Tel: ${sender}]: ${message}`,
+          },
+        ],
+        temperature: 0.3, // baja temperatura para respuestas consistentes y predecibles
+        max_tokens: 400,  // límite de tokens para mantener respuestas breves (WhatsApp)
+      });
+
+      reply = response.choices?.[0]?.message?.content || null;
+    } catch (err) {
+      console.error("Error llamando a la IA:", err);
+      // Fallback graceful: si la IA falla, responder con mensaje estándar
+      // para que el usuario no se quede sin respuesta por WhatsApp.
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+      console.error(`[whatsapp-bot] IA fallback para ${sender}: ${errorMessage}`);
+      return NextResponse.json({
+        reply: "Hola 👋 En este momento no puedo procesar tu mensaje automáticamente, pero un coordinador humano te va a contactar a la brevedad. Si es una urgencia, escribinos a contacto@redescuchapsicologica.com o llamá al 0800-345-1435 (Salud Mental, las 24 hs).",
+      });
+    }
 
     if (!reply) {
       console.error("La IA no devolvió contenido en la respuesta");
-      return NextResponse.json(
-        { error: "La IA no generó una respuesta válida" },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        reply: "Hola 👋 En este momento no pude procesar tu mensaje. Un coordinador humano te va a contactar a la brevedad. Si es una urgencia, llamá al 0800-345-1435 (Salud Mental, las 24 hs).",
+      });
     }
 
     // === 6. Log para auditoría (sin PII sensible) ===
