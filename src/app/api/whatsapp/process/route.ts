@@ -2,6 +2,41 @@ import { NextRequest, NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
 import { getUpcomingAvailableSlots, formatSlotForWhatsApp } from "@/lib/available-slots";
 
+// === Inicializar ZAI SDK con credenciales desde variables de entorno ===
+// El SDK por defecto busca un archivo .z-ai-config en /etc/ o en el home,
+// pero en Vercel no podemos escribir archivos en esas ubicaciones.
+// Solución: instanciar ZAI directamente con `new ZAI(config)` en vez de
+// `ZAI.create()`, pasando las credenciales desde variables de entorno.
+//
+// Variables requeridas en Vercel:
+// - Z_AI_BASE_URL: URL del API (ej: https://internal-api.z.ai/v1)
+// - Z_AI_API_KEY: API key de Z.ai
+// - Z_AI_USER_ID: (opcional) ID de usuario para tracking
+// - Z_AI_CHAT_ID: (opcional) ID de chat para tracking
+let zaiInstance: InstanceType<typeof ZAI> | null = null;
+
+function getZaiClient(): InstanceType<typeof ZAI> {
+  if (zaiInstance) return zaiInstance;
+
+  const baseUrl = process.env.Z_AI_BASE_URL;
+  const apiKey = process.env.Z_AI_API_KEY;
+
+  if (!baseUrl || !apiKey) {
+    throw new Error("Faltan variables de entorno Z_AI_BASE_URL o Z_AI_API_KEY");
+  }
+
+  // Instanciar directamente — el constructor es público
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  zaiInstance = new (ZAI as any)({
+    baseUrl,
+    apiKey,
+    userId: process.env.Z_AI_USER_ID || undefined,
+    chatId: process.env.Z_AI_CHAT_ID || undefined,
+    token: process.env.Z_AI_TOKEN || undefined,
+  });
+  return zaiInstance;
+}
+
 // === POST /api/whatsapp/process ===
 //
 // Endpoint del "Cerebro" del Agente IA de WhatsApp para REP.
@@ -214,7 +249,16 @@ export async function POST(request: NextRequest) {
     }
 
     // === 5. Llamar a la IA (z-ai-web-dev-sdk) ===
-    const zai = await ZAI.create();
+    let zai;
+    try {
+      zai = getZaiClient();
+    } catch (err) {
+      console.error("Error inicializando ZAI SDK:", err);
+      return NextResponse.json(
+        { error: "Servicio de IA no configurado" },
+        { status: 500 }
+      );
+    }
 
     const response = await zai.chat.completions.create({
       messages: [
