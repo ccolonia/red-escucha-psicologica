@@ -62,7 +62,9 @@ function isPublicApiRoute(pathname: string, method: string): boolean {
   if (
     pathname === "/api/auth/register" ||
     pathname === "/api/contact" ||
-    pathname === "/api/cms/content"
+    pathname === "/api/cms/content" ||
+    pathname === "/api/public/register-patient" ||
+    pathname === "/api/whatsapp/process"  // Bot de WhatsApp: se autentica con x-api-secret, no JWT
   ) {
     return true;
   }
