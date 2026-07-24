@@ -397,6 +397,16 @@ export async function GET(request: NextRequest) {
         therapyTypes: true,
         targetAudience: true,
         zones: true,
+        // === Dirección del consultorio (tarea 2026-07-25) ===
+        // officeAddress: campo legacy (string simple)
+        // addresses: modelo nuevo (ProfessionalAddress) con múltiples direcciones
+        // Se usan para mostrar el "Lugar de atención" en el modal de asignación
+        // de turno presencial y en la ficha del turno.
+        officeAddress: true,
+        addresses: {
+          select: { id: true, label: true, address: true, isActive: true },
+          orderBy: { isActive: "desc" }, // activa primero
+        },
         user: { select: { id: true, name: true, email: true, phone: true } },
         // Traer TODOS los schedules (sin filtro dayOfWeek) — necesitamos los 7 días
         schedules: true,
@@ -574,6 +584,18 @@ export async function GET(request: NextRequest) {
         therapyTypes: prof.therapyTypes,
         targetAudience: prof.targetAudience,
         zones: prof.zones,
+        // === Dirección del consultorio (tarea 2026-07-25) ===
+        // officeAddress: campo legacy (string simple o null)
+        // addresses: array de ProfessionalAddress (con label, address, isActive)
+        // El frontend usa resolveAddressForSlot() para mostrar la dirección
+        // correcta según el slot (presencial) en el modal de asignación.
+        officeAddress: prof.officeAddress,
+        addresses: prof.addresses.map((a) => ({
+          id: a.id,
+          label: a.label,
+          address: a.address,
+          isActive: a.isActive,
+        })),
         weeklySlots,
         // === Schedules crudos para que el frontend use isSlotInSchedule ===
         // El frontend necesita los schedules originales (startTime, endTime,

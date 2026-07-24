@@ -138,6 +138,10 @@ interface AvailableSlot {
   endTime: string;
   modality: string;
   duration: number;
+  // direccionId: enlace a ProfessionalAddress (modelo nuevo) para resolver
+  // la dirección del consultorio cuando el slot es presencial.
+  // Opcional porque no todos los slots tienen dirección específica asociada.
+  direccionId?: string | null;
 }
 
 interface BookedSlot {
@@ -202,6 +206,13 @@ interface DaySlots {
   bookedSlots: BookedSlot[];
 }
 
+interface ProfessionalAddress {
+  id: string;
+  label: string;
+  address: string;
+  isActive: boolean;
+}
+
 interface ProfessionalResult {
   id: string;
   name: string;
@@ -210,6 +221,9 @@ interface ProfessionalResult {
   specialty: string;
   profession: string | null;
   modalityBadges: string[];
+  // === Dirección del consultorio (tarea 2026-07-25) ===
+  officeAddress: string | null;          // legacy
+  addresses: ProfessionalAddress[];      // modelo nuevo
   weeklySlots: Record<number, DaySlots>;
   totalFreeSlots: number;
   totalBookedSlots: number;
@@ -1666,6 +1680,14 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
             <p className="text-[10px] text-teal-500">Por defecto hereda la modalidad del slot, pero podés cambiarla.</p>
           </div>
 
+          {/* === Badge de dirección del consultorio (tarea 2026-07-25) === */}
+          {/* Visible solo cuando la modalidad es Presencial o Híbrido.
+              Resuelve la dirección desde ProfessionalAddress (modelo nuevo)
+              con fallback a officeAddress (legacy). */}
+          {(form.modality === "P" || form.modality === "H") && professional && (
+            <OfficeAddressBadge professional={professional} slot={slot} />
+          )}
+
           <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Notas (opcional)</Label><Textarea value={form.notes} onChange={(e) => onFormChange({ ...form, notes: e.target.value })} placeholder="Motivo de consulta, observaciones..." className="text-sm border-teal-200 min-h-[50px]" rows={2} /></div>
         </div>
 
@@ -1675,6 +1697,67 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ====================================================================
+// SUB-COMPONENTE: Badge de dirección del consultorio
+// ====================================================================
+// Muestra la dirección de atención del profesional cuando la modalidad
+// del turno es Presencial o Híbrido. Resuelve la dirección desde:
+// 1. ProfessionalAddress (modelo nuevo) — si el slot tiene direccionId,
+//    busca esa dirección específica. Si no, usa la dirección marcada
+//    como isActive=true. Si no hay ninguna activa, usa la primera.
+// 2. officeAddress (legacy) — si no hay ProfessionalAddress, usa el
+//    campo legacy del Professional.
+//
+// Esto le permite al admin ver rápidamente dónde se va a atender el
+// paciente antes de confirmar la asignación, y al profesional confirmar
+// que la dirección es correcta.
+function OfficeAddressBadge({
+  professional,
+  slot,
+}: {
+  professional: ProfessionalResult;
+  slot?: AvailableSlot | null;
+}) {
+  // === Resolver la dirección ===
+  let resolvedAddress: string | null = null;
+
+  // 1. Si hay addresses (modelo nuevo), buscar la correcta
+  if (professional.addresses && professional.addresses.length > 0) {
+    // Si el slot tiene direccionId, buscar esa dirección específica
+    let targetAddr: ProfessionalAddress | undefined;
+    if (slot?.direccionId) {
+      targetAddr = professional.addresses.find((a) => a.id === slot.direccionId);
+    }
+    // Si no hay match por direccionId, buscar la activa
+    if (!targetAddr) {
+      targetAddr = professional.addresses.find((a) => a.isActive);
+    }
+    // Si no hay activa, usar la primera
+    if (!targetAddr) {
+      targetAddr = professional.addresses[0];
+    }
+    if (targetAddr) {
+      // Formato: "Label: Address" (ej: "Consultorio Principal: Av Cabildo 1234")
+      resolvedAddress = `${targetAddr.label}: ${targetAddr.address}`;
+    }
+  }
+
+  // 2. Fallback a officeAddress legacy
+  if (!resolvedAddress && professional.officeAddress) {
+    resolvedAddress = professional.officeAddress;
+  }
+
+  return (
+    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-md my-2 flex items-center gap-2 text-sm">
+      <span>📍</span>
+      <span>
+        <strong>Lugar de atención:</strong>{" "}
+        {resolvedAddress || "Sin dirección cargada"}
+      </span>
+    </div>
   );
 }
 
@@ -1723,6 +1806,12 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
             <div className="flex items-center gap-2 text-sm text-teal-900 font-bold"><Clock className="w-4 h-4 text-teal-600" /><span>{slot.endTime ? `${slot.time}–${slot.endTime} hs` : `${slot.time} hs`}</span><Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{modalityLabel}</Badge></div>
             <div className="flex items-center gap-2 text-xs"><span className="text-teal-500">Estado:</span><Badge variant={isRescheduled ? "destructive" : slot.status === "confirmed" ? "default" : "outline"} className="text-xs">{statusLabel}</Badge></div>
           </div>
+
+          {/* === Badge de dirección del consultorio (tarea 2026-07-25) === */}
+          {/* Visible solo cuando la modalidad del turno es Presencial o Híbrido. */}
+          {(slot.modality === "P" || slot.modality === "H") && (
+            <OfficeAddressBadge professional={professional} />
+          )}
 
           {/* === Alerta de Reprogramación === */}
           {isRescheduled && (
