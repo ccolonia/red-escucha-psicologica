@@ -97,8 +97,18 @@ export async function GET(request: NextRequest) {
       });
       if (professional) {
         where.professionalId = professional.id;
-        // Professionals see active appointments (exclude only final "cancelled")
-        // Include "cancelled_by_professional" so they see their own cancellations
+        // === LÓGICA DE SLOTS (tarea 2026-07-24) ===
+        // El profesional ve TODOS sus turnos (incluidos los cancelados por
+        // paciente) para que la pestaña "Lista" del dashboard pueda mostrar
+        // el histórico de cancelaciones para auditoría.
+        //
+        // La Agenda Visual (professional-weekly-agenda.tsx) filtra los
+        // cancelled_by_patient localmente para que la grilla muestre el
+        // slot como LIBRE y el profesional pueda activarlo para otro
+        // paciente.
+        //
+        // Excluimos solo "cancelled" (legacy sin origen) porque esos no
+        // aportan info útil y ya estaban excluidos antes.
         if (!status) {
           where.status = { notIn: ["cancelled"] };
         }

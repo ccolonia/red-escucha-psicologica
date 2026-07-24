@@ -263,6 +263,28 @@ export function ProfessionalWeeklyAgenda({
   const [isMobile, setIsMobile] = useState(false);
   const [userSelectedDay, setUserSelectedDay] = useState<Date | null>(null);
 
+  // === Appointments visibles en la Agenda Visual (grilla) ===
+  // Filtramos cancelled_by_patient y cancelled (legacy) para que el slot
+  // aparezca como LIBRE en la grilla y el profesional pueda activarlo
+  // para otro paciente.
+  //
+  // El array completo `appointments` (sin filtrar) sigue usándose en:
+  // - La pestaña "Lista" del dashboard (auditoría histórica de cancelaciones)
+  // - Los handlers de cancelar/reprogramar (que comparan por ID)
+  //
+  // Pero para la grilla visual usamos `visibleAppointments` que excluye
+  // los cancelados por paciente. Así:
+  //   - Si un turno se cancela por paciente → el slot se libera (verde)
+  //   - Si después se asigna OTRO turno en ese horario → se muestra el nuevo
+  //   - El turno cancelado sigue siendo visible en la pestaña "Lista"
+  const visibleAppointments = useMemo(
+    () =>
+      appointments.filter(
+        (a) => a.status !== "cancelled_by_patient" && a.status !== "cancelled"
+      ),
+    [appointments]
+  );
+
   // === Estados para acciones masivas ===
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [copyFromDay, setCopyFromDay] = useState("1");
@@ -754,10 +776,14 @@ export function ProfessionalWeeklyAgenda({
   // turno de 45 min ocupe 2 visualmente, pero si el slotDuration es
   // mayor a 30 min puede haber espacio visual "vacío" entre el card y
   // el siguiente turno — es un trade-off aceptable por ahora.
+  //
+  // Usamos `visibleAppointments` (que excluye cancelled_by_patient y
+  // cancelled) en vez de `appointments` (que tiene todo). Así la grilla
+  // no dibuja los turnos cancelados por paciente → el slot queda LIBRE.
   const getAppointmentForCell = useCallback(
     (dateStr: string, time: string): Appointment | undefined => {
       // Buscar appointments cuyo snap-down coincide con este slot
-      return appointments.find((a) => {
+      return visibleAppointments.find((a) => {
         if (a.date !== dateStr) return false;
         // Encontrar el slot más cercano anterior al start real
         const slotsBefore = timeSlots.filter((s) => s <= a.time);
@@ -765,7 +791,7 @@ export function ProfessionalWeeklyAgenda({
         return snappedSlot === time;
       });
     },
-    [appointments]
+    [visibleAppointments]
   );
 
   // Determine cell state
