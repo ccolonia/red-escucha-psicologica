@@ -150,17 +150,27 @@ model ProfessionalPatientNote {
 }
 
 model Appointment {
-  id             String       @id @default(cuid())
-  patientId      String
-  professionalId String
-  date           String // ISO date string
-  time           String // "09:00", "10:00", etc.
-  modality       String?      @default("P") // "P" presencial, "OL" online
-  status         String       @default("pending") // "pending", "confirmed", "completed", "cancelled"
-  reason         String?
-  notes          String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  patientId           String
+  professionalId      String
+  date                String // ISO date string
+  time                String // "09:00", "10:00", etc.
+  modality            String?      @default("P") // "P" presencial, "OL" online
+  status              String       @default("pending") // "pending", "confirmed", "completed", "cancelled", "cancelled_by_professional", "cancelled_by_patient", "absent", "rescheduled"
+  reason              String?
+  notes               String?
+  // === Origen de cancelación (tarea 2026-07-23) ===
+  // Guarda quién solicitó la cancelación y por qué, para reporting y
+  // para mostrar etiquetas visuales distintas en la agenda.
+  // Valores posibles de cancellationSource:
+  //   "patient"       → cancelado por el paciente (status: cancelled_by_patient o cancelled)
+  //   "professional"  → cancelado por el profesional (status: cancelled_by_professional)
+  // cancellationReason es un texto libre o un valor predefinido
+  // (ej: "Motivos personales", "Reprogramación", "Incapacidad de asistencia").
+  cancellationSource  String?
+  cancellationReason  String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
   patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   patientRequest PatientRequest?

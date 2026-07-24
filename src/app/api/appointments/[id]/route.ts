@@ -32,7 +32,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, notes, cancellationReason } = body;
+    const { status, notes, cancellationSource, cancellationReason } = body;
 
     if (!status) {
       return NextResponse.json(
@@ -111,6 +111,16 @@ export async function PATCH(
       data: {
         status,
         notes: notes || undefined,
+        // === Origen de cancelación (tarea 2026-07-23) ===
+        // Solo persistir si el nuevo status es de cancelación
+        cancellationSource:
+          status === "cancelled" || status === "cancelled_by_professional" || status === "cancelled_by_patient"
+            ? (cancellationSource || null)
+            : null, // limpiar si es un status no-cancelación
+        cancellationReason:
+          status === "cancelled" || status === "cancelled_by_professional" || status === "cancelled_by_patient"
+            ? (cancellationReason || null)
+            : null,
       },
       include: {
         patient: { include: { user: { select: { name: true } } } },

@@ -160,7 +160,12 @@ const STATUS_LABELS_ADMIN: Record<string, string> = {
   confirmed: "Confirmado",
   rescheduled: "Reprogramado",
   cancelled: "Cancelado",
-  cancelled_by_professional: "Cancelado",
+  // === Etiquetas distintivas por origen (tarea 2026-07-23) ===
+  // Antes ambos decían "Cancelado" genérico. Ahora distinguimos:
+  // - cancelled_by_patient → "Cancelado por Paciente" (ámbar/marrón)
+  // - cancelled_by_professional → "Cancelado por Profesional" (rojo)
+  cancelled_by_patient: "Cancelado por Paciente",
+  cancelled_by_professional: "Cancelado por Profesional",
   completed: "Atendido",
   absent: "Ausente",
   blocked: "Bloqueado",
@@ -171,7 +176,12 @@ const STATUS_COLORS_ADMIN: Record<string, { bg: string; text: string; border: st
   pending: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", badge: "bg-amber-100 text-amber-700 border-amber-200" },
   confirmed: { bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-200", badge: "bg-teal-100 text-teal-700 border-teal-200" },
   rescheduled: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", badge: "bg-orange-100 text-orange-700 border-orange-200" },
+  // === Colores distintivos por origen de cancelación ===
+  // - cancelled (legacy): rojo suave (mantiene compatibilidad con turnos viejos)
+  // - cancelled_by_patient: ámbar/marrón sutil (el paciente es quien decide)
+  // - cancelled_by_professional: rojo (más grave porque implica reprogramación)
   cancelled: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", badge: "bg-red-100 text-red-700 border-red-200" },
+  cancelled_by_patient: { bg: "bg-amber-50", text: "text-amber-800", border: "border-amber-300", badge: "bg-amber-100 text-amber-800 border-amber-300" },
   cancelled_by_professional: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", badge: "bg-red-100 text-red-700 border-red-200" },
   completed: { bg: "bg-gray-50", text: "text-gray-600", border: "border-gray-200", badge: "bg-gray-100 text-gray-600 border-gray-200" },
   absent: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", badge: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -339,6 +349,13 @@ export function AdminAgendaCentral() {
   });
   const [assigning, setAssigning] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  // === Modal de Cancelación con Selector de Origen (tarea 2026-07-23) ===
+  const [cancelDialog, setCancelDialog] = useState<{
+    open: boolean;
+    slot: BookedSlot | null;
+    source: "patient" | "professional" | "";
+    reason: string;
+  }>({ open: false, slot: null, source: "", reason: "" });
 
   // === Calcular weekStart (lunes de la semana seleccionada) ===
   const monday = useMemo(() => getMondayOfWeek(weekOffset), [weekOffset]);
@@ -504,23 +521,50 @@ export function AdminAgendaCentral() {
     }
   };
 
-  // === Cancelar turno desde la ficha rápida ===
-  const handleCancelAppointment = async (slot: BookedSlot) => {
+  // === Abrir modal de cancelación con selector de origen ===
+  // Reemplaza el confirm() nativo por un modal que pide:
+  // 1. Quién solicita la cancelación (paciente o profesional)
+  // 2. Motivo opcional
+  // Esto es clave para reporting y para distinguir visualmente los turnos
+  // cancelados por paciente vs por profesional en la agenda.
+  const handleCancelAppointment = (slot: BookedSlot) => {
     if (!slot) return;
-    if (!confirm(`¿Confirmar cancelación del turno de ${slot.patientName}?\n\nEl slot quedará libre para nueva asignación.`)) return;
+    // Abrir el modal de cancelación en vez del confirm()
+    setCancelDialog({ open: true, slot, source: "", reason: "" });
+  };
+
+  // === Confirmar cancelación con origen y motivo ===
+  const handleConfirmCancellation = async () => {
+    const { slot, source, reason } = cancelDialog;
+    if (!slot || !source) {
+      toast.error("Seleccioná quién solicita la cancelación");
+      return;
+    }
     setCancelling(true);
     try {
+      // Mapear source → status:
+      //   "patient"      → cancelled_by_patient (estado final, slot liberado)
+      //   "professional" → cancelled_by_professional (estado intermedio,
+      //                    el admin decide después si reasigna o cancela)
+      const newStatus = source === "patient" ? "cancelled_by_patient" : "cancelled_by_professional";
+
       const res = await fetch(`/api/appointments/${slot.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
+        body: JSON.stringify({
+          status: newStatus,
+          cancellationSource: source,
+          cancellationReason: reason || null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Error al cancelar el turno");
         return;
       }
-      toast.success(`Turno de ${slot.patientName} cancelado. Slot liberado.`);
+      const sourceLabel = source === "patient" ? "paciente" : "profesional";
+      toast.success(`Turno de ${slot.patientName} cancelado por ${sourceLabel}.`);
+      setCancelDialog({ open: false, slot: null, source: "", reason: "" });
       setFichaDialog((prev) => ({ ...prev, open: false }));
       handleSearch(); // re-fetch automático de la grilla
     } catch (err) {
@@ -851,6 +895,130 @@ export function AdminAgendaCentral() {
         onReschedule={handleReschedule}
         rescheduling={rescheduling}
       />
+
+      {/* === Modal de Cancelación con Selector de Origen (tarea 2026-07-23) === */}
+      {/* Reemplaza el confirm() nativo. Pide al admin/profesional especificar
+          QUIÉN solicita la cancelación (paciente o profesional) y un motivo
+          opcional. Esto permite distinguir visualmente los turnos cancelados
+          por paciente vs por profesional en la agenda. */}
+      <Dialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog((prev) => ({ ...prev, open }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-teal-900 flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-red-500" />
+              Cancelar Turno
+            </DialogTitle>
+          </DialogHeader>
+          {cancelDialog.slot && (
+            <div className="space-y-4 py-2">
+              {/* Info del turno que se va a cancelar */}
+              <div className="bg-red-50 rounded-lg p-3 space-y-1 border border-red-200">
+                <p className="text-sm text-red-800">
+                  <strong>Paciente:</strong> {cancelDialog.slot.patientName}
+                </p>
+                <p className="text-sm text-red-700">
+                  <strong>Fecha:</strong> {cancelDialog.slot.date} a las {cancelDialog.slot.time} hs
+                </p>
+              </div>
+
+              {/* Selector de origen — OBLIGATORIO */}
+              <div className="space-y-2">
+                <Label className="text-teal-700 text-sm font-medium">
+                  ¿Quién solicita la cancelación? <span className="text-red-500">*</span>
+                </Label>
+                <div className="space-y-2">
+                  <label className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                    cancelDialog.source === "patient"
+                      ? "border-amber-400 bg-amber-50"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="cancellation-source"
+                      value="patient"
+                      checked={cancelDialog.source === "patient"}
+                      onChange={(e) => setCancelDialog((prev) => ({ ...prev, source: e.target.value as "patient" }))}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-teal-900">Solicitado por el Paciente</p>
+                      <p className="text-xs text-slate-500">
+                        El paciente pidió cancelar. El slot queda libre para nueva asignación.
+                      </p>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                    cancelDialog.source === "professional"
+                      ? "border-red-400 bg-red-50"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="cancellation-source"
+                      value="professional"
+                      checked={cancelDialog.source === "professional"}
+                      onChange={(e) => setCancelDialog((prev) => ({ ...prev, source: e.target.value as "professional" }))}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-teal-900">Cancelado por el Profesional</p>
+                      <p className="text-xs text-slate-500">
+                        El profesional canceló. Se enviará email al paciente y el admin deberá decidir reasignar.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Motivo opcional */}
+              <div className="space-y-2">
+                <Label className="text-teal-700 text-sm font-medium">
+                  Motivo de cancelación <span className="text-slate-400 font-normal">(opcional)</span>
+                </Label>
+                <Select
+                  value={cancelDialog.reason}
+                  onValueChange={(value) => setCancelDialog((prev) => ({ ...prev, reason: value }))}
+                >
+                  <SelectTrigger className="border-teal-200 text-sm">
+                    <SelectValue placeholder="Seleccionar motivo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="motivos-personales">Motivos personales</SelectItem>
+                    <SelectItem value="incapacidad-asistencia">Incapacidad de asistencia</SelectItem>
+                    <SelectItem value="reprogramacion">Reprogramación</SelectItem>
+                    <SelectItem value="enfermedad">Enfermedad</SelectItem>
+                    <SelectItem value="emergencia-familiar">Emergencia familiar</SelectItem>
+                    <SelectItem value="cambio-laboral">Cambio laboral / horario</SelectItem>
+                    <SelectItem value="viaje">Viaje</SelectItem>
+                    <SelectItem value="otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCancelDialog({ open: false, slot: null, source: "", reason: "" })}
+              className="border-teal-300"
+              disabled={cancelling}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmCancellation}
+              disabled={cancelling || !cancelDialog.source}
+              variant="destructive"
+            >
+              {cancelling ? (
+                <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Cancelando...</>
+              ) : (
+                <><XCircle className="w-4 h-4 mr-2" /> Confirmar Cancelación</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
