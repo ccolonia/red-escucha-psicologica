@@ -1722,41 +1722,66 @@ function OfficeAddressBadge({
   slot?: AvailableSlot | null;
 }) {
   // === Resolver la dirección ===
+  // defensive: si professional.addresses es undefined, tratarlo como array vacío
+  const addresses = professional.addresses || [];
+  const officeAddress = professional.officeAddress || null;
+
   let resolvedAddress: string | null = null;
+  let resolvedLabel: string | null = null;
 
   // 1. Si hay addresses (modelo nuevo), buscar la correcta
-  if (professional.addresses && professional.addresses.length > 0) {
+  if (addresses.length > 0) {
     // Si el slot tiene direccionId, buscar esa dirección específica
     let targetAddr: ProfessionalAddress | undefined;
     if (slot?.direccionId) {
-      targetAddr = professional.addresses.find((a) => a.id === slot.direccionId);
+      targetAddr = addresses.find((a) => a.id === slot.direccionId);
     }
     // Si no hay match por direccionId, buscar la activa
     if (!targetAddr) {
-      targetAddr = professional.addresses.find((a) => a.isActive);
+      targetAddr = addresses.find((a) => a.isActive);
     }
     // Si no hay activa, usar la primera
     if (!targetAddr) {
-      targetAddr = professional.addresses[0];
+      targetAddr = addresses[0];
     }
     if (targetAddr) {
-      // Formato: "Label: Address" (ej: "Consultorio Principal: Av Cabildo 1234")
-      resolvedAddress = `${targetAddr.label}: ${targetAddr.address}`;
+      resolvedLabel = targetAddr.label;
+      resolvedAddress = targetAddr.address;
     }
   }
 
   // 2. Fallback a officeAddress legacy
-  if (!resolvedAddress && professional.officeAddress) {
-    resolvedAddress = professional.officeAddress;
+  if (!resolvedAddress && officeAddress) {
+    resolvedAddress = officeAddress;
   }
 
+  // === Renderizar ===
+  // Si hay dirección, mostrar badge verde con la dirección completa
+  if (resolvedAddress) {
+    return (
+      <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 p-3 rounded-md my-2 flex items-start gap-2 text-sm">
+        <span className="text-lg leading-none">📍</span>
+        <div className="flex-1">
+          <p className="font-semibold text-emerald-800">Lugar de atención presencial</p>
+          {resolvedLabel && (
+            <p className="text-xs text-emerald-600 font-medium">{resolvedLabel}</p>
+          )}
+          <p className="text-emerald-800">{resolvedAddress}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay dirección cargada, mostrar badge ámbar de advertencia
   return (
-    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-md my-2 flex items-center gap-2 text-sm">
-      <span>📍</span>
-      <span>
-        <strong>Lugar de atención:</strong>{" "}
-        {resolvedAddress || "Sin dirección cargada"}
-      </span>
+    <div className="bg-amber-50 border border-amber-300 text-amber-900 p-3 rounded-md my-2 flex items-start gap-2 text-sm">
+      <span className="text-lg leading-none">⚠️</span>
+      <div className="flex-1">
+        <p className="font-semibold text-amber-800">Sin dirección de consultorio cargada</p>
+        <p className="text-xs text-amber-700">
+          El profesional no cargó su dirección de atención presencial. Coordiná la ubicación por WhatsApp o email antes de confirmar el turno.
+        </p>
+      </div>
     </div>
   );
 }
