@@ -1724,7 +1724,17 @@ function OfficeAddressBadge({
   // === Resolver la dirección ===
   // defensive: si professional.addresses es undefined, tratarlo como array vacío
   const addresses = professional.addresses || [];
-  const officeAddress = professional.officeAddress || null;
+  let officeAddress = professional.officeAddress || null;
+
+  // === SANITIZAR officeAddress legacy ===
+  // Algunos profesionales cargaron su email en el campo officeAddress
+  // por error (ej: julia.th26@gmail.com). Eso NO es una dirección física
+  // y no debe mostrarse como tal al admin. Si detectamos que officeAddress
+  // es un email, lo descartamos (tratamos como null).
+  if (officeAddress && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(officeAddress)) {
+    console.warn("[OfficeAddressBadge] officeAddress parece un email, ignorando:", officeAddress);
+    officeAddress = null;
+  }
 
   let resolvedAddress: string | null = null;
   let resolvedLabel: string | null = null;
@@ -1750,7 +1760,7 @@ function OfficeAddressBadge({
     }
   }
 
-  // 2. Fallback a officeAddress legacy
+  // 2. Fallback a officeAddress legacy (solo si no es email, ver sanitización arriba)
   if (!resolvedAddress && officeAddress) {
     resolvedAddress = officeAddress;
   }
