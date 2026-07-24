@@ -53,14 +53,21 @@ export async function GET(
     }
 
     // Get all appointments for this week
-    // Incluimos cancelled_by_professional y cancelled_by_patient para que
-    // el profesional vea en su grilla los turnos cancelados con etiquetas
-    // distintivas (igual que el admin en Agenda Central).
+    // LÓGICA DE SLOTS (tarea 2026-07-24):
+    // - cancelled_by_patient: NO se incluye → el slot queda LIBRE en la grilla
+    //   del profesional, disponible para que active un nuevo turno.
+    //   El turno sigue en la DB para histórico, pero no bloquea el slot.
+    // - cancelled_by_professional: SÍ se incluye → el slot se muestra como
+    //   "booked" con etiqueta roja. El profesional puede revertir la
+    //   cancelación cambiando el status a confirmed si se arrepintió.
+    // - cancelled (legacy): NO se incluye → slot libre.
+    // - rescheduled, absent: SÍ se incluyen (estados intermedios que ocupan slot).
+    // - completed: SÍ se incluye (turno ya atendido, marca visual gris).
     const appointments = await db.appointment.findMany({
       where: {
         professionalId: id,
         date: { in: weekDates },
-        status: { in: ["pending", "confirmed", "completed", "cancelled_by_professional", "cancelled_by_patient", "rescheduled", "absent"] },
+        status: { in: ["pending", "confirmed", "completed", "cancelled_by_professional", "rescheduled", "absent"] },
       },
       include: {
         patient: { include: { user: { select: { name: true, email: true, phone: true } } } },

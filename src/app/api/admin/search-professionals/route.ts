@@ -403,15 +403,22 @@ export async function GET(request: NextRequest) {
         // Overrides de las 7 fechas de la semana
         scheduleOverrides: { where: { date: { in: weekDateStrings } } },
         // Appointments de las 7 fechas de la semana (activos + cancelados visibles)
-        // Incluimos cancelled_by_patient y cancelled_by_professional para que
-        // el admin vea en la grilla los turnos cancelados con etiquetas distintivas
-        // (ámbar para paciente, rojo para profesional). NO incluimos 'cancelled'
-        // genérico porque ese status legacy no tiene origen y se ve igual que un
-        // turno activo si lo mostramos como booked.
+        // LÓGICA DE SLOTS (tarea 2026-07-24):
+        // - cancelled_by_patient: NO se incluye → el slot queda LIBRE (verde) en
+        //   la grilla, disponible para que el admin asigne otro paciente.
+        //   El turno sigue en la DB con status cancelled_by_patient para
+        //   histórico, pero no bloquea el slot.
+        // - cancelled_by_professional: SÍ se incluye → el slot se muestra como
+        //   "booked" con etiqueta roja "Cancelado por Profesional". El admin
+        //   decide si reasigna (cambia a confirmed) o cancela definitivamente
+        //   (cambia a cancelled, liberando el slot).
+        // - cancelled (legacy): NO se incluye → slot libre (compat turnos viejos).
+        // - pending, confirmed, rescheduled, completed, absent: SÍ se incluyen
+        //   porque son turnos activos o ya atendidos que ocupan el slot.
         appointments: {
           where: {
             date: { in: weekDateStrings },
-            status: { in: ["pending", "confirmed", "rescheduled", "cancelled_by_professional", "cancelled_by_patient", "completed", "absent"] },
+            status: { in: ["pending", "confirmed", "rescheduled", "cancelled_by_professional", "completed", "absent"] },
           },
           select: {
             id: true,
