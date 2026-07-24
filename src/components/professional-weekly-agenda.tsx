@@ -806,7 +806,18 @@ export function ProfessionalWeeklyAgenda({
       time: string,
       dayOfWeek: number
     ): "schedule" | "available" | "booked" | "outside" => {
-      if (getAppointmentForCell(dateStr, time)) return "booked";
+      const apt = getAppointmentForCell(dateStr, time);
+      // === Filtrado defensivo (tarea 2026-07-24) ===
+      // Incluso si getAppointmentForCell encuentra un appointment, NO lo
+      // consideramos como "booked" si está cancelado por paciente o
+      // cancelado (legacy). Esos slots deben quedar LIBRES para que el
+      // profesional pueda activarlos para otro paciente.
+      // visibleAppointments ya filtra estos estados, pero este check
+      // adicional garantiza que nunca se renderice una tarjeta celeste
+      // de Confirmado para un turno cancelado.
+      if (apt && apt.status !== "cancelled_by_patient" && apt.status !== "cancelled") {
+        return "booked";
+      }
 
       // Verificar si el slot fue activado por el profesional (override type="extra")
       const activatedSlot = overrides.find((o) => {
