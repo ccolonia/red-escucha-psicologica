@@ -53,11 +53,14 @@ export async function GET(
     }
 
     // Get all appointments for this week
+    // Incluimos cancelled_by_professional y cancelled_by_patient para que
+    // el profesional vea en su grilla los turnos cancelados con etiquetas
+    // distintivas (igual que el admin en Agenda Central).
     const appointments = await db.appointment.findMany({
       where: {
         professionalId: id,
         date: { in: weekDates },
-        status: { in: ["pending", "confirmed", "completed"] },
+        status: { in: ["pending", "confirmed", "completed", "cancelled_by_professional", "cancelled_by_patient", "rescheduled", "absent"] },
       },
       include: {
         patient: { include: { user: { select: { name: true, email: true, phone: true } } } },

@@ -7,14 +7,16 @@ import { sendCancellationByProfessionalEmail } from "@/lib/email";
 // Valid status transitions
 // "cancelled_by_professional" is an intermediate state: professional cancelled but
 // admin must decide whether to reassign or delete definitively
+// "cancelled_by_patient" is a final state: patient requested cancellation, slot is freed
 const validTransitions: Record<string, string[]> = {
-  pending: ["confirmed", "cancelled", "cancelled_by_professional", "rescheduled"],
-  confirmed: ["completed", "cancelled", "cancelled_by_professional", "absent", "rescheduled"],
-  cancelled_by_professional: ["cancelled", "confirmed"], // admin can reassign or delete
+  pending: ["confirmed", "cancelled", "cancelled_by_professional", "cancelled_by_patient", "rescheduled"],
+  confirmed: ["completed", "cancelled", "cancelled_by_professional", "cancelled_by_patient", "absent", "rescheduled"],
+  cancelled_by_professional: ["cancelled", "confirmed", "cancelled_by_patient"], // admin can reassign, delete, or mark as patient-cancelled
   completed: [],
   cancelled: [],
+  cancelled_by_patient: [], // terminal state — slot is freed
   absent: [],
-  rescheduled: ["confirmed", "cancelled", "cancelled_by_professional"],
+  rescheduled: ["confirmed", "cancelled", "cancelled_by_professional", "cancelled_by_patient"],
 };
 
 export async function PATCH(

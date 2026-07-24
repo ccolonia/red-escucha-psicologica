@@ -402,11 +402,16 @@ export async function GET(request: NextRequest) {
         schedules: true,
         // Overrides de las 7 fechas de la semana
         scheduleOverrides: { where: { date: { in: weekDateStrings } } },
-        // Appointments de las 7 fechas de la semana (activos)
+        // Appointments de las 7 fechas de la semana (activos + cancelados visibles)
+        // Incluimos cancelled_by_patient y cancelled_by_professional para que
+        // el admin vea en la grilla los turnos cancelados con etiquetas distintivas
+        // (ámbar para paciente, rojo para profesional). NO incluimos 'cancelled'
+        // genérico porque ese status legacy no tiene origen y se ve igual que un
+        // turno activo si lo mostramos como booked.
         appointments: {
           where: {
             date: { in: weekDateStrings },
-            status: { in: ["pending", "confirmed", "rescheduled", "cancelled_by_professional", "completed", "absent"] },
+            status: { in: ["pending", "confirmed", "rescheduled", "cancelled_by_professional", "cancelled_by_patient", "completed", "absent"] },
           },
           select: {
             id: true,
