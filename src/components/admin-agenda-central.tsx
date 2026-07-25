@@ -631,6 +631,17 @@ export function AdminAgendaCentral() {
     setSelectedTherapyModalities([]); setModality("");
   };
 
+  // === Helper: normalizar texto (insensible a tildes y mayúsculas) ===
+  // Convierte 'Mónica' → 'monica', 'Psicología' → 'psicologia', etc.
+  // Permite que el admin busque 'monica' y encuentre a 'Mónica', o
+  // 'psicologia' y encuentre 'Psicología'.
+  const normalizeText = (text: string = "") => {
+    return text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Elimina tildes y diacríticos
+      .toLowerCase();
+  };
+
   // === Profesional activo ===
   const activeProfessional = useMemo(() => {
     if (!searchResults || !activeProfessionalId) return null;
@@ -641,16 +652,26 @@ export function AdminAgendaCentral() {
   // Filtra por nombre, especialidad o profesión según lo que escriba el admin
   // en el buscador de la columna de profesionales. También aplica el toggle
   // "Solo disponibles" para mostrar solo los que tienen slots libres > 0.
+  //
+  // === Búsqueda insensible a tildes (tarea 2026-07-25) ===
+  // Tanto el término de búsqueda como los campos del profesional pasan
+  // por normalizeText() antes de hacer el .includes(). Así:
+  //   - 'monica' encuentra a 'Mónica' ✅
+  //   - 'psicologia' encuentra a 'Psicología' ✅
+  //   - 'julia' encuentra a 'Julia' ✅ (ya funcionaba, pero ahora también
+  //     funcionaría si el nombre tuviera tilde)
   const filteredProfessionals = useMemo(() => {
     if (!searchResults) return [];
-    const term = professionalSearchTerm.trim().toLowerCase();
+    const normalizedSearch = normalizeText(professionalSearchTerm.trim());
     return searchResults.professionals.filter((p) => {
       // Filtro por término de búsqueda (nombre, especialidad, profesión)
+      // Normalizamos ambos lados para que la búsqueda sea insensible a
+      // tildes y mayúsculas.
       const matchesSearch =
-        !term ||
-        p.name.toLowerCase().includes(term) ||
-        p.specialty.toLowerCase().includes(term) ||
-        (p.profession || "").toLowerCase().includes(term);
+        !normalizedSearch ||
+        normalizeText(p.name).includes(normalizedSearch) ||
+        normalizeText(p.specialty).includes(normalizedSearch) ||
+        normalizeText(p.profession || "").includes(normalizedSearch);
       // Filtro "Solo disponibles"
       const matchesAvailable = !onlyAvailable || p.totalFreeSlots > 0;
       return matchesSearch && matchesAvailable;
