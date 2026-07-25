@@ -325,6 +325,9 @@ export function AdminAgendaCentral() {
   // Permite ocultar la lista de profesionales para ganar espacio en pantalla
   // y volver a expandir (estado inicial = expandido).
   const [professionalsOpen, setProfessionalsOpen] = useState(true);
+  // === Buscador en tiempo real de profesionales (tarea 2026-07-25) ===
+  const [professionalSearchTerm, setProfessionalSearchTerm] = useState("");
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
 
   // === Estado de resultados ===
   const [searching, setSearching] = useState(false);
@@ -634,6 +637,26 @@ export function AdminAgendaCentral() {
     return searchResults.professionals.find((p) => p.id === activeProfessionalId) || null;
   }, [searchResults, activeProfessionalId]);
 
+  // === Profesionales filtrados por búsqueda en tiempo real (tarea 2026-07-25) ===
+  // Filtra por nombre, especialidad o profesión según lo que escriba el admin
+  // en el buscador de la columna de profesionales. También aplica el toggle
+  // "Solo disponibles" para mostrar solo los que tienen slots libres > 0.
+  const filteredProfessionals = useMemo(() => {
+    if (!searchResults) return [];
+    const term = professionalSearchTerm.trim().toLowerCase();
+    return searchResults.professionals.filter((p) => {
+      // Filtro por término de búsqueda (nombre, especialidad, profesión)
+      const matchesSearch =
+        !term ||
+        p.name.toLowerCase().includes(term) ||
+        p.specialty.toLowerCase().includes(term) ||
+        (p.profession || "").toLowerCase().includes(term);
+      // Filtro "Solo disponibles"
+      const matchesAvailable = !onlyAvailable || p.totalFreeSlots > 0;
+      return matchesSearch && matchesAvailable;
+    });
+  }, [searchResults, professionalSearchTerm, onlyAvailable]);
+
   // ====================================================================
   // RENDER — Split View de 3 columnas
   // ====================================================================
@@ -791,26 +814,67 @@ export function AdminAgendaCentral() {
             <CardHeader className="pb-2 sticky top-0 bg-white z-10">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm text-teal-900">
-                  Profesionales {searchResults && `(${searchResults.summary.totalProfessionalsMatched})`}
+                  Profesionales {searchResults && `(${filteredProfessionals.length}${filteredProfessionals.length !== searchResults.summary.totalProfessionalsMatched ? ` de ${searchResults.summary.totalProfessionalsMatched}` : ""})`}
                 </CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => setProfessionalsOpen(false)} className="h-6 w-6 p-0 text-teal-400 hover:bg-teal-50" title="Colapsar lista de profesionales">
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
               </div>
+              {/* === Buscador en tiempo real (tarea 2026-07-25) === */}
+              {searchResults && searchResults.professionals.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-teal-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre o especialidad..."
+                      value={professionalSearchTerm}
+                      onChange={(e) => setProfessionalSearchTerm(e.target.value)}
+                      className="w-full pl-7 pr-3 py-1.5 text-xs border border-teal-200 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-400"
+                    />
+                  </div>
+                  <label className="flex items-center gap-1.5 text-[11px] text-teal-600 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={onlyAvailable}
+                      onChange={(e) => setOnlyAvailable(e.target.checked)}
+                      className="w-3 h-3 rounded border-teal-300 text-teal-600 focus:ring-teal-500/30"
+                    />
+                    Solo disponibles
+                  </label>
+                </div>
+              )}
             </CardHeader>
-            <CardContent className="space-y-2 pt-2">
+            <CardContent className="space-y-1 pt-2">
               {searching ? (
                 <div className="py-8 text-center"><RefreshCw className="w-6 h-6 text-teal-400 mx-auto animate-spin" /></div>
               ) : !searchResults ? (
                 <div className="py-8 text-center"><Search className="w-6 h-6 text-teal-300 mx-auto" /><p className="text-teal-500 mt-2 text-xs">Hacé clic en "Buscar"</p></div>
               ) : searchResults.professionals.length === 0 ? (
                 <div className="py-8 text-center"><AlertCircle className="w-6 h-6 text-amber-400 mx-auto" /><p className="text-teal-600 mt-2 text-xs">Sin resultados</p></div>
+              ) : filteredProfessionals.length === 0 ? (
+                <div className="py-6 text-center">
+                  <AlertCircle className="w-5 h-5 text-amber-400 mx-auto" />
+                  <p className="text-teal-600 mt-2 text-xs">
+                    {onlyAvailable
+                      ? "Ninguno tiene slots libres"
+                      : `No hay coincidencias para "${professionalSearchTerm}"`}
+                  </p>
+                  {(professionalSearchTerm || onlyAvailable) && (
+                    <button
+                      onClick={() => { setProfessionalSearchTerm(""); setOnlyAvailable(false); }}
+                      className="mt-2 text-[11px] text-teal-500 hover:text-teal-700 underline"
+                    >
+                      Limpiar filtros
+                    </button>
+                  )}
+                </div>
               ) : (
-                searchResults.professionals.map((prof) => (
+                filteredProfessionals.map((prof) => (
                   <button
                     key={prof.id}
                     onClick={() => setActiveProfessionalId(prof.id)}
-                    className={`w-full text-left p-2 rounded-lg border transition-all ${
+                    className={`w-full text-left p-1.5 rounded-lg border transition-all ${
                       activeProfessionalId === prof.id
                         ? "border-teal-500 bg-teal-50 shadow-sm ring-1 ring-teal-300"
                         : "border-teal-100 hover:border-teal-300 hover:bg-teal-50/50"
@@ -818,7 +882,7 @@ export function AdminAgendaCentral() {
                   >
                     <p className="text-xs font-medium text-teal-900 truncate">{prof.name}</p>
                     <p className="text-[10px] text-teal-500 truncate">{prof.specialty}</p>
-                    <div className="flex items-center gap-1 mt-1">
+                    <div className="flex items-center gap-1 mt-0.5">
                       <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1 py-0">
                         {prof.totalFreeSlots} lib
                       </Badge>
