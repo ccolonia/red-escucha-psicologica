@@ -704,6 +704,23 @@ export function AdminAgendaCentral() {
     });
   }, [searchResults, professionalSearchTerm, onlyAvailable]);
 
+  // === Auto-scroll a la tarjeta del profesional seleccionado (tarea 2026-07-26) ===
+  // Cuando se selecciona un profesional (especialmente vía profId del hash
+  // desde el Mapa de Consultorios), hacer scroll suave hasta su tarjeta
+  // en la columna del medio para que sea visible sin scroll manual.
+  useEffect(() => {
+    if (activeProfessionalId && searchResults) {
+      // Pequeño delay para asegurar que el DOM se renderizó
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`prof-card-${activeProfessionalId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeProfessionalId, searchResults]);
+
   // ====================================================================
   // RENDER — Split View de 3 columnas
   // ====================================================================
@@ -920,6 +937,7 @@ export function AdminAgendaCentral() {
                 filteredProfessionals.map((prof) => (
                   <button
                     key={prof.id}
+                    id={`prof-card-${prof.id}`}
                     onClick={() => setActiveProfessionalId(prof.id)}
                     className={`w-full text-left p-1.5 rounded-lg border transition-all ${
                       activeProfessionalId === prof.id

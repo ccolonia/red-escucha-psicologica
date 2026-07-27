@@ -185,7 +185,7 @@ function sanitizeAddress(label: string, address: string): string {
 // === Helper: geocodificar dirección con Nominatim (con cache en localStorage) ===
 // Incluye fallback: si la dirección exacta falla, buscar por localidad + provincia
 async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
-  const cacheKey = `rep_geocode_${btoa(address).replace(/[/+=]/g, "_")}`;
+  const cacheKey = `rep_geocode_v2_${btoa(address).replace(/[/+=]/g, "_")}`;
 
   // 1. Verificar cache
   if (typeof window !== "undefined") {
@@ -217,20 +217,41 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lng: numb
     }
   };
 
-  // Intento 1: dirección exacta
-  let result = await doGeocode(address);
+  // Intento 1: dirección exacta (limpiando detalles de piso/depto que confunden a Nominatim)
+  // Quitar "Piso X", "Dto X", "Dto X", "PB", etc. que Nominatim no entiende
+  const cleanAddrForGeocode = address
+    .replace(/piso\s+\w+/gi, "")
+    .replace(/dto\s+\w+/gi, "")
+    .replace(/dpto\s+\w+/gi, "")
+    .replace(/departamento\s+\w+/gi, "")
+    .replace(/\bpb\b/gi, "")
+    .replace(/\bpa\b/gi, "")
+    .replace(/\"[a-z]\"/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  let result = await doGeocode(cleanAddrForGeocode);
 
-  // Intento 2 (fallback): si falló, buscar por las últimas 2-3 palabras
-  // (probablemente la localidad) + ", Buenos Aires, Argentina"
+  // Intento 2 (fallback 1): si falló, buscar por barrio/localidad detectado
   if (!result) {
-    const words = address.split(/[\s,]+/).filter((w) => w.length > 2);
-    if (words.length > 2) {
-      // Tomar las últimas 2 palabras (probablemente localidad)
-      const localidad = words.slice(-2).join(" ");
-      const fallbackQuery = `${localidad}, Buenos Aires, Argentina`;
+    const barrio = detectBarrio(address);
+    if (barrio) {
+      const fallbackQuery = `${barrio}, Buenos Aires, Argentina`;
       result = await doGeocode(fallbackQuery);
       if (result) {
-        console.log(`[geocode] Fallback exitoso para "${address}" → usando "${fallbackQuery}"`);
+        console.log(`[geocode] Fallback por barrio: "${address}" → "${fallbackQuery}"`);
+      }
+    }
+  }
+
+  // Intento 3 (fallback 2): buscar por las primeras 3 palabras (calle + altura)
+  if (!result) {
+    const words = cleanAddrForGeocode.split(/[\s,]+/).filter((w) => w.length > 1);
+    if (words.length >= 3) {
+      const calleAltura = words.slice(0, 3).join(" ");
+      const fallbackQuery = `${calleAltura}, Buenos Aires, Argentina`;
+      result = await doGeocode(fallbackQuery);
+      if (result) {
+        console.log(`[geocode] Fallback por calle+altura: "${address}" → "${fallbackQuery}"`);
       }
     }
   }
@@ -477,7 +498,7 @@ export function AdminMap() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full max-w-full px-2 md:px-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
