@@ -143,6 +143,26 @@ const ZONE_COLORS: Record<string, string> = {
   "Interior / PBA": "bg-emerald-100 text-emerald-800 border-emerald-300",
 };
 
+// === Helper: sanitizar dirección para evitar duplicación ===
+// Algunos profesionales cargaron en `label` la dirección completa (ej:
+// "Avenida Rivadavia 13876. Piso 7mo L") y en `address` también la
+// dirección. Esto causaba que la tarjeta mostrara "label: address" con
+// la dirección repetida dos veces.
+//
+// Solución: si el label contiene la dirección (o viceversa), mostrar
+// solo la dirección. Si el label es un nombre genérico ("Consultorio
+// Principal", "Sala Belgrano"), mostrar "label — address".
+function sanitizeAddress(label: string, address: string): string {
+  const normLabel = normalizeText(label);
+  const normAddress = normalizeText(address);
+  // Si el label contiene la dirección o la dirección contiene el label
+  if (normAddress.includes(normLabel) || normLabel.includes(normAddress)) {
+    return address; // solo la dirección
+  }
+  // Si el label es genérico (Consultorio, Sala, etc.), mostrar "label — address"
+  return `${label} — ${address}`;
+}
+
 // === Helper: geocodificar dirección con Nominatim (con cache en localStorage) ===
 // Incluye fallback: si la dirección exacta falla, buscar por localidad + provincia
 async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
@@ -531,9 +551,9 @@ export function AdminMap() {
 
             {/* Si hay item seleccionado, mostrar detalle */}
             {selectedItem ? (
-              <Card className="border-emerald-200 shadow-md">
+              <Card className="bg-white border border-slate-200 shadow-sm">
                 <CardContent className="p-4 space-y-3">
-                  {/* === Badges de zona + barrio arriba === */}
+                  {/* === Badges de zona + barrio === */}
                   <div className="flex flex-wrap items-center gap-1.5">
                     {(() => {
                       const zone = detectZone(selectedItem.address);
@@ -556,50 +576,51 @@ export function AdminMap() {
                     })()}
                   </div>
 
+                  {/* === Nombre + especialidad === */}
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
-                        <Stethoscope className="w-4 h-4 text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-teal-900 text-sm">{selectedItem.name}</p>
-                        <p className="text-xs text-teal-500">{selectedItem.specialty}</p>
-                      </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">{selectedItem.name}</p>
+                      <p className="text-xs text-gray-500">{selectedItem.specialty}</p>
                     </div>
                     <button
                       onClick={() => setSelectedItem(null)}
-                      className="text-teal-400 hover:text-teal-600"
+                      className="text-gray-400 hover:text-gray-600"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5">
-                    <p className="text-xs font-semibold text-emerald-700 mb-1">📍 Dirección del consultorio</p>
-                    <p className="text-xs text-emerald-800 font-medium">
-                      {selectedItem.label}: {selectedItem.address}
+                  {/* === Dirección limpia en una línea (sin caja verde) === */}
+                  <div className="text-sm text-gray-700">
+                    📍 {sanitizeAddress(selectedItem.label, selectedItem.address)}
+                  </div>
+
+                  {/* === Estado de geocodificación === */}
+                  {!selectedItem.coords ? (
+                    <p className="text-[10px] text-amber-600 italic flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
+                      Ubicación aproximada — cargando en mapa...
                     </p>
-                    {!selectedItem.coords ? (
-                      <p className="text-[10px] text-amber-600 mt-1 italic flex items-center gap-1">
-                        <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
-                        Ubicación aproximada — cargando en mapa...
-                      </p>
-                    ) : (
-                      <p className="text-[10px] text-emerald-500 mt-1 flex items-center gap-1">
-                        ✅ Ubicación confirmada en el mapa
-                      </p>
-                    )}
+                  ) : (
+                    <p className="text-[10px] text-emerald-600 flex items-center gap-1">
+                      ✅ Ubicación confirmada en el mapa
+                    </p>
+                  )}
+
+                  {/* === Slots compactos en una línea === */}
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <span className="text-gray-700 font-medium">{selectedItem.totalFreeSlots} libres</span>
+                    </span>
+                    <span className="text-gray-300">|</span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                      <span className="text-gray-500">{selectedItem.totalBookedSlots} ocupados</span>
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[10px] bg-emerald-50 border-emerald-200 text-emerald-700">
-                      {selectedItem.totalFreeSlots} libres
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px] bg-slate-50 border-slate-200 text-slate-600">
-                      {selectedItem.totalBookedSlots} ocupados
-                    </Badge>
-                  </div>
-
+                  {/* === WhatsApp === */}
                   {selectedItem.phone && (
                     <a
                       href={`https://wa.me/${selectedItem.phone.replace(/[^0-9]/g, "")}`}
@@ -611,6 +632,7 @@ export function AdminMap() {
                     </a>
                   )}
 
+                  {/* === Botón Ver Agenda === */}
                   <Button
                     onClick={handleVerAgenda}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
@@ -634,14 +656,12 @@ export function AdminMap() {
                   return (
                     <Card
                       key={item.key}
-                      className={`border-teal-100 hover:border-emerald-300 hover:shadow-sm cursor-pointer transition-all ${
-                        item.coords ? "" : "opacity-80"
-                      }`}
+                      className="bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-300 cursor-pointer transition-all"
                       onClick={() => handleSidebarItemClick(item)}
                     >
-                      <CardContent className="p-2.5">
-                        {/* === Fila de badges: Zona + Barrio === */}
-                        <div className="flex flex-wrap items-center gap-1 mb-1.5">
+                      <CardContent className="p-3 space-y-1.5">
+                        {/* === Badges de zona + barrio === */}
+                        <div className="flex flex-wrap items-center gap-1">
                           {zone ? (
                             <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full border ${ZONE_COLORS[zone] || "bg-slate-100 text-slate-700 border-slate-300"}`}>
                               {zone}
@@ -665,26 +685,26 @@ export function AdminMap() {
                           )}
                         </div>
 
-                        {/* === Info del profesional === */}
-                        <div className="flex items-start gap-2">
-                          <div className="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center shrink-0">
-                            <Stethoscope className="w-3 h-3 text-teal-600" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-teal-900 truncate">{item.name}</p>
-                            <p className="text-[10px] text-teal-500 truncate">{item.specialty}</p>
-                            <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                              {item.address}
-                            </p>
-                            <div className="flex items-center gap-1 mt-1">
-                              <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1 py-0">
-                                {item.totalFreeSlots} lib
-                              </Badge>
-                              <Badge variant="outline" className="text-[9px] bg-slate-50 border-slate-200 text-slate-600 px-1 py-0">
-                                {item.totalBookedSlots} ocup
-                              </Badge>
-                            </div>
-                          </div>
+                        {/* === Nombre + especialidad === */}
+                        <p className="text-xs font-bold text-gray-900 truncate">{item.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{item.specialty}</p>
+
+                        {/* === Dirección limpia (sin caja verde) === */}
+                        <p className="text-[10px] text-gray-600 truncate">
+                          📍 {sanitizeAddress(item.label, item.address)}
+                        </p>
+
+                        {/* === Slots compactos === */}
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <span className="flex items-center gap-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span className="text-gray-700 font-medium">{item.totalFreeSlots} lib</span>
+                          </span>
+                          <span className="text-gray-300">|</span>
+                          <span className="flex items-center gap-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                            <span className="text-gray-500">{item.totalBookedSlots} ocup</span>
+                          </span>
                         </div>
                       </CardContent>
                     </Card>
