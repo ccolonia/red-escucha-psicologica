@@ -63,9 +63,12 @@ export function MapView({
       scrollWheelZoom={true}
     >
       <MapController center={center} zoom={zoom} />
+      {/* === Capa CartoDB Voyager HD (alto contraste, letras legibles) === */}
+      {/* Reemplaza el TileLayer default de OpenStreetMap que se veía opaco */}
+      {/* Voyager resalta provincias, avenidas y barrios con tipografía clara */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
       />
       {markers.map((m) => (
         <Marker

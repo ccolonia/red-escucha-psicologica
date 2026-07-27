@@ -143,24 +143,43 @@ const ZONE_COLORS: Record<string, string> = {
   "Interior / PBA": "bg-emerald-100 text-emerald-800 border-emerald-300",
 };
 
-// === Helper: sanitizar dirección para evitar duplicación ===
-// Algunos profesionales cargaron en `label` la dirección completa (ej:
-// "Avenida Rivadavia 13876. Piso 7mo L") y en `address` también la
-// dirección. Esto causaba que la tarjeta mostrara "label: address" con
-// la dirección repetida dos veces.
+// === Helper: sanitizar dirección para evitar duplicación (FIX DEFINITIVO) ===
+// Algunos profesionales cargaron en `label` la dirección completa y en
+// `address` también la dirección (con leves variaciones). El helper
+// anterior usaba includes() que no detectaba duplicados con variaciones.
 //
-// Solución: si el label contiene la dirección (o viceversa), mostrar
-// solo la dirección. Si el label es un nombre genérico ("Consultorio
-// Principal", "Sala Belgrano"), mostrar "label — address".
+// Nuevo enfoque estricto:
+// 1. Si la dirección ya contiene "—" o ":", tomar solo el primer segmento
+// 2. Comparar los primeros 20 caracteres normalizados de label y address
+//    — si coinciden, son duplicados → mostrar solo address
+// 3. Si no son duplicados, mostrar "label — address" (formato limpio)
 function sanitizeAddress(label: string, address: string): string {
-  const normLabel = normalizeText(label);
-  const normAddress = normalizeText(address);
-  // Si el label contiene la dirección o la dirección contiene el label
-  if (normAddress.includes(normLabel) || normLabel.includes(normAddress)) {
-    return address; // solo la dirección
+  if (!address) return label || "";
+
+  // Paso 1: limpiar la dirección de separadores previos
+  let cleanAddr = address;
+  if (/—|:/.test(cleanAddr)) {
+    const parts = cleanAddr.split(/—|:/);
+    cleanAddr = parts[0].trim();
   }
-  // Si el label es genérico (Consultorio, Sala, etc.), mostrar "label — address"
-  return `${label} — ${address}`;
+
+  // Paso 2: comparar primeros 20 chars normalizados
+  const normLabel = normalizeText(label).substring(0, 20);
+  const normAddr = normalizeText(cleanAddr).substring(0, 20);
+
+  // Si los primeros 20 chars coinciden, son duplicados
+  if (normLabel === normAddr && normLabel.length > 5) {
+    return cleanAddr;
+  }
+
+  // Paso 3: si el label es genérico (corta, < 30 chars y no parece dirección)
+  // mostrar "label — address"
+  if (label.length < 30 && !/\d/.test(label)) {
+    return `${label} — ${cleanAddr}`;
+  }
+
+  // Si el label parece una dirección (tiene números), mostrar solo address
+  return cleanAddr;
 }
 
 // === Helper: geocodificar dirección con Nominatim (con cache en localStorage) ===
@@ -554,10 +573,13 @@ export function AdminMap() {
               <Card className="bg-white border border-slate-200 shadow-sm">
                 <CardContent className="p-4 space-y-3">
                   {/* === Badges de zona + barrio === */}
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
                     {(() => {
-                      const zone = detectZone(selectedItem.address);
-                      const barrio = detectBarrio(selectedItem.address);
+                      // Buscar zona y barrio en AMBOS campos (address + label)
+                      // porque a veces la localidad está en el label, no en el address
+                      const combined = `${selectedItem.address} ${selectedItem.label}`;
+                      const zone = detectZone(combined);
+                      const barrio = detectBarrio(combined);
                       return (
                         <>
                           {zone && (
@@ -651,8 +673,10 @@ export function AdminMap() {
                   {geocoding && " (geocodificando...)"}
                 </p>
                 {filteredSidebarItems.map((item) => {
-                  const zone = detectZone(item.address);
-                  const barrio = detectBarrio(item.address);
+                  // Buscar zona y barrio en AMBOS campos (address + label)
+                  const combined = `${item.address} ${item.label}`;
+                  const zone = detectZone(combined);
+                  const barrio = detectBarrio(combined);
                   return (
                     <Card
                       key={item.key}
