@@ -59,58 +59,89 @@ function normalizeText(text: string = "") {
     .toLowerCase();
 }
 
-// === Helper: resaltar palabras geográficas en negrita ===
-function highlightGeoText(text: string): React.ReactNode {
-  if (!text) return text;
-  // Crear regex con todas las palabras geográficas (case-insensitive, sin tildes)
-  const normalizedKeywords = GEO_KEYWORDS.map((k) => normalizeText(k));
-  // Construir patrón: buscar cualquiera de las palabras, sin importar tildes
-  // Usamos una regex que captura cada palabra geográfica
-  const parts: React.ReactNode[] = [];
-  let remaining = text;
-  let found = true;
-  let keyCounter = 0;
-
-  while (found && remaining.length > 0) {
-    found = false;
-    let earliestMatch = -1;
-    let matchedKeyword = "";
-
-    for (let i = 0; i < GEO_KEYWORDS.length; i++) {
-      const normKeyword = normalizedKeywords[i];
-      const normRemaining = normalizeText(remaining);
-      const idx = normRemaining.indexOf(normKeyword);
-      if (idx !== -1 && (earliestMatch === -1 || idx < earliestMatch)) {
-        earliestMatch = idx;
-        matchedKeyword = GEO_KEYWORDS[i];
-        // Guardar el largo real del match (puede tener tildes)
-      }
-    }
-
-    if (earliestMatch !== -1) {
-      found = true;
-      // Texto antes del match
-      if (earliestMatch > 0) {
-        parts.push(remaining.substring(0, earliestMatch));
-      }
-      // El match mismo (usar el largo del keyword normalizado para cortar)
-      const normKeyword = normalizeText(matchedKeyword);
-      const matchEnd = earliestMatch + normKeyword.length;
-      parts.push(
-        <strong key={keyCounter++} className="font-bold text-emerald-800">
-          {remaining.substring(earliestMatch, matchEnd)}
-        </strong>
-      );
-      remaining = remaining.substring(matchEnd);
-    }
+// === Helper: detectar zona de una dirección ===
+// Devuelve el label de la zona (CABA, GBA Norte, etc.) o null si no detecta
+function detectZone(address: string): string | null {
+  const norm = normalizeText(address);
+  // CABA — barrios conocidos
+  const cabaBarrios = ["palermo", "caballito", "belgrano", "recoleta", "flores", "floresta", "versalles", "villa urquiza", "liniers", "mataderos", "san telmo", "la boca", "almagro", "boedo", "nunez", "devoto", "saavedra", "coghlan", "agronomia", "park", "centro", "microcentro", "balvanera", "once", "congreso", "monserrat", "san cristobal", "constitucion", "barracas"];
+  if (cabaBarrios.some((b) => norm.includes(b)) || norm.includes("caba") || norm.includes("capital federal") || norm.includes("ciudad autonoma")) {
+    return "CABA";
   }
-
-  if (remaining.length > 0) {
-    parts.push(remaining);
+  // GBA Norte
+  const gbaNorte = ["tigre", "pilar", "san isidro", "vicente lopez", "san fernando", "nordelta", "san martin", "3 de febrero", "tres de febrero", "hurlingham", "moron", "ituzaingo"];
+  if (gbaNorte.some((b) => norm.includes(b))) {
+    // Morón e Ituzaingó a veces se consideran Oeste, pero los incluimos en Norte por proximidad
+    if (norm.includes("moron") || norm.includes("ituzaingo")) return "GBA Oeste";
+    return "GBA Norte";
   }
-
-  return parts.length > 0 ? parts : text;
+  // GBA Sur
+  const gbaSur = ["avellaneda", "lanus", "lomas de zamora", "quilmes", "ezeiza", "florencio varela", "almirante brown", "quilmes"];
+  if (gbaSur.some((b) => norm.includes(b))) {
+    return "GBA Sur";
+  }
+  // GBA Oeste
+  const gbaOeste = ["merlo", "moreno", "la matanza", "ramos mejia", "haedo", "el palomar", "caseros", "ciudadela"];
+  if (gbaOeste.some((b) => norm.includes(b))) {
+    return "GBA Oeste";
+  }
+  // Interior / PBA
+  const pba = ["la plata", "mar del plata", "tandil", "bahia blanca", "junin", "olavarria", "trenque lauquen", "ranelagh", "berazategui"];
+  if (pba.some((b) => norm.includes(b)) || norm.includes("provincia de buenos aires") || norm.includes("pba")) {
+    return "Interior / PBA";
+  }
+  return null;
 }
+
+// === Helper: detectar barrio/localidad de una dirección ===
+// Devuelve el nombre del barrio o localidad encontrado, o null
+function detectBarrio(address: string): string | null {
+  const norm = normalizeText(address);
+  // Lista de barrios/localidades conocidos con su nombre canónico
+  const barrios: { norm: string; label: string }[] = [
+    { norm: "palermo", label: "Palermo" },
+    { norm: "caballito", label: "Caballito" },
+    { norm: "belgrano", label: "Belgrano" },
+    { norm: "recoleta", label: "Recoleta" },
+    { norm: "flores", label: "Flores" },
+    { norm: "versalles", label: "Versalles" },
+    { norm: "villa urquiza", label: "Villa Urquiza" },
+    { norm: "ramos mejia", label: "Ramos Mejía" },
+    { norm: "moron", label: "Morón" },
+    { norm: "merlo", label: "Merlo" },
+    { norm: "moreno", label: "Moreno" },
+    { norm: "la matanza", label: "La Matanza" },
+    { norm: "san martin", label: "San Martín" },
+    { norm: "tigre", label: "Tigre" },
+    { norm: "pilar", label: "Pilar" },
+    { norm: "san isidro", label: "San Isidro" },
+    { norm: "vicente lopez", label: "Vicente López" },
+    { norm: "avellaneda", label: "Avellaneda" },
+    { norm: "lanus", label: "Lanús" },
+    { norm: "lomas de zamora", label: "Lomas de Zamora" },
+    { norm: "quilmes", label: "Quilmes" },
+    { norm: "la plata", label: "La Plata" },
+    { norm: "ranelagh", label: "Ranelagh" },
+    { norm: "ituzaingo", label: "Ituzaingó" },
+    { norm: "haedo", label: "Haedo" },
+    { norm: "caseros", label: "Caseros" },
+    { norm: "san fernando", label: "San Fernando" },
+    { norm: "ezeiza", label: "Ezeiza" },
+  ];
+  for (const b of barrios) {
+    if (norm.includes(b.norm)) return b.label;
+  }
+  return null;
+}
+
+// === Colores de zonas para los badges ===
+const ZONE_COLORS: Record<string, string> = {
+  "CABA": "bg-teal-100 text-teal-800 border-teal-300",
+  "GBA Norte": "bg-blue-100 text-blue-800 border-blue-300",
+  "GBA Sur": "bg-purple-100 text-purple-800 border-purple-300",
+  "GBA Oeste": "bg-amber-100 text-amber-800 border-amber-300",
+  "Interior / PBA": "bg-emerald-100 text-emerald-800 border-emerald-300",
+};
 
 // === Helper: geocodificar dirección con Nominatim (con cache en localStorage) ===
 // Incluye fallback: si la dirección exacta falla, buscar por localidad + provincia
@@ -502,6 +533,29 @@ export function AdminMap() {
             {selectedItem ? (
               <Card className="border-emerald-200 shadow-md">
                 <CardContent className="p-4 space-y-3">
+                  {/* === Badges de zona + barrio arriba === */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {(() => {
+                      const zone = detectZone(selectedItem.address);
+                      const barrio = detectBarrio(selectedItem.address);
+                      return (
+                        <>
+                          {zone && (
+                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${ZONE_COLORS[zone] || "bg-slate-100 text-slate-700 border-slate-300"}`}>
+                              {zone}
+                            </span>
+                          )}
+                          {barrio && (
+                            <span className="px-2 py-0.5 text-[10px] font-medium rounded-full border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-0.5">
+                              <MapPin className="w-2.5 h-2.5" />
+                              {barrio}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
@@ -523,12 +577,16 @@ export function AdminMap() {
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5">
                     <p className="text-xs font-semibold text-emerald-700 mb-1">📍 Dirección del consultorio</p>
                     <p className="text-xs text-emerald-800 font-medium">
-                      {highlightGeoText(selectedItem.label)}:{" "}
-                      {highlightGeoText(selectedItem.address)}
+                      {selectedItem.label}: {selectedItem.address}
                     </p>
-                    {!selectedItem.coords && (
-                      <p className="text-[10px] text-amber-600 mt-1 italic">
-                        ⏳ Obteniendo ubicación en el mapa...
+                    {!selectedItem.coords ? (
+                      <p className="text-[10px] text-amber-600 mt-1 italic flex items-center gap-1">
+                        <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
+                        Ubicación aproximada — cargando en mapa...
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-emerald-500 mt-1 flex items-center gap-1">
+                        ✅ Ubicación confirmada en el mapa
                       </p>
                     )}
                   </div>
@@ -570,42 +628,68 @@ export function AdminMap() {
                   {filteredSidebarItems.length} consultorios
                   {geocoding && " (geocodificando...)"}
                 </p>
-                {filteredSidebarItems.map((item) => (
-                  <Card
-                    key={item.key}
-                    className={`border-teal-100 hover:border-emerald-300 hover:shadow-sm cursor-pointer transition-all ${
-                      item.coords ? "" : "opacity-75"
-                    }`}
-                    onClick={() => handleSidebarItemClick(item)}
-                  >
-                    <CardContent className="p-2.5">
-                      <div className="flex items-start gap-2">
-                        <div className="w-7 h-7 bg-teal-100 rounded-full flex items-center justify-center shrink-0">
-                          <Stethoscope className="w-3.5 h-3.5 text-teal-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-teal-900 truncate">{item.name}</p>
-                          <p className="text-[10px] text-teal-500 truncate">{item.specialty}</p>
-                          <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                            📍 <span className="font-medium">{highlightGeoText(item.label)}</span>:{" "}
-                            {highlightGeoText(item.address)}
-                          </p>
-                          {!item.coords && (
-                            <p className="text-[9px] text-amber-500 italic">⏳ En el mapa pronto...</p>
+                {filteredSidebarItems.map((item) => {
+                  const zone = detectZone(item.address);
+                  const barrio = detectBarrio(item.address);
+                  return (
+                    <Card
+                      key={item.key}
+                      className={`border-teal-100 hover:border-emerald-300 hover:shadow-sm cursor-pointer transition-all ${
+                        item.coords ? "" : "opacity-80"
+                      }`}
+                      onClick={() => handleSidebarItemClick(item)}
+                    >
+                      <CardContent className="p-2.5">
+                        {/* === Fila de badges: Zona + Barrio === */}
+                        <div className="flex flex-wrap items-center gap-1 mb-1.5">
+                          {zone ? (
+                            <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full border ${ZONE_COLORS[zone] || "bg-slate-100 text-slate-700 border-slate-300"}`}>
+                              {zone}
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full border bg-slate-50 text-slate-400 border-slate-200">
+                              Sin zona
+                            </span>
                           )}
-                          <div className="flex items-center gap-1 mt-1">
-                            <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1 py-0">
-                              {item.totalFreeSlots} lib
-                            </Badge>
-                            <Badge variant="outline" className="text-[9px] bg-slate-50 border-slate-200 text-slate-600 px-1 py-0">
-                              {item.totalBookedSlots} ocup
-                            </Badge>
+                          {barrio && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-medium rounded-full border bg-slate-100 text-slate-600 border-slate-300 flex items-center gap-0.5">
+                              <MapPin className="w-2 h-2" />
+                              {barrio}
+                            </span>
+                          )}
+                          {!item.coords && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-medium rounded-full border bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-0.5">
+                              <span className="inline-block w-1 h-1 bg-amber-400 rounded-full animate-pulse"></span>
+                              Cargando
+                            </span>
+                          )}
+                        </div>
+
+                        {/* === Info del profesional === */}
+                        <div className="flex items-start gap-2">
+                          <div className="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center shrink-0">
+                            <Stethoscope className="w-3 h-3 text-teal-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-teal-900 truncate">{item.name}</p>
+                            <p className="text-[10px] text-teal-500 truncate">{item.specialty}</p>
+                            <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                              {item.address}
+                            </p>
+                            <div className="flex items-center gap-1 mt-1">
+                              <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1 py-0">
+                                {item.totalFreeSlots} lib
+                              </Badge>
+                              <Badge variant="outline" className="text-[9px] bg-slate-50 border-slate-200 text-slate-600 px-1 py-0">
+                                {item.totalBookedSlots} ocup
+                              </Badge>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
                 {filteredSidebarItems.length === 0 && (
                   <div className="py-8 text-center">
                     <MapPin className="w-8 h-8 text-teal-200 mx-auto" />
