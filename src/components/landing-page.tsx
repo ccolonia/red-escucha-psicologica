@@ -170,6 +170,10 @@ const SYNONYMS: Record<string, string[]> = {
   "trastorno del lenguaje": ["trastorno del lenguaje", "lenguaje", "habla", "comunicación"],
   "mutismo selectivo": ["mutismo", "no habla", "mutismo selectivo"],
   "trastorno oposicionista desafiante": ["tod", "oposicionista", "desafiante", "desobediente", "rebeldía"],
+  "psiquiatría clínica": ["psiquiatría clínica", "psiquiatra", "psiquiatria", "consulta psiquiatrica", "psiquiatra cerca", "salud mental medica", "trastorno bipolar", "esquizofrenia", "tratamiento psiquiatrico", "medicación psiquiatrica", "psiquiatra cerca de mi", "clínica de salud mental cerca"],
+  "psiquiatría infanto-juvenil": ["psiquiatría infanto-juvenil", "psiquiatra niños", "psiquiatra adolescentes", "psiquiatría infantil", "desarrollo cognitivo niños"],
+  "psiquiatría forense o legal": ["psiquiatría forense", "psiquiatría legal", "psiquiatra judicial", "evaluación mental judicial", "salud mental justicia"],
+  "psiquiatría de enlace o interconsulta": ["psiquiatría de enlace", "interconsulta", "psiquiatría hospitalaria", "salud mental hospital"],
 };
 
 // ===== Índice de búsqueda (flattened) =====
@@ -333,6 +337,16 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: Eye, label: "EMDR", desc: "Terapia de reprocesamiento y desensibilización mediante movimientos oculares para el abordaje de traumas y experiencias adversas." },
       { icon: HeartPulse, label: "Trastornos Sexuales", desc: "Dificultades en la respuesta sexual, deseo, excitación o dolor que generan malestar y afectan la intimidad y las relaciones." },
       { icon: Shield, label: "ASI", desc: "Abuso Sexual Infantil: acompañamiento psicológico especializado para niños, niñas y adolescentes víctimas de abuso sexual, con abordaje centrado en la contención, el proceso terapéutico y la reparación del vínculo." },
+    ],
+  },
+  {
+    id: "psiquiatria",
+    label: "Psiquiatría",
+    items: [
+      { icon: Brain, label: "Psiquiatría Clínica", desc: "Tratamiento de trastornos como la depresión, ansiedad, esquizofrenia o trastorno bipolar." },
+      { icon: Baby, label: "Psiquiatría Infanto-Juvenil", desc: "Centrada en el desarrollo cognitivo y emocional de niños y adolescentes." },
+      { icon: Gavel, label: "Psiquiatría Forense o Legal", desc: "Colaboración con los sistemas de justicia para evaluar la salud mental de personas involucradas en procesos judiciales." },
+      { icon: HeartPulse, label: "Psiquiatría de Enlace o Interconsulta", desc: "Trabajo conjunto con otras especialidades médicas dentro de hospitales generales." },
     ],
   },
 ];
@@ -1078,6 +1092,7 @@ export function LandingPage() {
     "Ansiedad", "Depresión", "Terapia de Pareja", "Niños",
     "Adolescentes", "EMDR", "TOC", "Duelo",
     "Adicciones", "Estrés", "Psiconutrición", "Orientación Vocacional",
+    "Psiquiatría",
   ];
 
   // Maneja la navegación con teclado dentro de las sugerencias
