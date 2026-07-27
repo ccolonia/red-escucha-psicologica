@@ -465,7 +465,14 @@ export function AdminMap() {
     }
   };
 
+  // === "Ver Agenda" → navegar a Agenda Central con profId ===
+  // Como REP es una SPA con Zustand store (no Next.js router), usamos
+  // window.location.hash para pasar el profId. La Agenda Central lo
+  // captura en un useEffect al montar y selecciona ese profesional.
   const handleVerAgenda = () => {
+    if (selectedItem?.profId) {
+      window.location.hash = `admin-agenda-central?profId=${selectedItem.profId}`;
+    }
     setCurrentView("admin-agenda-central");
   };
 

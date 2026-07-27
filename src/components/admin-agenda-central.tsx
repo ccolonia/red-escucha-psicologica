@@ -435,7 +435,33 @@ export function AdminAgendaCentral() {
       // meter activeProfessionalId en las deps del useCallback (lo cual
       // causaría un loop infinito con el useEffect que llama a handleSearch).
       const currentActiveId = activeProfessionalIdRef.current;
+
+      // === Capturar profId del hash (redirección desde Mapa de Consultorios) ===
+      // Si el usuario viene del mapa con ?profId=xxx en el hash, seleccionar
+      // automáticamente a ese profesional en vez del primero de la lista.
+      let profIdFromHash: string | null = null;
+      if (typeof window !== "undefined") {
+        const hash = window.location.hash;
+        const match = hash.match(/profId=([^&]+)/);
+        if (match) {
+          profIdFromHash = match[1];
+          // Limpiar el hash para que no se re-seleccione en próximas búsquedas
+          window.location.hash = "";
+        }
+      }
+
       if (data.professionals.length > 0) {
+        // Prioridad 1: profId del hash (viene del mapa)
+        if (profIdFromHash) {
+          const profFromHash = data.professionals.find((p) => p.id === profIdFromHash);
+          if (profFromHash) {
+            setActiveProfessionalId(profFromHash.id);
+            toast.success(`Profesional seleccionado: ${profFromHash.name}`);
+            return; // no continuar con la lógica de auto-selección
+          }
+        }
+
+        // Prioridad 2: preservar selección actual si sigue en los resultados
         const stillExists = currentActiveId
           ? data.professionals.some((p) => p.id === currentActiveId)
           : false;

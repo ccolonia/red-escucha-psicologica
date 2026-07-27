@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -79,6 +79,18 @@ export function MapView({
             click: () => onMarkerClick(m),
           }}
         >
+          {/* === Tooltip al hover (sin necesidad de clic) === */}
+          <Tooltip direction="top" offset={[0, -20]} opacity={0.95}>
+            <div style={{ fontFamily: "sans-serif" }}>
+              <strong style={{ color: "#1e293b", fontSize: "12px" }}>{m.name}</strong>
+              <br />
+              <span style={{ color: "#64748b", fontSize: "11px" }}>{m.specialty}</span>
+              <br />
+              <span style={{ color: "#059669", fontSize: "11px", fontWeight: 600 }}>
+                {m.totalFreeSlots > 0 ? `${m.totalFreeSlots} slots libres` : "Sin slots libres"}
+              </span>
+            </div>
+          </Tooltip>
           <Popup>
             <div style={{ minWidth: "180px" }}>
               <strong style={{ color: "#0f766e", fontSize: "13px" }}>{m.name}</strong>
