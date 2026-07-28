@@ -14,6 +14,10 @@ import {
   CheckCircle2,
   XCircle,
   Edit3,
+  HelpCircle,
+  ChevronLeft,
+  ChevronRight,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +33,12 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -115,6 +125,8 @@ export function ProfessionalScheduleConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"weekly" | "overrides">("weekly");
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [guideStep, setGuideStep] = useState(0);
 
   // New schedule form
   const [newDay, setNewDay] = useState<number>(1);
@@ -442,7 +454,18 @@ export function ProfessionalScheduleConfig() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-teal-900">Mi Agenda</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-teal-900">Mi Agenda</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setIsGuideOpen(true); setGuideStep(0); }}
+            className="border-teal-200 text-teal-600 hover:bg-teal-50"
+          >
+            <HelpCircle className="mr-1.5 w-4 h-4" />
+            Guía Agenda REP
+          </Button>
+        </div>
         {activeTab === "weekly" && (
           <Button
             onClick={handleSaveSchedules}
@@ -1041,6 +1064,143 @@ export function ProfessionalScheduleConfig() {
           )}
         </div>
       )}
+
+      {/* === Wizard Guía Agenda REP === */}
+      <AgendaGuideModal
+        open={isGuideOpen}
+        onOpenChange={setIsGuideOpen}
+        step={guideStep}
+        setStep={setGuideStep}
+      />
     </div>
+  );
+}
+
+// ====================================================================
+// SUB-COMPONENTE: Wizard Guía Agenda REP (4 pasos)
+// ====================================================================
+const GUIDE_STEPS = [
+  {
+    icon: "⏰",
+    title: "Agregá tus rangos de atención",
+    body: "Seleccioná el día (ej. Lunes), el horario de inicio (ej. 09:00 hs), el de fin (ej. 18:00 hs) y la duración de la sesión (45 min). El sistema generará automáticamente los turnos de ese bloque.",
+  },
+  {
+    icon: "📍",
+    title: "Modalidad y Consultorio Presencial",
+    body: "Indicá si la atención es Online, Presencial o Híbrida. Si atendés de forma presencial, acordate de asignar la dirección del consultorio (en el menú \"Mi Perfil\" de tu tablero) asociada a ese bloque.",
+  },
+  {
+    icon: "💾",
+    title: "¡No olvides Guardar!",
+    body: "Cada vez que agregues o modifiques un horario, acordate de hacer clic en el botón \"Guardar Agenda\" ubicado en la esquina superior derecha para consolidar los datos.",
+  },
+  {
+    icon: "🗓️",
+    title: "Manejo de Excepciones y Días Libres",
+    body: "¿Tenés un feriado o un imprevisto? Usá la pestaña \"Excepciones\" para bloquear días completos, o administrá celdas individuales desde tu vista \"Mi Agenda\".",
+  },
+];
+
+function AgendaGuideModal({
+  open,
+  onOpenChange,
+  step,
+  setStep,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  step: number;
+  setStep: (step: number) => void;
+}) {
+  const totalSteps = GUIDE_STEPS.length;
+  const current = GUIDE_STEPS[step];
+  const isLast = step === totalSteps - 1;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        {/* Header con botón cerrar */}
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-teal-900 flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-teal-600" />
+              Guía Agenda REP
+            </DialogTitle>
+            <button
+              onClick={() => onOpenChange(false)}
+              className="text-teal-400 hover:text-teal-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </DialogHeader>
+
+        {/* Indicador de progreso: dots */}
+        <div className="flex items-center justify-center gap-2 mb-4">
+          {GUIDE_STEPS.map((_, i) => (
+            <div
+              key={i}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                i === step
+                  ? "w-8 bg-teal-600"
+                  : i < step
+                  ? "w-2 bg-teal-400"
+                  : "w-2 bg-teal-200"
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Contenido del paso */}
+        <div className="text-center py-4">
+          <div className="text-5xl mb-4">{current.icon}</div>
+          <h3 className="text-lg font-bold text-teal-900 mb-2">
+            Paso {step + 1} de {totalSteps}: {current.title}
+          </h3>
+          <p className="text-sm text-teal-600 leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
+            {current.body}
+          </p>
+        </div>
+
+        {/* Navegación */}
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setStep(Math.max(0, step - 1))}
+            disabled={step === 0}
+            className="border-teal-200 text-teal-600 hover:bg-teal-50"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Anterior
+          </Button>
+
+          <span className="text-xs text-teal-400 font-medium">
+            {step + 1} / {totalSteps}
+          </span>
+
+          {isLast ? (
+            <Button
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              <CheckCircle2 className="w-4 h-4 mr-1" />
+              ¡Entendido!
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setStep(Math.min(totalSteps - 1, step + 1))}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              Siguiente
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
