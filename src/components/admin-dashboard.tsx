@@ -970,7 +970,7 @@ export function AdminProfessionals() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
           <Input
-            placeholder="Buscar por nombre, email, matrícula o especialidad..."
+            placeholder="Buscar por nombre, email, matrícula, especialidad o zona..."
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9 border-teal-200 focus:border-teal-400"

@@ -54,6 +54,8 @@ export async function GET(request: NextRequest) {
               { user: { email: { contains: search, mode: "insensitive" } } },
               { license: { contains: search, mode: "insensitive" } },
               { specialty: { contains: search, mode: "insensitive" } },
+              { profession: { contains: search, mode: "insensitive" } },
+              { zones: { contains: search, mode: "insensitive" } },
             ],
           },
         ];
@@ -138,13 +140,15 @@ export async function GET(request: NextRequest) {
       where.licenseVerified = false;
     }
 
-    // Fuzzy search across name, email, license
+    // Fuzzy search across name, email, license, specialty, profession, zones
     if (search) {
       const searchConditions: Prisma.ProfessionalWhereInput[] = [
         { user: { name: { contains: search, mode: "insensitive" } } },
         { user: { email: { contains: search, mode: "insensitive" } } },
         { license: { contains: search, mode: "insensitive" } },
         { specialty: { contains: search, mode: "insensitive" } },
+        { profession: { contains: search, mode: "insensitive" } },
+        { zones: { contains: search, mode: "insensitive" } },
       ];
 
       if (status === "approved") {
