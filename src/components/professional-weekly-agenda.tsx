@@ -355,8 +355,11 @@ export function ProfessionalWeeklyAgenda({
         return;
       }
       toast.success(`Slot ${time}–${endTime} activado como Disponible`);
-      // Recargar overrides
-      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
+      // Recargar overrides de la semana actual (con from/to)
+      const weekStartStr = format(currentWeekStart, "yyyy-MM-dd");
+      const weekEnd = addDays(currentWeekStart, 6);
+      const weekEndStr = format(weekEnd, "yyyy-MM-dd");
+      const overRes = await fetch(`/api/professionals/${professionalId}/overrides?from=${weekStartStr}&to=${weekEndStr}`).then((r) => r.json());
       setOverrides(Array.isArray(overRes) ? overRes : []);
     } catch (err) {
       console.error("Error activating slot:", err);
@@ -393,8 +396,11 @@ export function ProfessionalWeeklyAgenda({
         return;
       }
       toast.success(`Slot ${time} desactivado`);
-      // Recargar overrides
-      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
+      // Recargar overrides de la semana actual (con from/to)
+      const weekStartStr = format(currentWeekStart, "yyyy-MM-dd");
+      const weekEnd = addDays(currentWeekStart, 6);
+      const weekEndStr = format(weekEnd, "yyyy-MM-dd");
+      const overRes = await fetch(`/api/professionals/${professionalId}/overrides?from=${weekStartStr}&to=${weekEndStr}`).then((r) => r.json());
       setOverrides(Array.isArray(overRes) ? overRes : []);
     } catch (err) {
       console.error("Error deactivating slot:", err);
@@ -589,14 +595,23 @@ export function ProfessionalWeeklyAgenda({
     }
   }, [session, propProfessionalId]);
 
-  // Load schedule data
+  // Load schedule + overrides data
+  // CRÍTICO: este useEffect depende de `currentWeekStart` para que al cambiar
+  // de semana se recarguen los overrides de esa semana específica.
+  // Sin esta dependencia, los overrides activados en una semana no aparecen
+  // al volver a esa semana después de navegar.
   useEffect(() => {
     if (professionalId) {
+      // Calcular rango de fechas de la semana actual (Lun-Dom)
+      const weekStartStr = format(currentWeekStart, "yyyy-MM-dd");
+      const weekEnd = addDays(currentWeekStart, 6);
+      const weekEndStr = format(weekEnd, "yyyy-MM-dd");
+
       Promise.all([
         fetch(`/api/professionals/${professionalId}/schedule`).then((r) =>
           r.json()
         ),
-        fetch(`/api/professionals/${professionalId}/overrides`).then((r) =>
+        fetch(`/api/professionals/${professionalId}/overrides?from=${weekStartStr}&to=${weekEndStr}`).then((r) =>
           r.json()
         ),
       ])
@@ -606,7 +621,7 @@ export function ProfessionalWeeklyAgenda({
         })
         .catch(() => {});
     }
-  }, [professionalId]);
+  }, [professionalId, currentWeekStart]);
 
   // Load appointments
   useEffect(() => {
@@ -656,10 +671,12 @@ export function ProfessionalWeeklyAgenda({
       }
       toast.success(data.message || `Día copiado correctamente (${data.created} bloques)`);
       setCopyDialogOpen(false);
-      // Recargar schedules y overrides
+      // Recargar schedules y overrides (con filtro de semana para overrides)
+      const ws = format(currentWeekStart, "yyyy-MM-dd");
+      const we = format(addDays(currentWeekStart, 6), "yyyy-MM-dd");
       const [schedRes, overRes] = await Promise.all([
         fetch(`/api/professionals/${professionalId}/schedule`).then((r) => r.json()),
-        fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json()),
+        fetch(`/api/professionals/${professionalId}/overrides?from=${ws}&to=${we}`).then((r) => r.json()),
       ]);
       setSchedules(Array.isArray(schedRes) ? schedRes : []);
       setOverrides(Array.isArray(overRes) ? overRes : []);
@@ -688,8 +705,10 @@ export function ProfessionalWeeklyAgenda({
       }
       toast.success(data.message || "Plantilla replicada para la próxima semana");
       setDuplicateDialogOpen(false);
-      // Recargar overrides (los schedules base no cambian)
-      const overRes = await fetch(`/api/professionals/${professionalId}/overrides`).then((r) => r.json());
+      // Recargar overrides de la semana actual (con from/to)
+      const ws = format(currentWeekStart, "yyyy-MM-dd");
+      const we = format(addDays(currentWeekStart, 6), "yyyy-MM-dd");
+      const overRes = await fetch(`/api/professionals/${professionalId}/overrides?from=${ws}&to=${we}`).then((r) => r.json());
       setOverrides(Array.isArray(overRes) ? overRes : []);
     } catch (err) {
       console.error("Error duplicating template:", err);
