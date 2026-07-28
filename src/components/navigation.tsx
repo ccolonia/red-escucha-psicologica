@@ -43,8 +43,8 @@ const PATIENT_NAV: NavItem[] = [
 
 const PROFESSIONAL_NAV: NavItem[] = [
   { view: "professional-dashboard", label: "Inicio", icon: Home },
-  { view: "professional-schedule", label: "Mi Agenda", icon: Clock },
   { view: "professional-schedule-config", label: "Config. Agenda", icon: Settings2 },
+  { view: "professional-schedule", label: "Mi Agenda", icon: Clock },
   { view: "professional-patients", label: "Pacientes", icon: Users },
   { view: "professional-planilla", label: "Planilla", icon: FileText },
   { view: "professional-profile", label: "Mi Perfil", icon: User },
