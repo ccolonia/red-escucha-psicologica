@@ -178,11 +178,11 @@ export function AppNavigation() {
       {/* Mobile sidebar drawer */}
       <div
         className={cn(
-          "md:hidden fixed top-14 left-0 bottom-0 z-40 w-64 bg-white border-r border-teal-100 transition-transform",
+          "md:hidden fixed top-14 left-0 bottom-0 z-40 w-64 bg-white border-r border-teal-100 transition-transform flex flex-col overflow-y-auto",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <nav className="px-3 py-4 space-y-1">
+        <nav className="px-3 py-4 space-y-1 flex-1">
           {navItems.map((item) => (
             <button
               key={item.view}
@@ -202,13 +202,13 @@ export function AppNavigation() {
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-teal-100">
+        <div className="p-4 border-t border-teal-100 shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center">
               <User className="w-4 h-4 text-teal-600" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-teal-900">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-teal-900 truncate">
                 {session?.user?.name}
               </p>
               <p className="text-xs text-teal-500 capitalize">
@@ -225,7 +225,10 @@ export function AppNavigation() {
           <Button
             variant="outline"
             className="w-full border-teal-200 text-teal-600 hover:bg-teal-50 h-9"
-            onClick={() => signOut({ redirect: false })}
+            onClick={() => {
+              setSidebarOpen(false);
+              signOut({ redirect: false });
+            }}
           >
             <LogOut className="mr-2 w-4 h-4" />
             Cerrar Sesión
