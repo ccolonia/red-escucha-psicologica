@@ -628,12 +628,14 @@ export function AdminProfessionals() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "profesionales-rep.csv";
+      // Nombre dinámico con fecha
+      const today = new Date().toISOString().split("T")[0];
+      a.download = `profesionales_REP_${today}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success("Archivo descargado exitosamente");
+      toast.success("Excel descargado exitosamente");
     } catch {
       toast.error("Error al exportar");
     } finally {
