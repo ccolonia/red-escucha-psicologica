@@ -154,20 +154,63 @@ export async function PUT(
     }
 
     // Delete existing and create new in a transaction
-    // === LIMPIEZA DE OVERRIDES HUÉRFANOS DESACTIVADA ===
-    // El fix anterior (commit ddefea4) eliminaba TODOS los overrides type="extra"
-    // futuros que no tuvieran appointments. Pero eso borraba los slots que el
-    // profesional activó manualmente como "Disponible" (verde) desde Mi Agenda.
     //
-    // Cuando el profesional guarda un cambio en Config. Agenda (ej: agrega
-    // sábado), la limpieza borraba los slots disponibles de miércoles, jueves
-    // y viernes —exactamente el bug reportado.
+    // === PURGA DE SLOTS HUÉRFANOS (Opción A — commit 2026-07-29) ===
+    // Cuando el profesional guarda su Config. Agenda, hay 2 escenarios:
     //
-    // Solución: NO limpiar overrides automáticamente al editar la config.
-    // Los overrides type="extra" son activaciones manuales del profesional
-    // que deben persistir independientemente de cambios en la plantilla base.
-    // Si en el futuro se necesitan limpiar slots fantasmas por cambio de
-    // duración, se hará con un botón manual o un script, no automático.
+    // Escenario 1: schedules está vacío (el profesional borró todos los bloques)
+    //   → Eliminar TODOS los overrides type="extra" futuros que no tengan
+    //     appointments activos. No tiene sentido tener slots "Disponible"
+    //     si no hay plantilla base de horarios.
+    //
+    // Escenario 2: schedules tiene bloques pero cambiaron (ej: duración 45→60)
+    //   → NO eliminar overrides automáticamente. Los slots activados
+    //     manualmente desde Mi Agenda deben persistir. Si hay slots
+    //     fantasmas por cambio de duración, se limpian manualmente.
+    //
+    // Filtro de seguridad:
+    //   - Aislamiento por professionalId (jamás tocar otro profesional)
+    //   - Solo overrides type="extra" (no tocar type="block")
+    //   - Solo fecha >= hoy (no tocar historial pasado)
+    //   - Solo los que NO tienen appointments activos (pending/confirmed/rescheduled)
+
+    const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
+
+    if (schedules.length === 0) {
+      // === Escenario 1: Config. Agenda vacía → purgar overrides ===
+      // Buscar overrides type="extra" futuros
+      const futureExtras = await db.scheduleOverride.findMany({
+        where: {
+          professionalId: id,
+          type: "extra",
+          date: { gte: todayStr },
+        },
+        select: { id: true, date: true, startTime: true },
+      });
+
+      // Buscar appointments futuros para no borrar overrides con turnos
+      const futureAppointments = await db.appointment.findMany({
+        where: {
+          professionalId: id,
+          date: { gte: todayStr },
+          status: { in: ["pending", "confirmed", "rescheduled"] },
+        },
+        select: { date: true, time: true },
+      });
+      const bookedSlots = new Set(futureAppointments.map((a) => `${a.date}|${a.time}`));
+
+      // Filtrar overrides que NO tienen appointments (slots libres)
+      const orphanedIds = futureExtras
+        .filter((ov) => !bookedSlots.has(`${ov.date}|${ov.startTime}`))
+        .map((ov) => ov.id);
+
+      if (orphanedIds.length > 0) {
+        console.log(`[schedule PUT] Purga: eliminando ${orphanedIds.length} overrides huérfanos (config vacía) para professional ${id}`);
+        await db.scheduleOverride.deleteMany({
+          where: { id: { in: orphanedIds } },
+        });
+      }
+    }
 
     await db.$transaction([
       db.professionalSchedule.deleteMany({ where: { professionalId: id } }),
