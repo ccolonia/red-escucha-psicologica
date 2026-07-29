@@ -129,6 +129,15 @@ const MODALITY_LABELS: Record<string, string> = {
   P: "P", OL: "OL", H: "H", ambas: "P|OL", amb: "P|OL",
 };
 
+// === Emoji + fullLabel por modalidad para slots disponibles ===
+const MODALITY_EMOJI: Record<string, { emoji: string; fullLabel: string }> = {
+  OL: { emoji: "💻", fullLabel: "Online" },
+  P: { emoji: "📍", fullLabel: "Presencial" },
+  H: { emoji: "🔄", fullLabel: "Híbrida" },
+  ambas: { emoji: "🔄", fullLabel: "Híbrida" },
+  amb: { emoji: "🔄", fullLabel: "Híbrida" },
+};
+
 // ====================================================================
 // TYPES
 // ====================================================================
@@ -1495,10 +1504,12 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     {/* === Slot DISPONIBLE (verde, clickeable para asignar) === */}
                     {state === "available" && effectiveFreeSlot && (
                       <div
-                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700"
-                        title={`Disponible ${time}–${effectiveFreeSlot.endTime} hs — click para asignar turno`}
+                        className="flex items-center justify-center gap-0.5 w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700"
+                        title={`Disponible (${MODALITY_EMOJI[effectiveFreeSlot.modality || "ambas"]?.fullLabel || "Híbrida"}) ${time}–${effectiveFreeSlot.endTime} hs — click para asignar turno`}
                       >
-                        Disponible
+                        <span>{MODALITY_EMOJI[effectiveFreeSlot.modality || "ambas"]?.emoji || "🔄"}</span>
+                        <span>Disponible</span>
+                        <span className="text-[8px] opacity-75">({MODALITY_LABELS[effectiveFreeSlot.modality || "ambas"] || "P|OL"})</span>
                       </div>
                     )}
 

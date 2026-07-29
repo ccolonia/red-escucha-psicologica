@@ -148,12 +148,12 @@ const STATUS_LABELS: Record<string, string> = {
 // Modality display for available cells (grid background)
 const MODALITY_CELL_DISPLAY: Record<
   string,
-  { icon: React.ComponentType<{ className?: string }>; label: string; colorClass: string }
+  { icon: React.ComponentType<{ className?: string }>; label: string; colorClass: string; fullLabel: string; emoji: string }
 > = {
-  OL: { icon: Monitor, label: "OL", colorClass: "bg-blue-50 border border-blue-200 text-blue-600 rounded-lg py-2 text-xs font-medium hover:bg-blue-100 transition-colors" },
-  P: { icon: MapPin, label: "P", colorClass: "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium hover:bg-emerald-100 transition-colors" },
-  ambas: { icon: MapPin, label: "P|OL", colorClass: "bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors" },
-  H: { icon: MapPin, label: "H", colorClass: "bg-purple-50 border border-purple-200 text-purple-600 rounded-lg py-2 text-xs font-medium hover:bg-purple-100 transition-colors" },
+  OL: { icon: Monitor, label: "OL", colorClass: "bg-blue-50 border border-blue-200 text-blue-600 rounded-lg py-2 text-xs font-medium hover:bg-blue-100 transition-colors", fullLabel: "Online", emoji: "💻" },
+  P: { icon: MapPin, label: "P", colorClass: "bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg py-2 text-xs font-medium hover:bg-emerald-100 transition-colors", fullLabel: "Presencial", emoji: "📍" },
+  ambas: { icon: MapPin, label: "P|OL", colorClass: "bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors", fullLabel: "Híbrida", emoji: "🔄" },
+  H: { icon: MapPin, label: "H", colorClass: "bg-purple-50 border border-purple-200 text-purple-600 rounded-lg py-2 text-xs font-medium hover:bg-purple-100 transition-colors", fullLabel: "Híbrida", emoji: "🔄" },
 };
 
 // Modality display for appointment cards
@@ -1084,10 +1084,12 @@ export function ProfessionalWeeklyAgenda({
                     )}
                     {state === "available" && (
                       <div
-                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors"
-                        title={`Disponible ${time}–${(() => { const d = schedules.find((s) => s.dayOfWeek === dayOfWeek)?.slotDuration || 45; const [h,m] = time.split(":").map(Number); const t = h*60+m+d; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; })()} hs — click para desactivar`}
+                        className="flex items-center justify-center gap-0.5 w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors"
+                        title={`Disponible (${MODALITY_CELL_DISPLAY[modality || "ambas"]?.fullLabel || "Híbrida"}) ${time}–${(() => { const d = schedules.find((s) => s.dayOfWeek === dayOfWeek)?.slotDuration || 45; const [h,m] = time.split(":").map(Number); const t = h*60+m+d; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; })()} hs — click para desactivar`}
                       >
-                        Disponible
+                        <span>{MODALITY_CELL_DISPLAY[modality || "ambas"]?.emoji || "🔄"}</span>
+                        <span>Disponible</span>
+                        <span className="text-[8px] opacity-75">({MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"})</span>
                       </div>
                     )}
                   </div>
@@ -1186,9 +1188,10 @@ export function ProfessionalWeeklyAgenda({
                     <div className="ml-2 flex-1">
                       <button
                         onClick={() => handleDeactivateSlot(dateStr, time)}
-                        className="flex items-center justify-center w-full bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg py-2 text-xs font-medium hover:bg-emerald-200 transition-colors"
+                        className="flex items-center justify-center gap-1 w-full bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg py-2 text-xs font-medium hover:bg-emerald-200 transition-colors"
                       >
-                        Disponible
+                        <span>{MODALITY_CELL_DISPLAY[modality || "ambas"]?.emoji || "🔄"}</span>
+                        Disponible ({MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"})
                       </button>
                     </div>
                   )}
@@ -1201,8 +1204,9 @@ export function ProfessionalWeeklyAgenda({
                   )}
                   {state === "available" && slotIsPastMobile && (
                     <div className="ml-2 flex-1">
-                      <div className="flex items-center justify-center w-full bg-emerald-50/50 border border-emerald-200/50 text-emerald-500 rounded-lg py-2 text-xs font-medium">
-                        Disponible
+                      <div className="flex items-center justify-center gap-1 w-full bg-emerald-50/50 border border-emerald-200/50 text-emerald-500 rounded-lg py-2 text-xs font-medium">
+                        <span>{MODALITY_CELL_DISPLAY[modality || "ambas"]?.emoji || "🔄"}</span>
+                        Disponible ({MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"})
                       </div>
                     </div>
                   )}
