@@ -27,6 +27,7 @@ export type AppView =
   | "admin-agenda-central"
   | "admin-derivador"
   | "admin-map"
+  | "admin-protocolo"
   | "forgot-password"
   | "professional-register";
 

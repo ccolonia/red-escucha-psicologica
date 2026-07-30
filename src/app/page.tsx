@@ -36,6 +36,7 @@ import { AdminTriage } from "@/components/admin-triage";
 import { AdminAgendaCentral } from "@/components/admin-agenda-central";
 import { DerivadorInteligente } from "@/components/admin-derivador";
 import { AdminMap } from "@/components/admin-map";
+import { AdminProtocolo } from "@/components/admin-protocolo";
 import { ProfessionalRegister } from "@/components/professional-register";
 import { AppNavigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
@@ -68,6 +69,7 @@ function DashboardContent() {
     "admin-agenda-central": <AdminAgendaCentral />,
     "admin-derivador": <DerivadorInteligente />,
     "admin-map": <AdminMap />,
+    "admin-protocolo": <AdminProtocolo />,
   };
 
   return (
