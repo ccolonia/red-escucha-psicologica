@@ -178,9 +178,10 @@ export function AppNavigation() {
       {/* Mobile sidebar drawer */}
       <div
         className={cn(
-          "md:hidden fixed top-14 left-0 bottom-0 z-40 w-64 bg-white border-r border-teal-100 transition-transform flex flex-col overflow-y-auto",
+          "md:hidden fixed top-14 left-0 z-50 w-64 bg-white border-r border-teal-100 transition-transform flex flex-col overflow-y-auto",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
+        style={{ bottom: "56px" }}
       >
         <nav className="px-3 py-4 space-y-1 flex-1">
           {navItems.map((item) => (
@@ -236,8 +237,11 @@ export function AppNavigation() {
         </div>
       </div>
 
-      {/* Mobile bottom navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-teal-100 safe-area-bottom">
+      {/* Mobile bottom navigation — ocultar cuando el drawer está abierto */}
+      <div className={cn(
+        "md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-teal-100 safe-area-bottom transition-opacity",
+        sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+      )}>
         <div className="flex items-center justify-around py-1">
           {navItems.slice(0, 4).map((item) => (
             <button
