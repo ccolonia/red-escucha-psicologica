@@ -25,92 +25,152 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 // === Tipos ===
+type QAItem = {
+  label: string;
+  paciente?: string;
+  respuesta: string;
+};
+
 type Category = {
   id: string;
   title: string;
   icon: string;
-  responses: { label: string; text: string }[];
+  items: QAItem[];
 };
 
-// === Respuestas rápidas por categoría ===
+// === Guía Oficial de Consultas y Respuestas ===
 const CATEGORIES: Category[] = [
   {
     id: "recepcion",
-    title: "Recepción & Saludo",
+    title: "Recepción y Saludo Inicial",
     icon: "👋",
-    responses: [
+    items: [
       {
-        label: "Saludo inicial",
-        text: "¡Hola! 👋 Bienvenido/a a Red Escucha Psicológica. ¿En qué podemos ayudarte hoy?",
+        label: 'Cuando escriben "Hola"',
+        paciente: "Hola.",
+        respuesta: "¡Hola! 😊 Soy Mónica, de Red de Escucha Psicológica. ¿Cómo estás? ¿En qué puedo ayudarte?",
+      },
+    ],
+  },
+  {
+    id: "turnos",
+    title: "Solicitud de Turno y Modalidad",
+    icon: "📅",
+    items: [
+      {
+        label: "Cuando pide un turno",
+        paciente: "Quiero sacar un turno.",
+        respuesta: "¡Claro! Con gusto te ayudamos. 😊\n¿Preferís atención online o presencial?",
       },
       {
-        label: "Dónde estamos",
-        text: "📍 Atendemos de forma Online (videollamada) y Presencial en distintos puntos de CABA y GBA. ¿Qué modalidad preferís?",
+        label: "Si elige presencial",
+        respuesta: "Perfecto. ¿En qué localidad o barrio te encontrás? Así puedo buscar el profesional más cercano.",
       },
       {
-        label: "Urgencias",
-        text: "🚨 Si estás atravesando una emergencia, por favor llamá al 135 (Línea de Prevención del Suicidio, 24 hs) o al 0800-345-1435 (Salud Mental). Si es una urgencia médica, acudí a la guardia del hospital más cercano.",
+        label: "Si pregunta dónde atienden",
+        paciente: "¿Dónde están?",
+        respuesta: "Somos una red de profesionales de la salud mental. Brindamos atención presencial en distintos consultorios según la zona de cada paciente, además de atención online.\n¿En qué localidad o barrio te encontrás?",
+      },
+      {
+        label: "Si pregunta si hay disponibilidad",
+        paciente: "¿Tienen turnos?",
+        respuesta: "Sí, contamos con disponibilidad. 😊\nDecime si preferís atención online o presencial y te ayudo a encontrar la mejor opción.",
       },
     ],
   },
   {
     id: "admission",
-    title: "Admisión & Turnos",
-    icon: "📅",
-    responses: [
+    title: "Indagación del Motivo / Admisión",
+    icon: "🧠",
+    items: [
       {
-        label: "Precio por sesión",
-        text: "💰 El valor de la sesión es de $35.000. Incluye sesión de 50 minutos con profesional matriculado.",
+        label: "Si todavía no cuenta qué le sucede",
+        respuesta: "Para recomendarte el profesional más adecuado, ¿podrías contarme brevemente qué te gustaría trabajar o qué te llevó a consultar?",
       },
       {
-        label: "Duración de la sesión",
-        text: "⏱️ Cada sesión tiene una duración de 50 minutos, ya sea Online o Presencial.",
+        label: 'Si responde "prefiero hablarlo con el profesional"',
+        respuesta: "Por supuesto, no hay ningún problema. 😊\nCon esa información ya podemos avanzar. Solo necesito algunos datos para recomendarte el profesional más adecuado.",
       },
       {
-        label: "Online vs Presencial",
-        text: "💻 Atendemos de forma Online (por videollamada, desde cualquier lugar) y Presencial (en consultorios de CABA y GBA). ¿Cuál te resulta más cómodo?",
-      },
-      {
-        label: "Ubicación / Zona",
-        text: "📍 Tenemos consultorios en CABA, GBA Norte, GBA Oeste y GBA Sur. ¿En qué zona te resulta más fácil concurrir?",
+        label: "Si consulta por un menor",
+        respuesta: "Gracias por escribirnos.\n¿Cuántos años tiene el niño, niña o adolescente y qué situación los motivó a buscar acompañamiento psicológico?",
       },
     ],
   },
   {
-    id: "manejo",
-    title: "Manejo de Respuestas",
-    icon: "🧠",
-    responses: [
+    id: "honorarios",
+    title: "Honorarios, Duración y Frecuencia",
+    icon: "💰",
+    items: [
       {
-        label: "Hablarlo con profesional",
-        text: "🤝 Esa consulta es excelente para plantearla en la primera sesión con el/la profesional. Cada caso es único y merece un abordaje personalizado. ¿Te asigno un turno para que puedas conversarlo?",
+        label: "Si pregunta el precio",
+        paciente: "¿Cuánto sale?",
+        respuesta: "El valor de la sesión es de $35.000 y se realiza una vez por semana.",
       },
       {
-        label: "Atención a menores",
-        text: "👶 Sí, contamos con profesionales especializados en infanto-juvenil. Para menores de edad necesitamos que un adulto responsable complete el formulario de admisión. ¿Qué edad tiene el/la menor?",
+        label: "Si pregunta cuánto dura la sesión",
+        respuesta: "Las sesiones tienen una duración aproximada de 50 minutos.",
       },
       {
-        label: "Obras sociales / Reintegros",
-        text: "🏥 Por el momento no trabajamos directamente con obras sociales, pero al finalizar el tratamiento podés solicitar un comprobante para presentar y tramitar el reintegro correspondiente.",
+        label: "Si pregunta la frecuencia",
+        respuesta: "Generalmente las sesiones son semanales, aunque la frecuencia siempre la define el profesional según cada caso.",
+      },
+    ],
+  },
+  {
+    id: "gestion",
+    title: "Gestión de Turnos y Búsqueda",
+    icon: "🔍",
+    items: [
+      {
+        label: "Si necesita un turno urgente",
+        respuesta: "Entiendo. Voy a revisar qué profesionales tienen disponibilidad y enseguida te envío la mejor opción.",
+      },
+      {
+        label: "Mientras buscás un profesional",
+        respuesta: "Dame unos minutos, por favor. Voy a verificar la disponibilidad y enseguida te comparto la opción más conveniente para vos.",
+      },
+      {
+        label: "Cuando encontraste un profesional",
+        respuesta: "Ya encontré una opción para vos. 😊\nEl profesional atiende en [Zona], tiene disponibilidad [día] a las [hora].\n¿Te sirve ese horario?",
+      },
+      {
+        label: "Si el horario no le sirve",
+        respuesta: "No hay problema. Voy a revisar otras opciones y te envío nuevos horarios.",
+      },
+      {
+        label: "Si acepta el turno",
+        respuesta: "¡Perfecto! 😊 Ya reservo ese horario para vos.\nEn unos minutos te envío los datos del profesional y toda la información necesaria para la primera sesión.",
+      },
+    ],
+  },
+  {
+    id: "obras-sociales",
+    title: "Obras Sociales, Recetas y Certificados",
+    icon: "🏥",
+    items: [
+      {
+        label: "Si pregunta por obras sociales",
+        respuesta: "Actualmente trabajamos de manera particular. Si tu obra social ofrece reintegros, podemos brindarte la documentación necesaria para gestionarlos.",
+      },
+      {
+        label: "Si pregunta si hacen recetas o certificados",
+        respuesta: "Eso dependerá de la evaluación y del criterio profesional del psicólogo/a que te atienda. Si fuera necesario, podrá orientarte durante el proceso.",
       },
     ],
   },
   {
     id: "cierre",
-    title: "Cierre & Seguimiento",
+    title: "Seguimiento y Cierre",
     icon: "✅",
-    responses: [
+    items: [
       {
-        label: "Turno confirmado",
-        text: "✅ ¡Turno confirmado! 📅 Te enviamos por email los detalles con fecha, hora y link de la sesión. ¡Te esperamos!",
+        label: "Si deja de responder (24 horas después)",
+        respuesta: "Hola. 😊 ¿Cómo estás? Te escribo para saber si todavía necesitás ayuda para coordinar tu consulta. Si tenés alguna duda, estoy a disposición.",
       },
       {
-        label: "Seguimiento 24 hs",
-        text: "👋 Hola! Te escribimos desde Red Escucha Psicológica. Vimos que no respondiste a nuestro último mensaje. ¿Necesitás que te ayudemos con algo? Estamos acá para lo que necesites. 💚",
-      },
-      {
-        label: "Despedida",
-        text: "💚 Muchas gracias por contactarte con Red Escucha Psicológica. Quedamos a tu disposición. ¡Que tengas un excelente día!",
+        label: "Cierre de conversación",
+        respuesta: "Muchas gracias por confiar en Red de Escucha Psicológica. Cualquier consulta que tengas, escribinos. Va a ser un gusto acompañarte.",
       },
     ],
   },
@@ -170,7 +230,7 @@ export function AdminProtocolo() {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedId(id);
-      toast.success("Copiado al portapapeles ✅");
+      toast.success("Texto copiado ✅");
       setTimeout(() => setCopiedId(null), 2000);
     } catch {
       toast.error("No se pudo copiar");
@@ -187,7 +247,7 @@ export function AdminProtocolo() {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-teal-900">Protocolo de Admisión REP</h2>
-            <p className="text-xs text-teal-500">Respuestas rápidas, árbol de decisión y manejo de objeciones</p>
+            <p className="text-xs text-teal-500">Guía oficial de consultas, respuestas rápidas y manejo de objeciones</p>
           </div>
         </div>
         <Badge variant="outline" className="bg-teal-50 border-teal-200 text-teal-600">
@@ -196,21 +256,21 @@ export function AdminProtocolo() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-4 border-b border-teal-100 pb-2">
+      <div className="flex gap-2 mb-4 border-b border-teal-100 pb-2 flex-wrap">
         <button
           onClick={() => setActiveTab("respuestas")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
             activeTab === "respuestas"
               ? "bg-teal-600 text-white shadow-sm"
               : "bg-teal-50 text-teal-600 hover:bg-teal-100"
           }`}
         >
           <MessageCircle className="w-4 h-4 inline mr-1.5" />
-          Respuestas Rápidas
+          Consultas y Respuestas
         </button>
         <button
           onClick={() => setActiveTab("workflow")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
             activeTab === "workflow"
               ? "bg-teal-600 text-white shadow-sm"
               : "bg-teal-50 text-teal-600 hover:bg-teal-100"
@@ -221,7 +281,7 @@ export function AdminProtocolo() {
         </button>
         <button
           onClick={() => setActiveTab("objeciones")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
             activeTab === "objeciones"
               ? "bg-teal-600 text-white shadow-sm"
               : "bg-teal-50 text-teal-600 hover:bg-teal-100"
@@ -255,7 +315,7 @@ export function AdminProtocolo() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px] bg-teal-50 border-teal-200 text-teal-600">
-                        {cat.responses.length} respuestas
+                        {cat.items.length} {cat.items.length === 1 ? "respuesta" : "respuestas"}
                       </Badge>
                       <ChevronDown
                         className={`w-4 h-4 text-teal-400 transition-transform ${
@@ -265,29 +325,52 @@ export function AdminProtocolo() {
                     </div>
                   </button>
                   {openCategory === cat.id && (
-                    <div className="px-4 pb-4 space-y-2">
-                      {cat.responses.map((resp, i) => {
+                    <div className="px-4 pb-4 space-y-3">
+                      {cat.items.map((item, i) => {
                         const copyId = `${cat.id}-${i}`;
                         return (
                           <div
                             key={copyId}
-                            className="bg-teal-50/50 rounded-lg p-3 border border-teal-100"
+                            className="bg-white rounded-lg p-3 border border-teal-100"
                           >
+                            {/* Label de la situación */}
                             <div className="flex items-start justify-between gap-2 mb-2">
-                              <p className="text-xs font-medium text-teal-700">{resp.label}</p>
+                              <div className="flex-1">
+                                <p className="text-xs font-bold text-teal-700 mb-1">{item.label}</p>
+                                {item.paciente && (
+                                  <div className="flex items-start gap-1.5 mb-2">
+                                    <Badge variant="outline" className="text-[9px] bg-slate-100 border-slate-200 text-slate-500 shrink-0">
+                                      Paciente
+                                    </Badge>
+                                    <p className="text-xs text-slate-600 italic">"{item.paciente}"</p>
+                                  </div>
+                                )}
+                              </div>
                               <button
-                                onClick={() => handleCopy(resp.text, copyId)}
-                                className="shrink-0 p-1.5 rounded-md bg-white border border-teal-200 hover:bg-teal-100 transition-colors"
-                                title="Copiar texto"
+                                onClick={() => handleCopy(item.respuesta, copyId)}
+                                className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-teal-50 border border-teal-200 hover:bg-teal-100 transition-colors"
+                                title="Copiar respuesta"
                               >
                                 {copiedId === copyId ? (
-                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span className="text-[10px] text-emerald-600 font-medium">Copiado</span>
+                                  </>
                                 ) : (
-                                  <Copy className="w-3.5 h-3.5 text-teal-500" />
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-teal-500" />
+                                    <span className="text-[10px] text-teal-600 font-medium">Copiar</span>
+                                  </>
                                 )}
                               </button>
                             </div>
-                            <p className="text-sm text-teal-800 whitespace-pre-wrap">{resp.text}</p>
+                            {/* Respuesta */}
+                            <div className="flex items-start gap-1.5">
+                              <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-600 shrink-0">
+                                Respuesta
+                              </Badge>
+                              <p className="text-sm text-teal-800 whitespace-pre-wrap flex-1">{item.respuesta}</p>
+                            </div>
                           </div>
                         );
                       })}
@@ -368,18 +451,24 @@ export function AdminProtocolo() {
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-teal-900 text-sm">
-                            ".objection"
+                            "{obj.objection}"
                           </p>
                         </div>
                         <button
                           onClick={() => handleCopy(obj.response, copyId)}
-                          className="shrink-0 p-1.5 rounded-md bg-white border border-teal-200 hover:bg-teal-100 transition-colors"
+                          className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-teal-50 border border-teal-200 hover:bg-teal-100 transition-colors"
                           title="Copiar respuesta"
                         >
                           {copiedId === copyId ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-[10px] text-emerald-600 font-medium">Copiado</span>
+                            </>
                           ) : (
-                            <Copy className="w-3.5 h-3.5 text-teal-500" />
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-teal-500" />
+                              <span className="text-[10px] text-teal-600 font-medium">Copiar</span>
+                            </>
                           )}
                         </button>
                       </div>
