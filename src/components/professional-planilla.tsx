@@ -108,6 +108,7 @@ interface SessionRow {
   absentReason: string;
   supervised: boolean;
   suspendedTreatment: boolean;
+  suspensionReason: string;
   weekNumber: number;
 }
 
@@ -328,6 +329,7 @@ export function ProfessionalPlanilla() {
       absentReason: "",
       supervised: false,
       suspendedTreatment: false,
+      suspensionReason: "",
       weekNumber: weekToUse,
     };
 
@@ -414,6 +416,7 @@ export function ProfessionalPlanilla() {
         absentReason: s.absentReason || null,
         supervised: s.supervised,
         suspendedTreatment: s.suspendedTreatment,
+        suspensionReason: s.suspensionReason || null,
         weekNumber: s.weekNumber,
       }));
 
@@ -858,6 +861,43 @@ export function ProfessionalPlanilla() {
                     <span className="text-xs text-red-600 font-medium shrink-0 whitespace-nowrap">
                       Debe abonar: ${s.patientFee.toLocaleString("es-AR")}
                     </span>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* === Suspensión de Tratamiento === */}
+      {currentSessions.some((s) => s.suspendedTreatment) && (
+        <Card className="border-amber-100 bg-amber-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-amber-800 text-sm flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Suspendió tratamiento
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {currentSessions
+                .filter((s) => s.suspendedTreatment)
+                .map((s) => (
+                  <div key={s.id} className="flex items-center gap-3">
+                    <Badge variant="outline" className="text-xs shrink-0 bg-amber-100 border-amber-300 text-amber-700">
+                      Susp.
+                    </Badge>
+                    <span className="text-sm text-teal-700 shrink-0 w-[100px]">
+                      {formatDisplayDate(s.date)}
+                    </span>
+                    <span className="text-sm text-teal-900 font-medium shrink-0">
+                      {s.patientName}
+                    </span>
+                    <Input
+                      value={s.suspensionReason}
+                      onChange={(e) => updateSession(s.id, "suspensionReason", e.target.value)}
+                      placeholder="Motivo de la suspensión..."
+                      className="h-7 text-xs border-amber-200 flex-1"
+                    />
                   </div>
                 ))}
             </div>

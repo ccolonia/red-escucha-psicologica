@@ -225,6 +225,7 @@ export async function POST(req: NextRequest) {
           absentReason: s.absentReason || null,
           supervised: s.supervised || false,
           suspendedTreatment: s.suspendedTreatment || false,
+          suspensionReason: s.suspensionReason || null,
           weekNumber: s.weekNumber || 1,
         };
       });
