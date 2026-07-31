@@ -5,12 +5,51 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, Send, Loader2, Search, X, Phone, Mail, User,
   CheckCheck, Circle, Ban, RotateCcw, MessageCircle, Inbox,
+  Bell, BellOff,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
+/**
+ * Reproduce un tono corto tipo "campana / ding" usando Web Audio API nativa.
+ * No depende de archivos .mp3 externos. Si el navegador bloquea el AudioContext
+ * (autoplay policy), el error se captura silenciosamente.
+ */
+function playNotificationSound() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+
+    // Tono principal: campana clara en A5 (880 Hz) con decaimiento exponencial a A4 (440 Hz)
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+
+    // Cerrar el contexto después de que termine el sonido para liberar recursos
+    osc.onended = () => {
+      try { ctx.close(); } catch { /* */ }
+    };
+  } catch (e) {
+    console.error("Error reproduciendo sonido de notificación:", e);
+  }
+}
 
 type ChatMessage = {
   id: string;
@@ -42,6 +81,7 @@ type Conversation = {
  *
  * Polling cada 5s para refrescar conversaciones y mensajes.
  * Auto-marca como leído al seleccionar una conversación.
+ * Alerta sonora (campana) cuando llega un nuevo mensaje de un paciente.
  */
 export function AdminChat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -51,8 +91,16 @@ export function AdminChat() {
   const [text, setText] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"ALL" | "UNREAD" | "ACTIVE" | "CLOSED">("ALL");
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  // Set de IDs de mensajes ya vistos (para detectar cuáles son NUEVOS)
+  const seenMessageIds = useRef<Set<string>>(new Set());
+  // Flag para distinguir la primera carga (no reproducir sonido en la inicial)
+  const isFirstLoad = useRef(true);
+  // Ref para acceder a soundEnabled dentro del polling sin reiniciar el interval
+  const soundEnabledRef = useRef(true);
+  useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -60,6 +108,34 @@ export function AdminChat() {
       if (!res.ok) return;
       const data: Conversation[] = await res.json();
       setConversations(data);
+
+      // === Detección de nuevos mensajes del paciente para alerta sonora ===
+      // Recorremos todas las conversaciones y buscamos mensajes con sender="PATIENT"
+      // cuyo ID no esté en seenMessageIds. Si encontramos al menos uno nuevo y no
+      // es la primera carga, reproducimos el sonido.
+      if (isFirstLoad.current) {
+        // Primera carga: poblar el Set sin reproducir sonido
+        data.forEach(c => {
+          (c.messages || []).forEach(m => seenMessageIds.current.add(m.id));
+        });
+        isFirstLoad.current = false;
+      } else {
+        // Cargas subsequentes: buscar mensajes nuevos del paciente
+        let hasNewPatientMessage = false;
+        data.forEach(c => {
+          (c.messages || []).forEach(m => {
+            if (!seenMessageIds.current.has(m.id)) {
+              seenMessageIds.current.add(m.id);
+              if (m.sender === "PATIENT") {
+                hasNewPatientMessage = true;
+              }
+            }
+          });
+        });
+        if (hasNewPatientMessage && soundEnabledRef.current) {
+          playNotificationSound();
+        }
+      }
     } catch {
       /* silencioso */
     } finally {
@@ -172,6 +248,29 @@ export function AdminChat() {
             </p>
           </div>
         </div>
+        {/* Toggle de alerta sonora */}
+        <button
+          onClick={() => {
+            const next = !soundEnabled;
+            setSoundEnabled(next);
+            // Si se activa, reproducir una vez para confirmar que funciona
+            if (next) {
+              playNotificationSound();
+              toast.success("Alerta sonora activada");
+            } else {
+              toast.info("Alerta sonora desactivada");
+            }
+          }}
+          title={soundEnabled ? "Sonido activado (clic para silenciar)" : "Sonido desactivado (clic para activar)"}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            soundEnabled
+              ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+              : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+          }`}
+        >
+          {soundEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+          {soundEnabled ? "Sonido ON" : "Sonido OFF"}
+        </button>
       </div>
 
       {/* Layout 2 columnas */}

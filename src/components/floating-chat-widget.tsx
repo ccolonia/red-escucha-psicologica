@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, MinusCircle } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, MinusCircle, AlertCircle, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -13,8 +13,18 @@ import { toast } from "sonner";
  * se crea una ChatConversation en la DB y se guarda el ID en localStorage para
  * persistir el hilo entre recargas.
  *
- * Realiza polling cada 4s para refrescar mensajes nuevos del admin.
+ * Persistencia punta a punta:
+ *  1. POST /api/chat { action: "start" } → backend crea conversación + 1er mensaje
+ *  2. On success: localStorage.setItem("rep_chat_conversation_id", id)
+ *  3. On mount: leer localStorage → setConversationId(stored)
+ *  4. useEffect[conversationId] → GET /api/chat?conversationId=... → setConversation(data)
+ *  5. Polling cada 4s con el mismo conversationId para refrescar mensajes del admin
+ *
+ * Si el GET devuelve 404 (el admin borró la conversación), se limpia localStorage
+ * y se vuelve al formulario inicial.
  */
+
+type Message = { id: string; sender: string; text: string; createdAt: string };
 
 type Conversation = {
   id: string;
@@ -23,7 +33,7 @@ type Conversation = {
   patientEmail: string | null;
   status: string;
   unreadUser: boolean;
-  messages: { id: string; sender: string; text: string; createdAt: string }[];
+  messages: Message[];
 };
 
 const STORAGE_KEY = "rep_chat_conversation_id";
@@ -33,6 +43,7 @@ export function FloatingChatWidget() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -42,63 +53,104 @@ export function FloatingChatWidget() {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Refs para evitar stale closures dentro del interval de polling
+  const conversationIdRef = useRef<string | null>(null);
+  const openRef = useRef(false);
+
+  // Mantener refs sincronizadas con el estado
+  useEffect(() => { conversationIdRef.current = conversationId; }, [conversationId]);
+  useEffect(() => { openRef.current = open; }, [open]);
 
   // === Cargar conversationId desde localStorage al montar ===
+  // Esto garantiza que al recargar la página o cerrar/reabrir el widget,
+  // el paciente vuelva a ver su hilo de conversación en lugar del form inicial.
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setConversationId(stored);
+      if (stored && stored.trim()) {
+        setConversationId(stored);
+        setLoading(true); // mostramos spinner hasta que llegue el historial
+      }
     } catch {
       /* localStorage puede no estar disponible (SSR / modo privado) */
     }
   }, []);
 
-  // === Cargar conversación + polling ===
+  // === Cargar conversación vía GET público por conversationId ===
+  // Esta función es estable (sin deps) para que el setInterval no se reinicie
+  // innecesariamente. Lee el conversationId actual desde la ref.
   const loadConversation = useCallback(async () => {
-    if (!conversationId) return;
+    const id = conversationIdRef.current;
+    if (!id) return;
     try {
-      const res = await fetch(`/api/chat?conversationId=${conversationId}`);
+      const res = await fetch(`/api/chat?conversationId=${id}`);
       if (!res.ok) {
-        // 404 = la conversación fue eliminada por el admin → reset
+        // 404 = la conversación fue eliminada por el admin → reset total
         if (res.status === 404) {
-          localStorage.removeItem(STORAGE_KEY);
+          try { localStorage.removeItem(STORAGE_KEY); } catch { /* */ }
           setConversationId(null);
           setConversation(null);
+          setLoadError(false);
+          return;
         }
+        // Otros errores (500, red) → marcar error pero conservar ID para reintentar
+        setLoadError(true);
         return;
       }
       const data: Conversation = await res.json();
       setConversation(data);
+      setLoadError(false);
 
-      // Contar no leídos del paciente
+      // Contar no leídos del paciente y marcar como leído si el panel está abierto
       const wasUnread = data.unreadUser;
-      if (wasUnread && open) {
-        // Si el panel está abierto, marcar como leído
+      if (wasUnread && openRef.current) {
+        // Panel abierto → marcar como leído inmediatamente
         await fetch("/api/chat", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversationId, action: "mark-user-read" }),
+          body: JSON.stringify({ conversationId: id, action: "mark-user-read" }),
         });
         setUnreadCount(0);
-      } else if (wasUnread && !open) {
-        setUnreadCount(1); // Aviso visual de "nuevo mensaje"
+      } else if (wasUnread && !openRef.current) {
+        setUnreadCount(1); // Aviso visual de "nuevo mensaje" en el FAB
       } else {
         setUnreadCount(0);
       }
     } catch {
-      /* silencioso: el polling reintenta */
+      // Error de red → marcar para reintentar en el próximo ciclo de polling
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
-  }, [conversationId, open]);
+  }, []); // estable: sin deps
 
+  // === Polling cada 4s cuando hay conversationId ===
   useEffect(() => {
-    if (conversationId) {
-      loadConversation();
-      pollRef.current = setInterval(loadConversation, 4000);
-      return () => {
-        if (pollRef.current) clearInterval(pollRef.current);
-      };
+    if (!conversationId) {
+      // Si no hay conversationId, asegurarse de que no quede un intervalo activo
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
     }
+    // Carga inmediata + polling
+    loadConversation();
+    pollRef.current = setInterval(loadConversation, 4000);
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
   }, [conversationId, loadConversation]);
+
+  // === Cuando el panel se abre, forzar un refetch + marcar como leído ===
+  useEffect(() => {
+    if (open && conversationId) {
+      loadConversation();
+    }
+  }, [open, conversationId, loadConversation]);
 
   // === Auto-scroll al final cuando llegan mensajes nuevos ===
   useEffect(() => {
@@ -132,9 +184,10 @@ export function FloatingChatWidget() {
         return;
       }
       const data: Conversation = await res.json();
+      // === Persistir el conversationId en localStorage ===
+      try { localStorage.setItem(STORAGE_KEY, data.id); } catch { /* */ }
       setConversation(data);
       setConversationId(data.id);
-      try { localStorage.setItem(STORAGE_KEY, data.id); } catch { /* */ }
       setForm({ patientName: "", patientPhone: "", patientEmail: "", text: "" });
       toast.success("Conversación iniciada. Te responderemos a la brevedad.");
     } catch {
@@ -147,36 +200,50 @@ export function FloatingChatWidget() {
   // === Enviar mensaje nuevo (paciente) ===
   const handleSend = async () => {
     if (!text.trim() || !conversationId) return;
+    const currentText = text;
+    setText(""); // optimista: limpiar input inmediatamente
     setSending(true);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send", conversationId, text }),
+        body: JSON.stringify({ action: "send", conversationId, text: currentText }),
       });
       if (!res.ok) {
         const d = await res.json();
         toast.error(d.error || "Error al enviar");
+        setText(currentText); // restaurar texto si falló
         return;
       }
-      setText("");
       await loadConversation(); // refresca inmediatamente
     } catch {
       toast.error("Error de conexión");
+      setText(currentText); // restaurar texto si falló
     } finally {
       setSending(false);
     }
   };
 
   const handleReset = () => {
-    if (!confirm("¿Cerrar esta conversación y empezar una nueva?")) return;
+    if (!confirm("¿Cerrar esta conversación y empezar una nueva? Se perderá el historial actual.")) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* */ }
     setConversationId(null);
     setConversation(null);
     setUnreadCount(0);
+    setLoadError(false);
   };
 
   const isClosed = conversation?.status === "CLOSED";
+
+  // === Determinar qué mostrar en el body del widget ===
+  // - Sin conversationId → form inicial
+  // - Con conversationId pero cargando → spinner
+  // - Con conversationId y error → mensaje de error + reintentar
+  // - Con conversationId y conversation → hilo de mensajes
+  const showForm = !conversationId;
+  const showLoading = conversationId && loading && !conversation;
+  const showError = conversationId && !loading && !conversation && loadError;
+  const showThread = conversationId && conversation;
 
   return (
     <>
@@ -241,7 +308,7 @@ export function FloatingChatWidget() {
             </div>
 
             {/* Body */}
-            {!conversationId ? (
+            {showForm ? (
               /* === Form de inicio === */
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-xs text-emerald-800">
@@ -297,14 +364,36 @@ export function FloatingChatWidget() {
                   Iniciar conversación
                 </button>
               </div>
-            ) : (
+            ) : showLoading ? (
+              /* === Cargando historial desde el servidor === */
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3" />
+                <p className="text-sm text-teal-700">Cargando tu conversación...</p>
+                <p className="text-[10px] text-teal-400 mt-1">Recuperando el historial de mensajes</p>
+              </div>
+            ) : showError ? (
+              /* === Error al cargar — botón de reintentar === */
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <AlertCircle className="w-8 h-8 text-amber-500 mb-3" />
+                <p className="text-sm text-teal-700">No pudimos cargar tu conversación</p>
+                <p className="text-[10px] text-teal-400 mt-1">Revisá tu conexión e intentá nuevamente</p>
+                <button
+                  onClick={() => { setLoading(true); setLoadError(false); loadConversation(); }}
+                  className="mt-3 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg flex items-center gap-1.5"
+                >
+                  <RotateCw className="w-3.5 h-3.5" /> Reintentar
+                </button>
+              </div>
+            ) : showThread ? (
               /* === Hilo de mensajes === */
               <>
                 <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50">
-                  {loading && !conversation && (
-                    <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-emerald-500" /></div>
+                  {conversation.messages.length === 0 && (
+                    <div className="text-center py-4">
+                      <p className="text-xs text-teal-400 italic">Aún no hay mensajes en esta conversación</p>
+                    </div>
                   )}
-                  {conversation?.messages.map(msg => {
+                  {conversation.messages.map(msg => {
                     const isPatient = msg.sender === "PATIENT";
                     return (
                       <div key={msg.id} className={`flex ${isPatient ? "justify-end" : "justify-start"}`}>
@@ -356,7 +445,7 @@ export function FloatingChatWidget() {
                   </button>
                 </div>
               </>
-            )}
+            ) : null}
           </motion.div>
         )}
       </AnimatePresence>
