@@ -28,6 +28,7 @@ export type AppView =
   | "admin-derivador"
   | "admin-map"
   | "admin-protocolo"
+  | "admin-lead-finder"
   | "forgot-password"
   | "professional-register";
 

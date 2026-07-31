@@ -397,3 +397,21 @@ model AttendanceSession {
   updatedAt            DateTime        @updatedAt
   sheet                AttendanceSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
 }
+
+// === LeadFinder: CRM de Reclutamiento de Profesionales ===
+// Prospectos de psicólogos y psiquiatras para zonas sin cobertura.
+model ProfessionalProspect {
+  id        String   @id @default(cuid())
+  fullName  String
+  email     String?
+  phone     String
+  role      String   @default("PSYCHOLOGIST") // PSYCHOLOGIST | PSYCHIATRIST
+  region    String   @default("CABA") // CABA | ZONA_SUR | ZONA_OESTE | ZONA_NORTE
+  location  String   // Barrio o Partido
+  address   String?
+  status    String   @default("NUEVO") // NUEVO | CONTACTADO | CV_RECIBIDO | ENTREVISTADO | APROBADO | DESCARTADO
+  notes     String?
+  source    String   @default("MANUAL_ENTRY") // MAPS_RADAR | DIRECT_POSTULATION | MANUAL_ENTRY
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
