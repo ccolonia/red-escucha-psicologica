@@ -17,11 +17,18 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#10B981",
 };
 
 export const metadata: Metadata = {
   title: "REP | Escuchar - Acompañar - Transformar | Un Espacio Seguro para Vos",
   description: "Brindamos terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Entendemos que cada proceso es único, por eso respetamos tus tiempos y necesidades.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "REP",
+  },
   // === OpenGraph (redes sociales: Facebook, WhatsApp, LinkedIn, etc.) ===
   openGraph: {
     title: "REP | Escuchar - Acompañar - Transformar | Un Espacio Seguro para Vos",

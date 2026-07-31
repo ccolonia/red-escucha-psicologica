@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, MinusCircle, AlertCircle, RotateCw } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, MinusCircle, AlertCircle, RotateCw, Bell } from "lucide-react";
 import { toast } from "sonner";
+import { usePushNotifications } from "@/lib/use-push-notifications";
 
 /**
  * Widget flotante de Chat Web en Vivo.
@@ -47,6 +48,24 @@ export function FloatingChatWidget() {
   const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // === Notificaciones Push nativas ===
+  // Permite al paciente recibir notificaciones en su dispositivo cuando el
+  // admin responde, incluso si la web está cerrada.
+  const { permission: pushPermission, subscribe: subscribePush, subscribing: pushSubscribing } = usePushNotifications();
+
+  const handleEnablePush = useCallback(async () => {
+    if (!conversationId) {
+      toast.error("Iniciá una conversación antes de activar notificaciones");
+      return;
+    }
+    const ok = await subscribePush(conversationId);
+    if (ok) {
+      toast.success("Notificaciones activadas ✓ Te avisaremos cuando respondan");
+    } else {
+      toast.error("No se pudieron activar las notificaciones");
+    }
+  }, [conversationId, subscribePush]);
 
   // Form inicial (solo si no hay conversación)
   const [form, setForm] = useState({ patientName: "", patientPhone: "", patientEmail: "", text: "" });
@@ -387,6 +406,29 @@ export function FloatingChatWidget() {
             ) : showThread ? (
               /* === Hilo de mensajes === */
               <>
+                {/* Banner para activar notificaciones push (solo si no están activadas) */}
+                {pushPermission === "default" && (
+                  <div className="bg-emerald-50 border-b border-emerald-200 px-3 py-2 flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <p className="text-[11px] text-emerald-800 flex-1">
+                      Activá las notificaciones para saber cuando respondan
+                    </p>
+                    <button
+                      onClick={handleEnablePush}
+                      disabled={pushSubscribing}
+                      className="text-[10px] font-medium px-2 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-md shrink-0"
+                    >
+                      {pushSubscribing ? "..." : "Activar"}
+                    </button>
+                  </div>
+                )}
+                {pushPermission === "denied" && (
+                  <div className="bg-amber-50 border-b border-amber-200 px-3 py-2">
+                    <p className="text-[10px] text-amber-700">
+                      Notificaciones bloqueadas. Activá los permisos del navegador para recibir avisos.
+                    </p>
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50">
                   {conversation.messages.length === 0 && (
                     <div className="text-center py-4">

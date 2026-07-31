@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Toaster } from "sonner";
 import { IdleTimeoutProvider } from "@/components/providers/idle-timeout-provider";
 import { FloatingChatWidget } from "@/components/floating-chat-widget";
+import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
 
 /** Oculta el widget de chat para admins (tienen su panel /admin/chat). */
 function ChatWidgetWrapper() {
@@ -48,6 +49,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             {/* Widget flotante de Chat Web en Vivo - disponible en toda la web
                 como fallback temporal por contingencia de WhatsApp. */}
             <ChatWidgetWrapper />
+            {/* Service Worker para PWA + Web Push notifications.
+                Solo se registra en producción para no romper el HMR de dev. */}
+            <ServiceWorkerRegistrar />
           </IdleTimeoutProvider>
           <Toaster position="top-right" />
         </ThemeProvider>

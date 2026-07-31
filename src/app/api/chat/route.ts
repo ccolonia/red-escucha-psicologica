@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendPushToConversation, sendPushToUser } from "@/lib/push";
 
 // === Utilidades de auth ===
 async function requireAdmin() {
@@ -88,6 +89,34 @@ export async function POST(request: NextRequest) {
         },
         include: { messages: { orderBy: { createdAt: "asc" } } },
       });
+
+      // === Notificar a todos los admins via push ===
+      // Buscamos todos los usuarios con rol admin/super_admin y les enviamos push.
+      // Fire-and-forget: no bloqueamos la respuesta al paciente.
+      (async () => {
+        try {
+          const admins = await db.user.findMany({
+            where: { role: { in: ["admin", "super_admin"] }, active: true },
+            select: { id: true },
+          });
+          const truncated = String(text).slice(0, 80);
+          await Promise.all(
+            admins.map(a =>
+              sendPushToUser(a.id, {
+                title: `💬 Nuevo chat de ${String(patientName).slice(0, 30)}`,
+                body: truncated,
+                url: "/admin/chat",
+                conversationId: conv.id,
+                tag: `rep-chat-admin-${conv.id}`,
+                requireInteraction: false,
+              })
+            )
+          );
+        } catch (e) {
+          console.error("Push notify admins error:", e);
+        }
+      })();
+
       return NextResponse.json(conv, { status: 201 });
     }
 
@@ -113,6 +142,33 @@ export async function POST(request: NextRequest) {
         where: { id: conversationId },
         data: { unreadAdmin: true, updatedAt: new Date() },
       });
+
+      // === Notificar a todos los admins via push ===
+      // Fire-and-forget: no bloqueamos la respuesta al paciente.
+      (async () => {
+        try {
+          const admins = await db.user.findMany({
+            where: { role: { in: ["admin", "super_admin"] }, active: true },
+            select: { id: true },
+          });
+          const truncated = String(text).slice(0, 80);
+          await Promise.all(
+            admins.map(a =>
+              sendPushToUser(a.id, {
+                title: `💬 ${conv.patientName} escribió`,
+                body: truncated,
+                url: "/admin/chat",
+                conversationId: conv.id,
+                tag: `rep-chat-admin-${conv.id}`,
+                requireInteraction: false,
+              })
+            )
+          );
+        } catch (e) {
+          console.error("Push notify admins error:", e);
+        }
+      })();
+
       return NextResponse.json(msg, { status: 201 });
     }
 
@@ -139,6 +195,27 @@ export async function POST(request: NextRequest) {
         where: { id: conversationId },
         data: { unreadUser: true, unreadAdmin: false, updatedAt: new Date() },
       });
+
+      // === Notificar al paciente via push ===
+      // Enviamos push a todas las suscripciones vinculadas a esta conversación
+      // (el paciente puede tener múltiples dispositivos).
+      // Fire-and-forget: no bloqueamos la respuesta al admin.
+      (async () => {
+        try {
+          const truncated = String(text).slice(0, 80);
+          await sendPushToConversation(conversationId, {
+            title: "REP 💬 Nuevo mensaje",
+            body: truncated,
+            url: "/",
+            conversationId,
+            tag: `rep-chat-patient-${conversationId}`,
+            requireInteraction: false,
+          });
+        } catch (e) {
+          console.error("Push notify patient error:", e);
+        }
+      })();
+
       return NextResponse.json(msg, { status: 201 });
     }
 

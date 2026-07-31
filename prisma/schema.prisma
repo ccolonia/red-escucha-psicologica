@@ -442,3 +442,21 @@ model ChatMessage {
 
   @@index([conversationId, createdAt])
 }
+
+// === Push Subscriptions (Web Push API + VAPID) ===
+// Suscripciones de navegadores para recibir notificaciones push nativas.
+// Una PushSubscription puede estar vinculada a una conversación de chat
+// (paciente anónimo) o a un userId (usuario autenticado).
+model PushSubscription {
+  id             String   @id @default(cuid())
+  conversationId String?  // Si la suscripción es de un paciente anónimo en una conversación
+  userId         String?  // Si la suscripción es de un usuario autenticado (admin, profesional, paciente)
+  endpoint       String   @db.Text  // URL del push service del navegador (FCM para Chrome, APNs para Safari)
+  keys           Json     // { p256dh: string, auth: string } - claves de cifrado ECDH
+  userAgent      String?  // Para identificar el dispositivo/navegador (debug)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([conversationId])
+  @@index([userId])
+}

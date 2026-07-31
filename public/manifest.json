@@ -1,0 +1,50 @@
+{
+  "name": "Red Escucha Psicológica",
+  "short_name": "REP",
+  "description": "Plataforma de psicólogos que brindan terapia individual, de pareja, familiar y grupal con profesionales altamente especializados. Atención presencial y online en todo Argentina.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAFAFA",
+  "theme_color": "#10B981",
+  "categories": ["health", "medical", "lifestyle"],
+  "lang": "es-AR",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Iniciar Chat",
+      "short_name": "Chat",
+      "description": "Abrir el chat en vivo con el equipo de REP",
+      "url": "/?action=chat",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Solicitar Turno",
+      "short_name": "Turno",
+      "description": "Solicitar un turno psicológico",
+      "url": "/?action=book",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

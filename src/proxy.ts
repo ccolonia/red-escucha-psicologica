@@ -72,6 +72,16 @@ function isPublicApiRoute(pathname: string, method: string): boolean {
     return true;
   }
 
+  // Push notifications: rutas públicas (VAPID public key + subscribe/unsubscribe)
+  // El endpoint /subscribe puede recibir un conversationId (paciente anónimo) o
+  // vincularse a userId si hay sesión. /vapid-public-key devuelve solo la clave pública.
+  if (
+    pathname === "/api/push/vapid-public-key" ||
+    pathname === "/api/push/subscribe"
+  ) {
+    return true;
+  }
+
   // Patient requests: only POST is public (patients submit triage forms)
   if (pathname === "/api/patient-requests" && method === "POST") {
     return true;
