@@ -433,6 +433,17 @@ export function LandingPage() {
     guardianName: "",
   });
   const [contactSent, setContactSent] = useState(false);
+
+  // === Auto-reset del formulario tras envío exitoso (3.5 segundos) ===
+  // Después de mostrar "¡Consulta enviada!" por 3.5s, resetear el estado
+  // para que el formulario vuelva a estar disponible sin refrescar la página.
+  useEffect(() => {
+    if (!contactSent) return;
+    const timer = setTimeout(() => {
+      setContactSent(false);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [contactSent]);
   const [contactSending, setContactSending] = useState(false);
   const [contactError, setContactError] = useState(false);
   // Mensaje específico para el caso de email con appointment activo (409)
