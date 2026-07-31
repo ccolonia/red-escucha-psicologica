@@ -2485,13 +2485,10 @@ export function LandingPage() {
                           onChange={(e) =>
                             setContactForm({ ...contactForm, message: e.target.value })
                           }
-                          placeholder="Contanos cómo podemos ayudarte..."
+                          placeholder="Contanos cómo podemos ayudarte, si buscás terapia presencial indicanos tu zona y barrio."
                           rows={4}
                           className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
                         />
-                        <p className="text-xs text-forest-400" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                          Contanos cómo podemos ayudarte, <strong className="font-bold text-forest-500">si buscás terapia presencial indicanos tu zona y barrio.</strong>
-                        </p>
                       </div>
                       <Button
                         type="submit"
