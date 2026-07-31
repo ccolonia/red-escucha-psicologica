@@ -8,6 +8,7 @@ import { Toaster } from "sonner";
 import { IdleTimeoutProvider } from "@/components/providers/idle-timeout-provider";
 import { FloatingChatWidget } from "@/components/floating-chat-widget";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
+import { InstallPWAButton } from "@/components/install-pwa-button";
 
 /** Oculta el widget de chat para admins (tienen su panel /admin/chat). */
 function ChatWidgetWrapper() {
@@ -15,6 +16,18 @@ function ChatWidgetWrapper() {
   const role = (session?.user as { role?: string } | undefined)?.role;
   if (role === "admin" || role === "super_admin") return null;
   return <FloatingChatWidget />;
+}
+
+/** Oculta el banner de instalación de PWA para usuarios autenticados
+ *  (ellos ya están dentro de la app; el banner es para visitantes anónimos
+ *  de la web pública). */
+function InstallPWAWrapper() {
+  const { data: session } = useSession();
+  // Mostrar el banner solo si NO hay sesión (visitantes anónimos de la home)
+  // o si es paciente (no admin/profesional)
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  if (role === "admin" || role === "super_admin" || role === "professional") return null;
+  return <InstallPWAButton />;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -52,6 +65,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
             {/* Service Worker para PWA + Web Push notifications.
                 Solo se registra en producción para no romper el HMR de dev. */}
             <ServiceWorkerRegistrar />
+            {/* Banner de instalación de la PWA - solo para visitantes/pacientes. */}
+            <InstallPWAWrapper />
           </IdleTimeoutProvider>
           <Toaster position="top-right" />
         </ThemeProvider>
