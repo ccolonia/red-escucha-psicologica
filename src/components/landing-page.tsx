@@ -2749,7 +2749,12 @@ export function LandingPage() {
       </div>
 
       {/* ===== WHATSAPP FLOATING BUTTON (bottom of the stack) ===== */}
-      {cmsConfig.whatsapp_enabled !== "false" && (
+      {/* DESACTIVADO TEMPORALMENTE: mientras el canal de WhatsApp esté en
+          contingencia, se reemplaza por el FloatingChatWidget (chat web en vivo)
+          montado globalmente en <Providers/>. Para reactivar, borrar el
+          'false &&' y restaurar la condición original:
+          cmsConfig.whatsapp_enabled !== "false" */}
+      {false && cmsConfig.whatsapp_enabled !== "false" && (
       <a
         href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
         rel="noopener noreferrer"
