@@ -853,6 +853,7 @@ interface SendContactNotificationParams {
   message: string;
   reason: string | null;
   modality?: string | null;
+  age?: string | null;
 }
 
 const REASON_MAP: Record<string, string> = {
@@ -861,7 +862,7 @@ const REASON_MAP: Record<string, string> = {
   informacion: "Información",
 };
 
-export async function sendContactNotification({ name, email, phone, message, reason, modality }: SendContactNotificationParams) {
+export async function sendContactNotification({ name, email, phone, message, reason, modality, age }: SendContactNotificationParams) {
   const resend = getResend();
   const reasonLabel = reason ? (REASON_MAP[reason] || reason) : "No especificado";
 
@@ -1025,6 +1026,13 @@ export async function sendContactNotification({ name, email, phone, message, rea
               </div>
 
               ${phoneField}
+
+              ${age ? `
+              <div class="field">
+                <div class="label">Edad</div>
+                <div class="value" style="font-weight:600;">${age} años</div>
+              </div>
+              ` : ''}
 
               <div class="field">
                 <div class="label">Motivo</div>

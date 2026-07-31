@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       reason: triageReason,
       notes: patientNotes,
       enableTriage,
+      age,
     } = body;
 
     if (!name || !email || !password) {
@@ -290,6 +291,7 @@ export async function POST(request: NextRequest) {
         message: `Nuevo paciente registrado desde la web. DNI: ${finalDni || "No cargado"}. Motivo: ${triageReason || "otros"}. Modalidad: ${triageModality || "presencial"}.${patientNotes ? " Mensaje: " + patientNotes : ""}`,
         reason: "solicitar_turno",
         modality: triageModality || "presencial",
+        age: age || null,
       });
       console.log(`📧 Notificación de nuevo paciente enviada: ${email}`);
     } catch (emailError) {

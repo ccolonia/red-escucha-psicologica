@@ -721,6 +721,7 @@ export function LandingPage() {
           enableTriage: true,
           modality: contactForm.modality || "presencial",
           reason: contactForm.consultReason || "otros",
+          age: contactForm.patientAge || null,
         }),
       });
 
@@ -2488,6 +2489,9 @@ export function LandingPage() {
                           rows={4}
                           className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
                         />
+                        <p className="text-xs text-forest-400" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                          Contanos cómo podemos ayudarte, <strong className="font-bold text-forest-500">si buscás terapia presencial indicanos tu zona y barrio.</strong>
+                        </p>
                       </div>
                       <Button
                         type="submit"
