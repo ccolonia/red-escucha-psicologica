@@ -83,9 +83,11 @@ export function AdminLeadFinder() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterRegion, setFilterRegion] = useState("");
-  const [filterRole, setFilterRole] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  // Usamos "ALL" como valor centinela para los filtros "Todos" porque Radix UI
+  // lanza un error si un <SelectItem> tiene value="" (cadena vacía).
+  const [filterRegion, setFilterRegion] = useState("ALL");
+  const [filterRole, setFilterRole] = useState("ALL");
+  const [filterStatus, setFilterStatus] = useState("ALL");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [editDialog, setEditDialog] = useState<Prospect | null>(null);
   const [newForm, setNewForm] = useState({ fullName: "", email: "", phone: "", prospectRole: "PSYCHOLOGIST", region: "CABA", location: "", notes: "" });
@@ -94,9 +96,10 @@ export function AdminLeadFinder() {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    if (filterRegion) params.set("region", filterRegion);
-    if (filterRole) params.set("role", filterRole);
-    if (filterStatus) params.set("status", filterStatus);
+    // Convertimos "ALL" de vuelta a vacío para no enviar el parámetro a la API
+    if (filterRegion && filterRegion !== "ALL") params.set("region", filterRegion);
+    if (filterRole && filterRole !== "ALL") params.set("role", filterRole);
+    if (filterStatus && filterStatus !== "ALL") params.set("status", filterStatus);
     try {
       const res = await fetch(`/api/admin/lead-finder?${params.toString()}`);
       const data = await res.json();
@@ -242,15 +245,15 @@ export function AdminLeadFinder() {
             </div>
             <Select value={filterRegion} onValueChange={setFilterRegion}>
               <SelectTrigger className="w-[130px] h-8 text-xs border-teal-200"><SelectValue placeholder="Región" /></SelectTrigger>
-              <SelectContent><SelectItem value="">Todas</SelectItem><SelectItem value="CABA">CABA</SelectItem><SelectItem value="ZONA_SUR">Zona Sur</SelectItem><SelectItem value="ZONA_OESTE">Zona Oeste</SelectItem><SelectItem value="ZONA_NORTE">Zona Norte</SelectItem></SelectContent>
+              <SelectContent><SelectItem value="ALL">Todas</SelectItem><SelectItem value="CABA">CABA</SelectItem><SelectItem value="ZONA_SUR">Zona Sur</SelectItem><SelectItem value="ZONA_OESTE">Zona Oeste</SelectItem><SelectItem value="ZONA_NORTE">Zona Norte</SelectItem></SelectContent>
             </Select>
             <Select value={filterRole} onValueChange={setFilterRole}>
               <SelectTrigger className="w-[130px] h-8 text-xs border-teal-200"><SelectValue placeholder="Profesión" /></SelectTrigger>
-              <SelectContent><SelectItem value="">Todas</SelectItem><SelectItem value="PSYCHOLOGIST">Psicólogo/a</SelectItem><SelectItem value="PSYCHIATRIST">Psiquiatra</SelectItem></SelectContent>
+              <SelectContent><SelectItem value="ALL">Todas</SelectItem><SelectItem value="PSYCHOLOGIST">Psicólogo/a</SelectItem><SelectItem value="PSYCHIATRIST">Psiquiatra</SelectItem></SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-[130px] h-8 text-xs border-teal-200"><SelectValue placeholder="Estado" /></SelectTrigger>
-              <SelectContent><SelectItem value="">Todos</SelectItem>{Object.entries(STATUS_CONFIG).map(([k,v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
+              <SelectContent><SelectItem value="ALL">Todos</SelectItem>{Object.entries(STATUS_CONFIG).map(([k,v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
 
