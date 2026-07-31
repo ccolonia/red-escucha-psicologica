@@ -41,31 +41,105 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      // === Mensaje específico según el rol del usuario existente ===
-      // Como regla de negocio: 1 email = 1 rol. Si una persona es paciente
-      // y quiere ser profesional (o viceversa), debe usar otro email. El
-      // mensaje le explica claramente la situación y le indica qué hacer.
-      const roleMessages: Record<string, string> = {
-        patient:
-          "Ya existe una cuenta de paciente con este email. Si querés registrarte como profesional, usá otro email. Si ya sos paciente y necesitás ayuda, contactanos a contacto@redescuchapsicologica.com.",
-        professional:
-          "Ya existe una cuenta de profesional con este email. Si ya te registraste como profesional, esperá la aprobación del administrador. Si no recordás tu contraseña, usá '¿Olvidaste tu contraseña?' en la pantalla de inicio de sesión.",
-        admin:
-          "Este email ya está registrado en el sistema como administrador. Contactanos a contacto@redescuchapsicologica.com para asistencia.",
-        super_admin:
-          "Este email ya está registrado en el sistema como administrador. Contactanos a contacto@redescuchapsicologica.com para asistencia.",
-      };
-      const specificMessage =
-        roleMessages[existingUser.role] ||
-        "Ya existe una cuenta con este email. Contactanos a contacto@redescuchapsicologica.com para asistencia.";
+      // === Si es profesional o admin, bloquear (1 email = 1 rol) ===
+      if (existingUser.role !== "patient") {
+        const roleMessages: Record<string, string> = {
+          professional:
+            "Ya existe una cuenta de profesional con este email. Si ya te registraste como profesional, esperá la aprobación del administrador. Si no recordás tu contraseña, usá '¿Olvidaste tu contraseña?' en la pantalla de inicio de sesión.",
+          admin:
+            "Este email ya está registrado en el sistema como administrador. Contactanos a contacto@redescuchapsicologica.com para asistencia.",
+          super_admin:
+            "Este email ya está registrado en el sistema como administrador. Contactanos a contacto@redescuchapsicologica.com para asistencia.",
+        };
+        const specificMessage =
+          roleMessages[existingUser.role] ||
+          "Ya existe una cuenta con este email. Contactanos a contacto@redescuchapsicologica.com para asistencia.";
+
+        return NextResponse.json(
+          {
+            error: specificMessage,
+            code: "EMAIL_ALREADY_EXISTS",
+            existingRole: existingUser.role,
+          },
+          { status: 409 }
+        );
+      }
+
+      // === Si es paciente existente, NO bloquear ===
+      // En REP, el formulario de contacto es una Mesa de Entrada / Intake.
+      // Un mismo paciente (o un familiar con el mismo email) debe poder
+      // enviar múltiples solicitudes de turno a lo largo del tiempo.
+      // En vez de crear un nuevo User (chocaría con unique email),
+      // actualizamos sus datos de contacto y creamos una nueva PatientRequest.
+      
+      // Actualizar datos de contacto (teléfono, nombre)
+      await db.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name,
+          phone: phone || existingUser.phone,
+        },
+      });
+
+      // Actualizar DNI si se proporcionó y el paciente no lo tenía
+      if (dni) {
+        const finalDniUpdate = dni.replace(/[^0-9]/g, "");
+        if (/^\d{7,8}$/.test(finalDniUpdate)) {
+          const existingPatient = await db.patient.findUnique({
+            where: { userId: existingUser.id },
+          });
+          if (existingPatient && !existingPatient.dni) {
+            await db.patient.update({
+              where: { userId: existingUser.id },
+              data: { dni: finalDniUpdate },
+            });
+          }
+        }
+      }
+
+      // Crear nueva PatientRequest para Triage
+      const validModalities = ["online", "presencial", "híbrida"];
+      const validReasons = [
+        "ansiedad", "depresion", "vinculos", "duelo", "autoestima",
+        "adicciones", "estres", "laboral", "orientacion_padres",
+        "evaluaciones", "discapacidad", "otros",
+        "infanto_juvenil", "consulta_general",
+      ];
+      const finalModality = validModalities.includes(triageModality) ? triageModality : "presencial";
+      const finalReason = validReasons.includes(triageReason) ? triageReason : "otros";
+
+      await db.patientRequest.create({
+        data: {
+          name,
+          email,
+          phone: phone || null,
+          modality: finalModality,
+          reason: finalReason,
+          notes: patientNotes || null,
+          status: "pending",
+        },
+      });
+
+      // Enviar email de notificación al admin
+      try {
+        const { sendContactNotification } = await import("@/lib/email");
+        await sendContactNotification({
+          name,
+          email,
+          phone: phone || null,
+          message: `Nuevo paciente registrado desde la web. DNI: ${dni || "No cargado"}. Motivo: ${triageReason || "otros"}. Modalidad: ${triageModality || "presencial"}.${patientNotes ? " Mensaje: " + patientNotes : ""}`,
+          reason: "solicitar_turno",
+          modality: triageModality || "presencial",
+          age: age || null,
+        });
+        console.log(`📧 Notificación de nueva consulta de paciente existente enviada: ${email}`);
+      } catch (emailError) {
+        console.error("⚠️ Error enviando notificación (no bloqueante):", emailError);
+      }
 
       return NextResponse.json(
-        {
-          error: specificMessage,
-          code: "EMAIL_ALREADY_EXISTS",
-          existingRole: existingUser.role,
-        },
-        { status: 409 }
+        { message: "¡Gracias por tu consulta! En breve un integrante de nuestro equipo se pondrá en contacto contigo.", userId: existingUser.id },
+        { status: 200 }
       );
     }
 
