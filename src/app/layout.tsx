@@ -81,7 +81,11 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        {/* === Favicons ===
+            favicon.ico es multi-resolución real (16+32+48 px embebidos en .ico)
+            generado desde el isotipo oficial REP con fondo esmeralda #10B981.
+            Los PNG individuales son fallback para navegadores que no soportan .ico multi-res. */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
         <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
