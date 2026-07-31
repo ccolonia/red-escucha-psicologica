@@ -101,7 +101,7 @@ const MODALITY_MAP: Record<string, { label: string; icon: React.ComponentType<{ 
   ambas: { label: "Presencial y Online", icon: CheckCircle2 },
 };
 
-const DURATION_OPTIONS = [40, 45, 60];
+const DURATION_OPTIONS = [40, 45, 50, 60];
 
 // Opciones horarias de 06:00 a 24:00 (medianoche) en intervalos de 30 min.
 // Ampliado desde el rango anterior (07:00-22:00) para soportar jornadas
