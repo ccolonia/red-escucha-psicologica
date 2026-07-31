@@ -26,6 +26,7 @@ import {
   MapPin,
   BookOpen,
   Zap as ZapIcon,
+  MessagesSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ const PROFESSIONAL_NAV: NavItem[] = [
 
 const ADMIN_NAV: NavItem[] = [
   { view: "admin-dashboard", label: "Inicio", icon: LayoutDashboard },
+  { view: "admin-chat", label: "Chat en Vivo", icon: MessagesSquare },
   { view: "admin-triage", label: "Triage", icon: AlertCircle },
   { view: "admin-agenda-central", label: "Agenda Central", icon: LayoutGrid },
   { view: "admin-derivador", label: "Derivador", icon: Zap },

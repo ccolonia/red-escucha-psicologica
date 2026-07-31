@@ -415,3 +415,30 @@ model ProfessionalProspect {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// === Chat Web en Vivo ===
+// Sistema de mensajería en tiempo real entre pacientes (web pública) y
+// el equipo de administración REP. Fallback temporal por contingencia de WhatsApp.
+model ChatConversation {
+  id           String        @id @default(cuid())
+  patientName  String
+  patientEmail String?
+  patientPhone String
+  status       String        @default("ACTIVE") // ACTIVE | CLOSED
+  unreadAdmin  Boolean       @default(true)  // Hay mensajes nuevos del paciente sin leer por admin
+  unreadUser   Boolean       @default(false) // Hay mensajes nuevos del admin sin leer por paciente
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  messages     ChatMessage[]
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         String           // "PATIENT" | "ADMIN"
+  text           String           @db.Text
+  createdAt      DateTime         @default(now())
+
+  @@index([conversationId, createdAt])
+}

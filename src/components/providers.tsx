@@ -1,11 +1,20 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, useSession } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { useState } from "react";
 import { Toaster } from "sonner";
 import { IdleTimeoutProvider } from "@/components/providers/idle-timeout-provider";
+import { FloatingChatWidget } from "@/components/floating-chat-widget";
+
+/** Oculta el widget de chat para admins (tienen su panel /admin/chat). */
+function ChatWidgetWrapper() {
+  const { data: session } = useSession();
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  if (role === "admin" || role === "super_admin") return null;
+  return <FloatingChatWidget />;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -36,6 +45,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
               Solo activa listeners cuando el usuario está autenticado. */}
           <IdleTimeoutProvider>
             {children}
+            {/* Widget flotante de Chat Web en Vivo - disponible en toda la web
+                como fallback temporal por contingencia de WhatsApp. */}
+            <ChatWidgetWrapper />
           </IdleTimeoutProvider>
           <Toaster position="top-right" />
         </ThemeProvider>

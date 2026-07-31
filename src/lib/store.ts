@@ -29,6 +29,7 @@ export type AppView =
   | "admin-map"
   | "admin-protocolo"
   | "admin-lead-finder"
+  | "admin-chat"
   | "forgot-password"
   | "professional-register";
 

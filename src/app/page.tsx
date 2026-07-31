@@ -38,6 +38,7 @@ import { DerivadorInteligente } from "@/components/admin-derivador";
 import { AdminMap } from "@/components/admin-map";
 import { AdminProtocolo } from "@/components/admin-protocolo";
 import { AdminLeadFinder } from "@/components/admin-lead-finder";
+import { AdminChat } from "@/components/admin-chat";
 import { ProfessionalRegister } from "@/components/professional-register";
 import { AppNavigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
@@ -72,6 +73,7 @@ function DashboardContent() {
     "admin-map": <AdminMap />,
     "admin-protocolo": <AdminProtocolo />,
     "admin-lead-finder": <AdminLeadFinder />,
+    "admin-chat": <AdminChat />,
   };
 
   return (
@@ -181,7 +183,7 @@ function AppContent() {
       {/* Desktop: offset for sidebar */}
       <main className="md:ml-64 min-h-screen">
         <div className={`px-4 sm:px-6 lg:px-8 py-6 pt-16 md:pt-6 pb-24 md:pb-6 ${
-          currentView === "admin-agenda-central" || currentView === "admin-map"
+          currentView === "admin-agenda-central" || currentView === "admin-map" || currentView === "admin-chat"
             ? "w-full max-w-none"
             : "max-w-5xl mx-auto"
         }`}>
