@@ -85,7 +85,12 @@ type Conversation = {
  */
 export function AdminChat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  // selectedConversation: hilo COMPLETO con todos los mensajes (fetch separado vía
+  // GET /api/chat?conversationId=xxx). NO usar conversations.find() porque esa
+  // lista solo trae el último mensaje (take: 1) para preview del inbox.
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loadingThread, setLoadingThread] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
@@ -100,7 +105,10 @@ export function AdminChat() {
   const isFirstLoad = useRef(true);
   // Ref para acceder a soundEnabled dentro del polling sin reiniciar el interval
   const soundEnabledRef = useRef(true);
+  // Ref para acceder a selectedId dentro del polling (refetch del hilo seleccionado)
+  const selectedIdRef = useRef<string | null>(null);
   useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
+  useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -136,6 +144,22 @@ export function AdminChat() {
           playNotificationSound();
         }
       }
+
+      // === Si hay una conversación seleccionada, refetch del hilo completo ===
+      // para garantizar que el admin siempre vea todos los mensajes (incluidos
+      // los nuevos que llegaron en este ciclo de polling).
+      const selId = selectedIdRef.current;
+      if (selId) {
+        try {
+          const threadRes = await fetch(`/api/chat?conversationId=${selId}`);
+          if (threadRes.ok) {
+            const threadData: Conversation = await threadRes.json();
+            setSelectedConversation(threadData);
+          }
+        } catch {
+          /* silencioso: el hilo se refrescará en el próximo ciclo */
+        }
+      }
     } catch {
       /* silencioso */
     } finally {
@@ -149,41 +173,111 @@ export function AdminChat() {
     return () => clearInterval(interval);
   }, [loadConversations]);
 
-  // === Conversación seleccionada con mensajes completos ===
-  const selected = conversations.find(c => c.id === selectedId) || null;
+  // === Persistencia de la conversación seleccionada vía URL ?id=UUID ===
+  // Esto garantiza que al recargar la página (F5), el admin vuelva a la misma
+  // conversación que estaba mirando, con su historial completo cargado desde la DB.
+  //
+  // Usamos window.location.replace con query string en lugar de hash, porque el
+  // hash se mezcla con el routing SPA existente (useAppStore maneja #login etc.).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const idFromUrl = params.get("id");
+    if (idFromUrl && idFromUrl !== selectedId) {
+      setSelectedId(idFromUrl);
+    }
+  }, []); // solo al montar
 
-  // === Al seleccionar una conversación, marcarla como leída ===
-  const handleSelect = useCallback(async (id: string) => {
+  // === Cuando cambia selectedId, fetch del hilo completo + sync URL ===
+  useEffect(() => {
+    if (!selectedId) {
+      setSelectedConversation(null);
+      // Limpiar ?id= de la URL si no hay selección
+      if (typeof window !== "undefined" && window.location.search) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("id");
+        window.history.replaceState({}, "", url.toString());
+      }
+      return;
+    }
+
+    // Actualizar URL sin recargar la página
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("id", selectedId);
+      window.history.replaceState({}, "", url.toString());
+    }
+
+    // Fetch del hilo completo desde la DB
+    let cancelled = false;
+    setLoadingThread(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/chat?conversationId=${selectedId}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            toast.error("La conversación ya no existe");
+            setSelectedId(null);
+            setSelectedConversation(null);
+          }
+          return;
+        }
+        const data: Conversation = await res.json();
+        if (!cancelled) {
+          setSelectedConversation(data);
+          // Marcar como leído en el backend
+          await fetch("/api/chat", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ conversationId: selectedId, action: "mark-admin-read" }),
+          });
+          setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, unreadAdmin: false } : c));
+        }
+      } catch {
+        /* silencioso */
+      } finally {
+        if (!cancelled) setLoadingThread(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [selectedId]);
+
+  // === Alias 'selected' para compatibilidad con el JSX existente ===
+  const selected = selectedConversation;
+
+  // === Al hacer clic en una conversación del inbox ===
+  // Solo setea el selectedId; el useEffect[selectedId] se encarga de:
+  //  - actualizar la URL
+  //  - hacer fetch del hilo completo
+  //  - marcar como leído en el backend
+  const handleSelect = useCallback((id: string) => {
     setSelectedId(id);
-    try {
-      await fetch("/api/chat", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: id, action: "mark-admin-read" }),
-      });
-      setConversations(prev => prev.map(c => c.id === id ? { ...c, unreadAdmin: false } : c));
-    } catch { /* */ }
   }, []);
 
   // === Enviar respuesta como admin ===
   const handleSend = async () => {
     if (!text.trim() || !selectedId) return;
+    const currentText = text;
+    setText(""); // optimista
     setSending(true);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "admin-send", conversationId: selectedId, text }),
+        body: JSON.stringify({ action: "admin-send", conversationId: selectedId, text: currentText }),
       });
       if (!res.ok) {
         const d = await res.json();
         toast.error(d.error || "Error al enviar");
+        setText(currentText); // restaurar
         return;
       }
-      setText("");
-      await loadConversations(); // refresca
+      // Refetch inmediato del hilo + lista para ver el mensaje enviado
+      await loadConversations();
     } catch {
       toast.error("Error de conexión");
+      setText(currentText);
     } finally {
       setSending(false);
     }
@@ -206,12 +300,12 @@ export function AdminChat() {
     }
   };
 
-  // === Auto-scroll al final ===
+  // === Auto-scroll al final cuando llega un mensaje nuevo ===
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [selected?.messages.length]);
+  }, [selectedConversation?.messages.length, selectedId]);
 
   // === Filtros aplicados ===
   const filteredConversations = conversations.filter(c => {
@@ -377,11 +471,28 @@ export function AdminChat() {
 
         {/* === Columna derecha: Hilo de mensajes === */}
         <div className="flex flex-col min-h-0 bg-white rounded-xl border border-teal-100 overflow-hidden">
-          {!selected ? (
+          {!selectedId ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
               <MessageCircle className="w-12 h-12 text-teal-200 mb-3" />
               <p className="text-sm font-medium text-teal-700">Seleccioná una conversación</p>
               <p className="text-xs text-teal-500 mt-1">Elegí un paciente del inbox para ver el hilo completo</p>
+            </div>
+          ) : loadingThread && !selected ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3" />
+              <p className="text-sm text-teal-700">Cargando historial de mensajes...</p>
+              <p className="text-[10px] text-teal-400 mt-1">Recuperando la conversación desde la base de datos</p>
+            </div>
+          ) : !selected ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+              <MessageCircle className="w-12 h-12 text-teal-200 mb-3" />
+              <p className="text-sm font-medium text-teal-700">No se pudo cargar la conversación</p>
+              <button
+                onClick={() => setSelectedId(null)}
+                className="mt-3 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg"
+              >
+                Volver al inbox
+              </button>
             </div>
           ) : (
             <>
@@ -412,18 +523,29 @@ export function AdminChat() {
                       </span>
                     </div>
                   </div>
-                  <Button
-                    onClick={handleCloseToggle}
-                    variant="outline"
-                    size="sm"
-                    className={`text-xs h-7 ${selected.status === "CLOSED" ? "border-emerald-300 text-emerald-600 hover:bg-emerald-50" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                  >
-                    {selected.status === "CLOSED" ? (
-                      <><RotateCcw className="w-3 h-3 mr-1" /> Reabrir</>
-                    ) : (
-                      <><Ban className="w-3 h-3 mr-1" /> Cerrar</>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      onClick={() => setSelectedId(null)}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7 border-slate-300 text-slate-500 hover:bg-slate-50"
+                      title="Volver al inbox"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      onClick={handleCloseToggle}
+                      variant="outline"
+                      size="sm"
+                      className={`text-xs h-7 ${selected.status === "CLOSED" ? "border-emerald-300 text-emerald-600 hover:bg-emerald-50" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      {selected.status === "CLOSED" ? (
+                        <><RotateCcw className="w-3 h-3 mr-1" /> Reabrir</>
+                      ) : (
+                        <><Ban className="w-3 h-3 mr-1" /> Cerrar</>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
