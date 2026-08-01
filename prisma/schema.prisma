@@ -400,20 +400,35 @@ model AttendanceSession {
 
 // === LeadFinder: CRM de Reclutamiento de Profesionales ===
 // Prospectos de psicólogos y psiquiatras para zonas sin cobertura.
+// Los campos placeId, lat, lng, rating, userRatings, website, specialty, zone
+// se agregan para integración con Google Places API (Radar de Mapas).
 model ProfessionalProspect {
-  id        String   @id @default(cuid())
-  fullName  String
-  email     String?
-  phone     String
-  role      String   @default("PSYCHOLOGIST") // PSYCHOLOGIST | PSYCHIATRIST
-  region    String   @default("CABA") // CABA | ZONA_SUR | ZONA_OESTE | ZONA_NORTE
-  location  String   // Barrio o Partido
-  address   String?
-  status    String   @default("NUEVO") // NUEVO | CONTACTADO | CV_RECIBIDO | ENTREVISTADO | APROBADO | DESCARTADO
-  notes     String?
-  source    String   @default("MANUAL_ENTRY") // MAPS_RADAR | DIRECT_POSTULATION | MANUAL_ENTRY
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  fullName    String
+  email       String?
+  phone       String
+  role        String   @default("PSYCHOLOGIST") // PSYCHOLOGIST | PSYCHIATRIST
+  region      String   @default("CABA") // CABA | ZONA_SUR | ZONA_OESTE | ZONA_NORTE
+  location    String   // Barrio o Partido
+  address     String?
+  status      String   @default("NUEVO") // NUEVO | CONTACTADO | CV_RECIBIDO | ENTREVISTADO | APROBADO | DESCARTADO
+  notes       String?  @db.Text
+  source      String   @default("MANUAL_ENTRY") // MAPS_RADAR | DIRECT_POSTULATION | MANUAL_ENTRY
+  // === Campos Google Places API (Radar de Mapas) ===
+  placeId     String?  @unique  // Google Place ID (para deduplicar)
+  lat         Float?
+  lng         Float?
+  rating      Float?   // Calificación Google (0-5 estrellas)
+  userRatings Int?     // Cantidad total de reseñas
+  website     String?  @db.Text  // Sitio web del profesional/consultorio
+  specialty   String?  // Especialidad detectada (ej: "Psicología Clínica", "Psiquiatría")
+  zone        String?  // Zona geográfica normalizada (ej: "Merlo", "Morón", "CABA")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([region])
+  @@index([status])
+  @@index([placeId])
 }
 
 // === Chat Web en Vivo ===

@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/admin/lead-finder — Crear prospecto
+// Acepta tanto campos manuales como campos de Google Places (radar)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -52,23 +53,49 @@ export async function POST(request: NextRequest) {
     if (role !== "admin" && role !== "super_admin") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
     const body = await request.json();
-    const { fullName, email, phone, prospectRole, region, location, address, notes, source } = body;
+    const {
+      fullName, email, phone, prospectRole, region, location, address, notes, source,
+      // Campos Google Places
+      placeId, lat, lng, rating, userRatings, website, specialty, zone,
+    } = body;
 
-    if (!fullName || !phone) {
-      return NextResponse.json({ error: "Nombre y teléfono son obligatorios" }, { status: 400 });
+    if (!fullName) {
+      return NextResponse.json({ error: "Nombre es obligatorio" }, { status: 400 });
+    }
+
+    // Si hay placeId, verificar si ya existe (deduplicar)
+    if (placeId) {
+      const existing = await db.professionalProspect.findUnique({
+        where: { placeId },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: "Este lugar ya está guardado en el CRM", prospect: existing },
+          { status: 409 }
+        );
+      }
     }
 
     const prospect = await db.professionalProspect.create({
       data: {
         fullName,
         email: email || null,
-        phone,
+        phone: phone || "",
         role: prospectRole || "PSYCHOLOGIST",
         region: region || "CABA",
         location: location || "",
         address: address || null,
         notes: notes || null,
         source: source || "MANUAL_ENTRY",
+        // Campos Google Places (opcionales)
+        placeId: placeId || null,
+        lat: lat ?? null,
+        lng: lng ?? null,
+        rating: rating ?? null,
+        userRatings: userRatings ?? null,
+        website: website || null,
+        specialty: specialty || null,
+        zone: zone || null,
       },
     });
 
@@ -88,7 +115,11 @@ export async function PATCH(request: NextRequest) {
     if (role !== "admin" && role !== "super_admin") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
     const body = await request.json();
-    const { id, status, notes, fullName, email, phone, region, location, address } = body;
+    const {
+      id, status, notes, fullName, email, phone, region, location, address,
+      // Campos Google Places (editables)
+      rating, userRatings, website, specialty, zone,
+    } = body;
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,6 +132,11 @@ export async function PATCH(request: NextRequest) {
     if (region !== undefined) data.region = region;
     if (location !== undefined) data.location = location;
     if (address !== undefined) data.address = address || null;
+    if (rating !== undefined) data.rating = rating ?? null;
+    if (userRatings !== undefined) data.userRatings = userRatings ?? null;
+    if (website !== undefined) data.website = website || null;
+    if (specialty !== undefined) data.specialty = specialty || null;
+    if (zone !== undefined) data.zone = zone || null;
 
     const updated = await db.professionalProspect.update({ where: { id }, data });
     return NextResponse.json(updated);
