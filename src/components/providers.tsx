@@ -9,13 +9,23 @@ import { IdleTimeoutProvider } from "@/components/providers/idle-timeout-provide
 import { FloatingChatWidget } from "@/components/floating-chat-widget";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
 import { InstallPWAButton } from "@/components/install-pwa-button";
+import { WhatsAppFloat } from "@/components/whatsapp-float";
 
-/** Oculta el widget de chat para admins (tienen su panel /admin/chat). */
+/** Oculta el widget de chat web en vivo para admins (tienen su panel /admin/chat). */
 function ChatWidgetWrapper() {
   const { data: session } = useSession();
   const role = (session?.user as { role?: string } | undefined)?.role;
   if (role === "admin" || role === "super_admin") return null;
   return <FloatingChatWidget />;
+}
+
+/** Oculta el widget de WhatsApp para admins/profesionales (no es relevante
+ *  dentro del panel autenticado). Visible para pacientes y visitantes anónimos. */
+function WhatsAppFloatWrapper() {
+  const { data: session } = useSession();
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  if (role === "admin" || role === "super_admin" || role === "professional") return null;
+  return <WhatsAppFloat />;
 }
 
 /** Oculta el banner de instalación de PWA para usuarios autenticados
@@ -60,8 +70,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <IdleTimeoutProvider>
             {children}
             {/* Widget flotante de Chat Web en Vivo - disponible en toda la web
-                como fallback temporal por contingencia de WhatsApp. */}
+                como canal alternativo a WhatsApp. */}
             <ChatWidgetWrapper />
+            {/* Widget flotante de WhatsApp con modal de chat desplegable.
+                Visible para pacientes y visitantes anónimos. */}
+            <WhatsAppFloatWrapper />
             {/* Service Worker para PWA + Web Push notifications.
                 Solo se registra en producción para no romper el HMR de dev. */}
             <ServiceWorkerRegistrar />
