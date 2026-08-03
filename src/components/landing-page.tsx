@@ -2669,7 +2669,7 @@ export function LandingPage() {
       {/* ===== VOLVER ARRIBA (scroll-to-top) FLOATING BUTTON ===== */}
       {/* Aparece cuando el usuario scrollea fuera del hero (scrolled = true).
           Se ubica en el lado izquierdo para no chocar con los botones
-          flotantes de la derecha (Profesionales, Turno, WhatsApp).
+          flotantes de la derecha (Profesionales, Turno).
           Al hacer click, hace scroll suave hasta el inicio del hero. */}
       {scrolled && (
         <button

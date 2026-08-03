@@ -101,7 +101,7 @@ export function WhatsAppFloat() {
   };
 
   return (
-    <div className="fixed bottom-6 right-24 z-50" ref={popupRef}>
+    <div className="fixed bottom-6 right-6 z-50" ref={popupRef}>
       {/* Popup de chat (desplegable hacia arriba) */}
       <AnimatePresence>
         {isOpen && (

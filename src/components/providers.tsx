@@ -6,18 +6,23 @@ import { ThemeProvider } from "next-themes";
 import { useState } from "react";
 import { Toaster } from "sonner";
 import { IdleTimeoutProvider } from "@/components/providers/idle-timeout-provider";
-import { FloatingChatWidget } from "@/components/floating-chat-widget";
+// FloatingChatWidget desactivado por request del usuario (cleanup UI).
+// El chat web en vivo sigue disponible en /admin/chat para el equipo REP.
+// Para reactivar el widget flotante público, descomentar las líneas marcadas
+// con [CHAT-WIDGET-REACTIVATE] en este archivo.
+// import { FloatingChatWidget } from "@/components/floating-chat-widget";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 
-/** Oculta el widget de chat web en vivo para admins (tienen su panel /admin/chat). */
-function ChatWidgetWrapper() {
-  const { data: session } = useSession();
-  const role = (session?.user as { role?: string } | undefined)?.role;
-  if (role === "admin" || role === "super_admin") return null;
-  return <FloatingChatWidget />;
-}
+// [CHAT-WIDGET-REACTIVATE] Descomentar para reactivar el chat web flotante
+// /** Oculta el widget de chat web en vivo para admins (tienen su panel /admin/chat). */
+// function ChatWidgetWrapper() {
+//   const { data: session } = useSession();
+//   const role = (session?.user as { role?: string } | undefined)?.role;
+//   if (role === "admin" || role === "super_admin") return null;
+//   return <FloatingChatWidget />;
+// }
 
 /** Oculta el widget de WhatsApp para admins/profesionales (no es relevante
  *  dentro del panel autenticado). Visible para pacientes y visitantes anónimos. */
@@ -69,11 +74,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
               Solo activa listeners cuando el usuario está autenticado. */}
           <IdleTimeoutProvider>
             {children}
-            {/* Widget flotante de Chat Web en Vivo - disponible en toda la web
-                como canal alternativo a WhatsApp. */}
+            {/* [CHAT-WIDGET-REACTIVATE] Widget flotante de Chat Web en Vivo
+                DESACTIVADO por request del usuario (cleanup UI).
+                Para reactivar: descomentar el import y la función ChatWidgetWrapper
+                arriba, y la línea <ChatWidgetWrapper /> aquí abajo.
             <ChatWidgetWrapper />
+            */}
             {/* Widget flotante de WhatsApp con modal de chat desplegable.
-                Visible para pacientes y visitantes anónimos. */}
+                Visible para pacientes y visitantes anónimos.
+                Ocupa la posición principal (bottom-right) ahora que el chat
+                web en vivo está desactivado. */}
             <WhatsAppFloatWrapper />
             {/* Service Worker para PWA + Web Push notifications.
                 Solo se registra en producción para no romper el HMR de dev. */}
