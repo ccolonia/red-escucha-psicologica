@@ -130,6 +130,7 @@ interface Professional {
   available: boolean;
   title: string | null;
   profession: string | null;
+  commissionRate: number | null;
   cuil: string | null;
   gender: string | null;
   therapyTypes: string | null;
@@ -556,6 +557,7 @@ export function AdminProfessionals() {
     license: "",
     specialty: "",
     bio: "",
+    commissionRate: "" as string | number,  // "" = usar default por profesión
   });
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -841,6 +843,7 @@ export function AdminProfessionals() {
       license: prof.license,
       specialty: prof.specialty,
       bio: "",
+      commissionRate: prof.commissionRate ?? "",
     });
   };
 
@@ -865,6 +868,9 @@ export function AdminProfessionals() {
           license: editForm.license,
           specialty: editForm.specialty,
           bio: editForm.bio || null,
+          // commissionRate: "" → null (usar default por profesión)
+          // number → usar ese valor (0.30, 0.20, etc.)
+          commissionRate: editForm.commissionRate === "" ? null : Number(editForm.commissionRate),
         }),
       });
       if (res.ok) {
@@ -1306,6 +1312,30 @@ export function AdminProfessionals() {
                             </Select>
                           </div>
                         </div>
+                        {/* === Comisión REP dinámica === */}
+                        <div className="space-y-2">
+                          <Label>Comisión REP (%)</Label>
+                          <Select
+                            value={String(editForm.commissionRate)}
+                            onValueChange={(value) => setEditForm({ ...editForm, commissionRate: value === "auto" ? "" : value })}
+                          >
+                            <SelectTrigger className="border-teal-200">
+                              <SelectValue placeholder="Automático por profesión" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="auto">Automático (Psicólogo 30% / Psiquiatra 20%)</SelectItem>
+                              <SelectItem value="0.30">30% (Psicólogo)</SelectItem>
+                              <SelectItem value="0.20">20% (Psiquiatra)</SelectItem>
+                              <SelectItem value="0.10">10% (Antiguo / acuerdo especial)</SelectItem>
+                              <SelectItem value="0.25">25% (acuerdo especial)</SelectItem>
+                              <SelectItem value="0.15">15% (acuerdo especial)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-[10px] text-slate-400">
+                            Define qué porcentaje de cada sesión se retiene como comisión REP.
+                            "Automático" usa 30% para psicólogos y 20% para psiquiatras.
+                          </p>
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -1515,6 +1545,16 @@ export function AdminProfessionals() {
                                   <span className="text-teal-800">{prof.profession}</span>
                                 </div>
                               )}
+                              <div>
+                                <span className="text-teal-500">Comisión REP:</span>{" "}
+                                <span className="text-teal-800 font-medium">
+                                  {prof.commissionRate != null
+                                    ? `${Math.round(prof.commissionRate * 100)}%`
+                                    : prof.profession && prof.profession.toLowerCase().includes("psiquiatr")
+                                      ? "20% (auto)"
+                                      : "30% (auto)"}
+                                </span>
+                              </div>
                               {prof.cuil && (
                                 <div>
                                   <span className="text-teal-500">CUIT/CUIL:</span>{" "}

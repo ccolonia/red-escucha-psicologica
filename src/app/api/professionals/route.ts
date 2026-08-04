@@ -80,6 +80,11 @@ export async function GET(request: NextRequest) {
           therapyTypes: true,
           targetAudience: true,
           therapyModality: true,
+          // === Comisión REP dinámica ===
+          // Se incluye para que el frontend (professional-planilla, admin-planilla)
+          // pueda calcular la comisión correcta por profesional (30% psicólogos,
+          // 20% psiquiatras, o override individual).
+          commissionRate: true,
           // === Detalle de "Otras terapias" ===
           // Se incluye en el select para que el panel admin lo pueda mostrar
           // en la tarjeta expandible del profesional.
@@ -197,6 +202,11 @@ export async function GET(request: NextRequest) {
           therapyTypes: true,
           targetAudience: true,
           therapyModality: true,
+          // === Comisión REP dinámica ===
+          // Se incluye para que el frontend (professional-planilla, admin-planilla)
+          // pueda calcular la comisión correcta por profesional (30% psicólogos,
+          // 20% psiquiatras, o override individual).
+          commissionRate: true,
           // === Detalle de "Otras terapias" ===
           // Se incluye en el select para que el panel admin lo pueda mostrar
           // en la tarjeta expandible del profesional.
@@ -310,6 +320,10 @@ export async function PATCH(request: NextRequest) {
       onlineAttention,
       presentialAttention,
       homeAttention,
+      // === Comisión REP dinámica (SOLO admin) ===
+      // Override individual de la tasa de comisión (0.30, 0.20, etc.)
+      // Si es null, se infiere desde el campo 'profession'.
+      commissionRate,
       // === Campos de auditoría documental (SOLO admin) ===
       dniVerified,
       degreeVerified,
@@ -360,7 +374,7 @@ export async function PATCH(request: NextRequest) {
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: { available?: boolean; license?: string; licenseVerified?: boolean; specialty?: string; bio?: string | null; internalNotes?: string | null; evaluationStatus?: string | null; dniVerified?: boolean; degreeVerified?: boolean; malpracticeInsuranceVerified?: boolean; taxRegistrationVerified?: boolean; nationalRegistryVerified?: boolean; profession?: string; cuil?: string | null; therapyTypes?: string; targetAudience?: string; therapyModality?: string; zones?: string; otherTherapyDetails?: string | null; cvData?: string | null; cvFileName?: string | null; cvMimeType?: string | null; onlineAttention?: boolean; presentialAttention?: boolean; homeAttention?: boolean } = {};
+    const data: { available?: boolean; license?: string; licenseVerified?: boolean; specialty?: string; bio?: string | null; internalNotes?: string | null; evaluationStatus?: string | null; dniVerified?: boolean; degreeVerified?: boolean; malpracticeInsuranceVerified?: boolean; taxRegistrationVerified?: boolean; nationalRegistryVerified?: boolean; profession?: string; cuil?: string | null; therapyTypes?: string; targetAudience?: string; therapyModality?: string; zones?: string; otherTherapyDetails?: string | null; cvData?: string | null; cvFileName?: string | null; cvMimeType?: string | null; onlineAttention?: boolean; presentialAttention?: boolean; homeAttention?: boolean; commissionRate?: number | null } = {};
 
     // === Helper: sanea arrays de strings ===
     // - Filtra nulls/undefined/no-strings
@@ -488,6 +502,17 @@ export async function PATCH(request: NextRequest) {
       if (malpracticeInsuranceVerified !== undefined) data.malpracticeInsuranceVerified = malpracticeInsuranceVerified;
       if (taxRegistrationVerified !== undefined) data.taxRegistrationVerified = taxRegistrationVerified;
       if (nationalRegistryVerified !== undefined) data.nationalRegistryVerified = nationalRegistryVerified;
+      // === Comisión REP dinámica (solo admin puede setear override) ===
+      // Acepta: 0.30, 0.20, 0.10, etc. o null para usar default por profesión.
+      if (commissionRate !== undefined) {
+        // Validar que esté en rango razonable (0-1)
+        const rate = Number(commissionRate);
+        if (!Number.isNaN(rate) && rate >= 0 && rate <= 1) {
+          data.commissionRate = rate;
+        } else if (commissionRate === null) {
+          data.commissionRate = null;
+        }
+      }
     } else {
       // Non-admin intentando mutar campos de auditoría — log para
       // detección de intentos de abuso pero no bloquear el request

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { getCommissionRate, getCommissionPercentage } from "@/lib/commission";
 import {
   FileSpreadsheet,
   Plus,
@@ -170,19 +171,21 @@ function formatDisplayDate(dateStr: string): string {
   return `${d}/${m}/${y}`;
 }
 
-// Calculate REP commission based on the year the professional joined
-function getRepCommission(yearJoined: number, currentYear: number): number {
-  const yearsInRep = currentYear - yearJoined;
-  if (yearsInRep <= 0) return 0.30;
-  if (yearsInRep === 1) return 0.30;
-  if (yearsInRep === 2) return 0.20;
-  return 0.10;
-}
+// === Comisión REP dinámica por profesional ===
+// Reemplazada la lógica anterior (basada en antigüedad) por una basada en
+// profesión: Psicólogos 30%, Psiquiatras 20%, con override individual posible
+// vía el campo commissionRate del modelo Professional.
+// La función real está en @/lib/commission para reutilización entre componentes.
 
 export function ProfessionalPlanilla() {
   const { data: session } = useSession();
   const [professionalId, setProfessionalId] = useState<string | null>(null);
   const [professionalJoinedYear, setProfessionalJoinedYear] = useState<number>(new Date().getFullYear());
+  // === Comisión dinámica por profesional ===
+  // profession: "Psicólogo", "Psiquiatra", etc. — para inferir tasa si commissionRate es null
+  // commissionRate: override explícito (0.30, 0.20, etc.) — null = usar default por profesión
+  const [professionalProfession, setProfessionalProfession] = useState<string | null>(null);
+  const [professionalCommissionRate, setProfessionalCommissionRate] = useState<number | null>(null);
   const [sheets, setSheets] = useState<SheetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -210,6 +213,9 @@ export function ProfessionalPlanilla() {
           if (prof) {
             setProfessionalId(prof.id);
             setProfessionalJoinedYear(prof.createdAt ? new Date(prof.createdAt).getFullYear() : new Date().getFullYear());
+            // Cargar profesión y commissionRate para cálculo dinámico de comisión
+            setProfessionalProfession(prof.profession || null);
+            setProfessionalCommissionRate(prof.commissionRate ?? null);
           }
         })
         .catch(console.error);
@@ -258,8 +264,11 @@ export function ProfessionalPlanilla() {
   );
 
   const repCommission = useMemo(
-    () => getRepCommission(professionalJoinedYear, selectedYear),
-    [professionalJoinedYear, selectedYear]
+    () => getCommissionRate({
+      commissionRate: professionalCommissionRate,
+      profession: professionalProfession,
+    }),
+    [professionalCommissionRate, professionalProfession]
   );
 
   const filteredSessions = useMemo(() => {
