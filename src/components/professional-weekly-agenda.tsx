@@ -1145,7 +1145,7 @@ export function ProfessionalWeeklyAgenda({
                 const spanRows = getSlotRowSpan(daySchedule?.slotDuration || 45);
                 const colIndex = dayIdx + 2;
 
-                let slotClass = "p-0.5 transition-colors z-10 ";
+                let slotClass = "p-0.5 transition-colors z-10 h-full flex flex-col justify-stretch ";
                 if (state === "schedule") slotClass += "bg-amber-50/30 ";
                 else if (state === "available") slotClass += "bg-emerald-50/60 ";
                 else if (state === "booked") slotClass += "bg-white ";
@@ -1179,7 +1179,7 @@ export function ProfessionalWeeklyAgenda({
                     {state === "booked" && apt && renderAppointment(apt)}
                     {state === "schedule" && (
                       <div
-                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition-colors h-full"
+                        className="flex items-center justify-center w-full rounded text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition-colors flex-1 min-h-0"
                         title={`${MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"} — click para activar como Disponible ${time}–${slotEnd} hs`}
                       >
                         {MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"}
@@ -1187,7 +1187,7 @@ export function ProfessionalWeeklyAgenda({
                     )}
                     {state === "available" && (
                       <div
-                        className="flex items-center justify-center gap-0.5 w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors h-full"
+                        className="flex items-center justify-center gap-0.5 w-full rounded text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors flex-1 min-h-0"
                         title={`Disponible (${MODALITY_CELL_DISPLAY[modality || "ambas"]?.fullLabel || "Híbrida"}) ${time}–${slotEnd} hs — click para desactivar`}
                       >
                         <span>{MODALITY_CELL_DISPLAY[modality || "ambas"]?.emoji || "🔄"}</span>

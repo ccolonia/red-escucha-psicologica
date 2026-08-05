@@ -1476,7 +1476,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const spanRows = Math.max(1, Math.round((daySchedule?.slotDuration || 45) / 15));
                 const colIndex = day.dayOfWeek + 1;
 
-                let slotClass = "p-0.5 transition-colors z-10 ";
+                let slotClass = "p-0.5 transition-colors z-10 h-full flex flex-col justify-stretch ";
                 if (state === "schedule") slotClass += "bg-amber-50/30 ";
                 else if (state === "available") slotClass += "bg-emerald-50/60 ";
                 else if (state === "booked") slotClass += "bg-white ";
@@ -1505,7 +1505,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   >
                     {state === "schedule" && (
                       <div
-                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 h-full"
+                        className="flex items-center justify-center w-full rounded text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 flex-1 min-h-0"
                         title={`${MODALITY_LABELS[modality || "ambas"] || "P|OL"} ${time}–${(() => { const si = getScheduleForCell(day.dayOfWeek, time); if (si) { const [h,m] = time.split(":").map(Number); const t = h*60+m+si.slotDuration; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; } return ""; })()} hs — no disponible (el profesional debe activar este slot)`}
                       >
                         {MODALITY_LABELS[modality || "ambas"] || "P|OL"}
@@ -1513,7 +1513,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     )}
                     {state === "available" && effectiveFreeSlot && (
                       <div
-                        className="flex items-center justify-center gap-0.5 w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 h-full"
+                        className="flex items-center justify-center gap-0.5 w-full rounded text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 flex-1 min-h-0"
                         title={`Disponible (${MODALITY_EMOJI[effectiveFreeSlot.modality || "ambas"]?.fullLabel || "Híbrida"}) ${time}–${effectiveFreeSlot.endTime} hs — click para asignar turno`}
                       >
                         <span>{MODALITY_EMOJI[effectiveFreeSlot.modality || "ambas"]?.emoji || "🔄"}</span>
@@ -1523,7 +1523,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     )}
                     {state === "past" && modality && scheduleInfo && (
                       <div
-                        className={`flex items-center justify-center w-full rounded py-1 text-[10px] font-medium opacity-50 ${MODALITY_COLORS[modality] || MODALITY_COLORS.ambas} h-full`}
+                        className={`flex items-center justify-center w-full rounded text-[10px] font-medium opacity-50 ${MODALITY_COLORS[modality] || MODALITY_COLORS.ambas} flex-1 min-h-0`}
                         title={`Pasado — ${MODALITY_LABELS[modality] || modality} ${time} a ${scheduleInfo.endTime} hs`}
                       >
                         {MODALITY_LABELS[modality] || modality}
