@@ -1387,57 +1387,73 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
           })}
         </div>
 
-        {/* === Time rows (IDÉNTICO al profesional) === */}
+        {/* === Time rows — CSS Grid por coordenadas === */}
+        {/* FIX: mismo refactor que professional-weekly-agenda. Un solo grid
+            container con celdas de fondo + slots posicionados por gridRow/gridColumn. */}
         <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
-          {timeSlots.map((time) => (
-            <div
-              key={time}
-              className={GRID_TEMPLATE + " border-b border-teal-50/50 last:border-b-0"}
-            >
-              {/* Time label */}
-              <div className="p-1 text-[11px] text-teal-400 text-right pr-2 border-r border-teal-50 flex items-start justify-end pt-1.5">
-                {time}
-              </div>
+          <div
+            className="grid relative w-full"
+            style={{
+              gridTemplateColumns: `60px repeat(${WEEK_DAYS.length}, 1fr)`,
+              gridAutoRows: "28px",
+            }}
+          >
+            {/* === CAPA 1: Celdas de fondo (todas las filas × columnas) === */}
+            {timeSlots.map((time, rowIdx) => (
+              <React.Fragment key={`bg-${time}`}>
+                {/* Time label (columna 1) */}
+                <div
+                  className="p-1 text-[11px] text-teal-400 text-right pr-2 border-r border-teal-50 flex items-start justify-end pt-1.5"
+                  style={{ gridRow: rowIdx + 1, gridColumn: 1 }}
+                >
+                  {time}
+                </div>
+                {/* Day background cells (columnas 2-N) */}
+                {WEEK_DAYS.map((day) => {
+                  const dayData = professional.weeklySlots[day.dayOfWeek];
+                  const dateStr = dayData?.date || "";
+                  const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+                  return (
+                    <div
+                      key={`bg-${day.dayOfWeek}-${time}`}
+                      className={`border-l border-b border-teal-50/50 ${isToday ? "bg-teal-50/20" : ""}`}
+                      style={{ gridRow: rowIdx + 1, gridColumn: day.dayOfWeek + 1 }}
+                    />
+                  );
+                })}
+              </React.Fragment>
+            ))}
 
-              {/* Day cells */}
-              {WEEK_DAYS.map((day) => {
+            {/* === CAPA 2: Slots posicionados por coordenadas === */}
+            {timeSlots.map((time, rowIdx) =>
+              WEEK_DAYS.map((day) => {
                 const dayData = professional.weeklySlots[day.dayOfWeek];
                 const dateStr = dayData?.date || "";
                 const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
 
-                // === STATE MACHINE RÉPLICA EXACTA del profesional ===
-                // El profesional usa getCellState() que llama a:
-                // 1. isDateBlocked(dateStr) → "blocked"
-                // 2. isTimeSlotBlocked(dateStr, time) → "blocked"
-                // 3. getAppointmentForCell(dateStr, time) → "booked"
-                // 4. isSlotInSchedule(dayOfWeek, time) → "available"
-                // 5. check extra overrides → "available"
-                // 6. else → "outside"
-                //
-                // isSlotInSchedule usa RANGO (time >= startTime && time < endTime),
-                // NO match exacto. Esto significa que TODAS las filas del grid que
-                // caen dentro del rango de atención se muestran como "available".
+                // Buscar bookedSlot por match exacto (sin snap-down)
+                const bookedSlot = dayData?.bookedSlots.find((s) => s.time === time);
 
-                // Buscar bookedSlot con snap-down (para appointments con horarios no alineados)
-                const bookedSlot = dayData?.bookedSlots.find((s) => {
-                  if (s.time === time) return true;
-                  const slotsBefore = timeSlots.filter((t) => t <= s.time);
-                  const snappedSlot = slotsBefore[slotsBefore.length - 1];
-                  return snappedSlot === time;
-                });
-
-                // Buscar freeSlot exacto (availableSlots del backend, solo futuros)
+                // Buscar freeSlot exacto
                 const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
 
-                // Verificar si el slot está en el pasado (usando timezone Argentina)
                 const slotIsPast = dayData ? isSlotInPast(dayData.date, time) : false;
 
-                // Determinar estado — PARIDAD 1:1 con la agenda del profesional
-                // "schedule": dentro del schedule pero NO activado → naranja con modalidad
-                // "available": activado por el profesional → verde "Disponible"
-                // "booked": tiene turno asignado
-                // "past": slot activado pero ya pasó → tenue
-                // "outside": fuera del schedule → rojo tenue
+                // Encontrar el schedule de este día para calcular slotStart y rowSpan
+                const daySchedule = rawSchedules.find((s: { dayOfWeek: number }) => s.dayOfWeek === day.dayOfWeek);
+                // Solo renderizar "schedule" si este time es el INICIO de un slot
+                const isSlotStart = (() => {
+                  if (!daySchedule) return false;
+                  const [sH, sM] = daySchedule.startTime.split(":").map(Number);
+                  const [eH, eM] = daySchedule.endTime.split(":").map(Number);
+                  const sMin = sH * 60 + sM;
+                  const eMin = eH * 60 + eM;
+                  const [tH, tM] = time.split(":").map(Number);
+                  const tMin = tH * 60 + tM;
+                  if (tMin < sMin || tMin >= eMin) return false;
+                  return (tMin - sMin) % daySchedule.slotDuration === 0;
+                })();
+
                 const effectiveFreeSlot = freeSlot;
 
                 let state: "schedule" | "available" | "booked" | "outside" | "past" = "outside";
@@ -1448,65 +1464,56 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                   state = "available";
                 } else if (effectiveFreeSlot && slotIsPast) {
                   state = "past";
-                } else if (isSlotInSchedule(day.dayOfWeek, time)) {
+                } else if (isSlotStart && isSlotInSchedule(day.dayOfWeek, time)) {
                   state = "schedule";
                 } else {
                   state = "outside";
                 }
 
-                // Clases CSS — paridad 1:1 con profesional
-                let cellClass = "border-l border-teal-50/50 p-0.5 min-h-[32px] transition-colors ";
+                // Si es "outside", no renderizar slot (la celda de fondo ya está)
+                if (state === "outside") return null;
 
-                if (state === "outside") {
-                  cellClass += "bg-red-50/30 ";
-                } else if (state === "schedule") {
-                  cellClass += "bg-amber-50/30 ";
-                } else if (state === "available") {
-                  cellClass += "bg-emerald-50/60 ";
-                } else if (state === "booked") {
-                  cellClass += "bg-white ";
-                } else if (state === "past") {
-                  cellClass += "bg-emerald-50/30 ";
-                }
+                const spanRows = Math.max(1, Math.round((daySchedule?.slotDuration || 45) / 15));
+                const colIndex = day.dayOfWeek + 1;
 
-                if (slotIsPast && state !== "outside" && state !== "booked") {
-                  cellClass += "opacity-50 ";
-                }
+                let slotClass = "p-0.5 transition-colors z-10 ";
+                if (state === "schedule") slotClass += "bg-amber-50/30 ";
+                else if (state === "available") slotClass += "bg-emerald-50/60 ";
+                else if (state === "booked") slotClass += "bg-white ";
+                else if (state === "past") slotClass += "bg-emerald-50/30 ";
 
-                if (isToday) {
-                  cellClass += "border-l-2 border-l-teal-300 ";
+                if (slotIsPast && state !== "booked") {
+                  slotClass += "opacity-50 ";
                 }
+                if (isToday) slotClass += "border-l-2 border-l-teal-300 ";
 
                 const past = slotIsPast;
-
-                // Obtener modalidad para slots schedule/available/past
                 const modality = (state === "schedule" || state === "available" || state === "past")
                   ? getModalityForCell(day.dayOfWeek, time)
                   : null;
-
                 const scheduleInfo = state === "past" ? getScheduleForCell(day.dayOfWeek, time) : null;
 
                 return (
                   <div
-                    key={`${day.dayOfWeek}-${time}`}
-                    className={cellClass}
+                    key={`slot-${day.dayOfWeek}-${time}`}
+                    className={slotClass}
+                    style={{
+                      gridRow: `${rowIdx + 1} / span ${spanRows}`,
+                      gridColumn: colIndex,
+                    }}
                     onClick={(state === "available" && effectiveFreeSlot && !past) ? () => onSlotClick(effectiveFreeSlot, dayData!.date) : (state === "booked" && bookedSlot) ? () => onBookedSlotClick(bookedSlot) : undefined}
-                    style={(state === "available" || state === "booked") ? { cursor: "pointer" } : undefined}
                   >
-                    {/* === Slot SCHEDULE (naranja, no clickeable) === */}
                     {state === "schedule" && (
                       <div
-                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600"
+                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 h-full"
                         title={`${MODALITY_LABELS[modality || "ambas"] || "P|OL"} ${time}–${(() => { const si = getScheduleForCell(day.dayOfWeek, time); if (si) { const [h,m] = time.split(":").map(Number); const t = h*60+m+si.slotDuration; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; } return ""; })()} hs — no disponible (el profesional debe activar este slot)`}
                       >
                         {MODALITY_LABELS[modality || "ambas"] || "P|OL"}
                       </div>
                     )}
-
-                    {/* === Slot DISPONIBLE (verde, clickeable para asignar) === */}
                     {state === "available" && effectiveFreeSlot && (
                       <div
-                        className="flex items-center justify-center gap-0.5 w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700"
+                        className="flex items-center justify-center gap-0.5 w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 h-full"
                         title={`Disponible (${MODALITY_EMOJI[effectiveFreeSlot.modality || "ambas"]?.fullLabel || "Híbrida"}) ${time}–${effectiveFreeSlot.endTime} hs — click para asignar turno`}
                       >
                         <span>{MODALITY_EMOJI[effectiveFreeSlot.modality || "ambas"]?.emoji || "🔄"}</span>
@@ -1514,26 +1521,22 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                         <span className="text-[8px] opacity-75">({MODALITY_LABELS[effectiveFreeSlot.modality || "ambas"] || "P|OL"})</span>
                       </div>
                     )}
-
-                    {/* === Slot PASADO (tenue, no clickeable) === */}
                     {state === "past" && modality && scheduleInfo && (
                       <div
-                        className={`flex items-center justify-center w-full rounded py-1 text-[10px] font-medium opacity-50 ${MODALITY_COLORS[modality] || MODALITY_COLORS.ambas}`}
+                        className={`flex items-center justify-center w-full rounded py-1 text-[10px] font-medium opacity-50 ${MODALITY_COLORS[modality] || MODALITY_COLORS.ambas} h-full`}
                         title={`Pasado — ${MODALITY_LABELS[modality] || modality} ${time} a ${scheduleInfo.endTime} hs`}
                       >
                         {MODALITY_LABELS[modality] || modality}
                       </div>
                     )}
-
-                    {/* === Slot OCUPADO (appointment) === */}
                     {state === "booked" && bookedSlot && (
                       <BookedSlotCard slot={bookedSlot} past={past} />
                     )}
                   </div>
                 );
-              })}
-            </div>
-          ))}
+              })
+            )}
+          </div>
         </div>
       </div>
 

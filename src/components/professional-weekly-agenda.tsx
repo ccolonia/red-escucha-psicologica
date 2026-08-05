@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
@@ -1086,154 +1086,120 @@ export function ProfessionalWeeklyAgenda({
           })}
         </div>
 
-        {/* Time rows — TABLA con rowSpan para slots multi-fila */}
+        {/* === Time rows — CSS Grid por coordenadas === */}
+        {/* FIX: reemplazado <table>/<td rowSpan> por CSS Grid puro.
+            El problema con <table> era que omitir <td> en filas cubiertas por
+            rowSpan desplazaba las columnas horizontalmente. Con CSS Grid,
+            cada slot se posiciona explícitamente con gridRow/gridColumn sin
+            afectar a las demás celdas. */}
         <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
-          <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
-            <colgroup>
-              <col style={{ width: "60px" }} />
-              {weekDays.map((_, i) => (
-                <col key={i} />
-              ))}
-            </colgroup>
-            <tbody>
-              {timeSlots.map((time, timeIdx) => {
-                // Determinar si esta fila debe renderizarse o si está cubierta
-                // por un rowSpan de una fila anterior para TODOS los días.
-                // Si todos los días tienen state="outside" Y la fila está cubierta
-                // por un rowSpan superior, no renderizamos la fila.
-                // Pero como cada día puede tener distinto rowSpan, necesitamos
-                // renderizar la fila y dejar que las celdas cubiertas no existan.
+          <div
+            className="grid relative w-full"
+            style={{
+              gridTemplateColumns: `60px repeat(${weekDays.length}, 1fr)`,
+              gridAutoRows: "28px",
+            }}
+          >
+            {/* === CAPA 1: Celdas de fondo (todas las filas × columnas) === */}
+            {/* Siempre se renderizan TODAS las celdas para mantener la grilla visual.
+                Los slots se superponen en la CAPA 2. */}
+            {timeSlots.map((time, rowIdx) => (
+              <Fragment key={`bg-${time}`}>
+                {/* Time label (columna 1) */}
+                <div
+                  className="p-1 text-[11px] text-teal-400 text-right pr-2 border-r border-teal-50 flex items-start justify-end pt-1.5"
+                  style={{ gridRow: rowIdx + 1, gridColumn: 1 }}
+                >
+                  {time}
+                </div>
+                {/* Day background cells (columnas 2-N) */}
+                {weekDays.map((day, dayIdx) => {
+                  const isCurrentDay = isToday(day);
+                  return (
+                    <div
+                      key={`bg-${format(day, "yyyy-MM-dd")}-${time}`}
+                      className={`border-l border-b border-teal-50/50 ${isCurrentDay ? "bg-teal-50/20" : ""}`}
+                      style={{ gridRow: rowIdx + 1, gridColumn: dayIdx + 2 }}
+                    />
+                  );
+                })}
+              </Fragment>
+            ))}
+
+            {/* === CAPA 2: Slots posicionados por coordenadas gridRow/gridColumn === */}
+            {/* Cada slot es un div autónomo que se ubica en su celda (columna, fila)
+                sin afectar a las demás. NUNCA se omiten celdas de fondo. */}
+            {timeSlots.map((time, rowIdx) =>
+              weekDays.map((day, dayIdx) => {
+                const dateStr = format(day, "yyyy-MM-dd");
+                const dayOfWeek = dayIdx + 1;
+                const state = getCellState(dateStr, time, dayOfWeek);
+                const apt = getAppointmentForCell(dateStr, time);
+                const isCurrentDay = isToday(day);
+                const slotIsPast = isSlotInPast(dateStr, time);
+
+                // Si es "outside", no renderizar slot (la celda de fondo ya está)
+                if (state === "outside") return null;
+
+                const daySchedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
+                const spanRows = getSlotRowSpan(daySchedule?.slotDuration || 45);
+                const colIndex = dayIdx + 2;
+
+                let slotClass = "p-0.5 transition-colors z-10 ";
+                if (state === "schedule") slotClass += "bg-amber-50/30 ";
+                else if (state === "available") slotClass += "bg-emerald-50/60 ";
+                else if (state === "booked") slotClass += "bg-white ";
+
+                if (slotIsPast) slotClass += "opacity-50 ";
+                if (isCurrentDay) slotClass += "border-l-2 border-l-teal-300 ";
+
+                const modality =
+                  (state === "schedule" || state === "available")
+                    ? getModalityForCell(dateStr, dayOfWeek, time)
+                    : null;
+
+                const slotEnd = (() => {
+                  const d = daySchedule?.slotDuration || 45;
+                  const [h, m] = time.split(":").map(Number);
+                  const t = h * 60 + m + d;
+                  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+                })();
 
                 return (
-                  <tr key={time} className="border-b border-teal-50/50 last:border-b-0">
-                    {/* Time label */}
-                    <td className="p-1 text-[11px] text-teal-400 text-right pr-2 border-r border-teal-50 align-top pt-1.5">
-                      {time}
-                    </td>
-
-                    {/* Day cells */}
-                    {weekDays.map((day, i) => {
-                      const dateStr = format(day, "yyyy-MM-dd");
-                      const dayOfWeek = i + 1;
-                      const state = getCellState(dateStr, time, dayOfWeek);
-                      const apt = getAppointmentForCell(dateStr, time);
-                      const isCurrentDay = isToday(day);
-                      const slotIsPast = isSlotInPast(dateStr, time);
-
-                      // Si la celda es "outside" porque está cubierta por un
-                      // rowSpan superior, NO renderizamos el <td> (el rowSpan
-                      // de la celda superior ocupa este espacio).
-                      // Para saber si está cubierta, verificamos si hay un slot
-                      // activo/schedule/booked que empezó antes y cuya duración
-                      // todavía no terminó en este time.
-                      const daySchedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
-                      const slotStart = daySchedule ? findSlotStartForTime(time, daySchedule) : null;
-
-                      // Verificar overrides (available) que cubren este time
-                      const coveringOverride = overrides.find((o) => {
-                        if (o.date !== dateStr || o.type !== "extra") return false;
-                        if (!o.startTime || !o.endTime) return false;
-                        return time > o.startTime && time < o.endTime;
-                      });
-
-                      // Verificar appointments que cubren este time
-                      const coveringApt = visibleAppointments.find((a) => {
-                        if (a.date !== dateStr) return false;
-                        const daySch = schedules.find((s) => s.dayOfWeek === dayOfWeek);
-                        const dur = daySch?.slotDuration || 45;
-                        const [aH, aM] = a.time.split(":").map(Number);
-                        const aMin = aH * 60 + aM;
-                        const [tH, tM] = time.split(":").map(Number);
-                        const tMin = tH * 60 + tM;
-                        return tMin > aMin && tMin < aMin + dur;
-                      });
-
-                      // Si está cubierta por rowSpan superior, no renderizar <td>
-                      if (coveringOverride || coveringApt) {
-                        return null; // null = no renderizar <td>, el rowSpan la cubre
-                      }
-
-                      // Si es sub-intervalo de un slot del schedule (no inicio)
-                      if (slotStart && slotStart !== time && state === "outside") {
-                        // Está dentro de un slot del schedule pero no es el inicio
-                        // → no renderizar <td>, el rowSpan de la celda inicio la cubre
-                        return null;
-                      }
-
-                      // Calcular rowSpan para la celda actual
-                      let rowSpan = 1;
-                      if (state === "schedule" || state === "available") {
-                        const dur = daySchedule?.slotDuration || 45;
-                        rowSpan = getSlotRowSpan(dur);
-                      } else if (state === "booked" && apt) {
-                        const dur = daySchedule?.slotDuration || 45;
-                        rowSpan = getSlotRowSpan(dur);
-                      }
-
-                      let cellClass =
-                        "border-l border-teal-50/50 p-0.5 align-top transition-colors ";
-                      cellClass += "h-[28px] "; // altura fija por fila de 15 min
-
-                      if (state === "outside") {
-                        cellClass += "bg-red-50/30 ";
-                      } else if (state === "schedule") {
-                        cellClass += "bg-amber-50/30 ";
-                      } else if (state === "available") {
-                        cellClass += "bg-emerald-50/60 ";
-                      } else if (state === "booked") {
-                        cellClass += "bg-white ";
-                      }
-
-                      if (slotIsPast) cellClass += "opacity-50 ";
-                      if (isCurrentDay) cellClass += "border-l-2 border-l-teal-300 ";
-
-                      const modality =
-                        (state === "schedule" || state === "available")
-                          ? getModalityForCell(dateStr, dayOfWeek, time)
-                          : null;
-
-                      const slotEnd = (() => {
-                        const d = daySchedule?.slotDuration || 45;
-                        const [h, m] = time.split(":").map(Number);
-                        const t = h * 60 + m + d;
-                        return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
-                      })();
-
-                      return (
-                        <td
-                          key={`${dateStr}-${time}`}
-                          className={cellClass}
-                          rowSpan={rowSpan}
-                          onClick={(state === "schedule" && !slotIsPast) ? () => handleActivateSlot(dateStr, time, dayOfWeek) : (state === "available" && !slotIsPast) ? () => handleDeactivateSlot(dateStr, time) : undefined}
-                          style={(state === "schedule" || state === "available") && !slotIsPast ? { cursor: "pointer" } : undefined}
-                        >
-                          {state === "booked" && apt && renderAppointment(apt)}
-                          {state === "schedule" && (
-                            <div
-                              className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition-colors h-full"
-                              title={`${MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"} — click para activar como Disponible ${time}–${slotEnd} hs`}
-                            >
-                              {MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"}
-                            </div>
-                          )}
-                          {state === "available" && (
-                            <div
-                              className="flex items-center justify-center gap-0.5 w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors h-full"
-                              title={`Disponible (${MODALITY_CELL_DISPLAY[modality || "ambas"]?.fullLabel || "Híbrida"}) ${time}–${slotEnd} hs — click para desactivar`}
-                            >
-                              <span>{MODALITY_CELL_DISPLAY[modality || "ambas"]?.emoji || "🔄"}</span>
-                              <span>Disponible</span>
-                              <span className="text-[8px] opacity-75">({MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"})</span>
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
+                  <div
+                    key={`slot-${dateStr}-${time}`}
+                    className={slotClass}
+                    style={{
+                      gridRow: `${rowIdx + 1} / span ${spanRows}`,
+                      gridColumn: colIndex,
+                    }}
+                    onClick={(state === "schedule" && !slotIsPast) ? () => handleActivateSlot(dateStr, time, dayOfWeek) : (state === "available" && !slotIsPast) ? () => handleDeactivateSlot(dateStr, time) : undefined}
+                    onMouseDown={(state === "schedule" || state === "available") && !slotIsPast ? (e) => { e.currentTarget.style.cursor = "pointer"; } : undefined}
+                  >
+                    {state === "booked" && apt && renderAppointment(apt)}
+                    {state === "schedule" && (
+                      <div
+                        className="flex items-center justify-center w-full rounded py-1 text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition-colors h-full"
+                        title={`${MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"} — click para activar como Disponible ${time}–${slotEnd} hs`}
+                      >
+                        {MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"}
+                      </div>
+                    )}
+                    {state === "available" && (
+                      <div
+                        className="flex items-center justify-center gap-0.5 w-full rounded py-1 text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors h-full"
+                        title={`Disponible (${MODALITY_CELL_DISPLAY[modality || "ambas"]?.fullLabel || "Híbrida"}) ${time}–${slotEnd} hs — click para desactivar`}
+                      >
+                        <span>{MODALITY_CELL_DISPLAY[modality || "ambas"]?.emoji || "🔄"}</span>
+                        <span>Disponible</span>
+                        <span className="text-[8px] opacity-75">({MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"})</span>
+                      </div>
+                    )}
+                  </div>
                 );
-              })}
-            </tbody>
-          </table>
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>
