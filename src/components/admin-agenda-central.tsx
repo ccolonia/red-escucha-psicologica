@@ -1237,36 +1237,38 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
   };
 
   // === Calcular timeSlots: RÉPLICA EXACTA del profesional ===
-  // El profesional usa generateTimeSlotsForSchedule() que alinea los slots
-  // al startTime de cada schedule. Esto garantiza que las filas de la grilla
-  // coincidan exactamente con los slots configurados.
-  // Antes usábamos generateTimeSlotsDynamic() que arrancaba desde 06:00
-  // con múltiplos de slotDuration → 14:00 no era múltiplo de 45 desde 06:00
-  // y se mostraba como 14:15 (desalineado).
+  // === Eje Y ESTANDARIZADO en intervalos de 15 minutos ===
+  // FIX CRÍTICO: antes se unían los startTime de cada schedule, causando
+  // filas descalzadas (14:00, 14:15, 14:45, 15:00) cuando días con distinto
+  // inicio convivían. Ahora filas fijas cada 15 min desde min startTime
+  // hasta max endTime. Los slots de 45 min se renderizan con rowSpan=3.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawSchedules = (professional as any)?.schedules || [];
   const timeSlots = useMemo(() => {
-    if (rawSchedules.length === 0) return generateTimeSlotsDynamic(45);
+    if (rawSchedules.length === 0) return generateTimeSlotsDynamic(15);
 
-    // Para cada schedule, generar sus slots alineados a su startTime
-    // (igual que professional-weekly-agenda.tsx línea 472-487)
-    const allSlotsSet = new Set<string>();
+    // Encontrar min startTime y max endTime de todos los schedules
+    let minMin = 24 * 60;
+    let maxMin = 0;
     for (const s of rawSchedules) {
-      const [startH, startM] = s.startTime.split(":").map(Number);
-      const [endH, endM] = s.endTime.split(":").map(Number);
-      const startMin = startH * 60 + startM;
-      const endMin = endH * 60 + endM;
-      let current = startMin;
-      while (current < endMin) {
-        const h = Math.floor(current / 60);
-        const m = current % 60;
-        allSlotsSet.add(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
-        current += s.slotDuration;
-      }
+      const [sH, sM] = s.startTime.split(":").map(Number);
+      const [eH, eM] = s.endTime.split(":").map(Number);
+      const sMin = sH * 60 + sM;
+      const eMin = eH * 60 + eM;
+      if (sMin < minMin) minMin = sMin;
+      if (eMin > maxMin) maxMin = eMin;
     }
+    // Redondear a múltiplos de 15
+    minMin = Math.floor(minMin / 15) * 15;
+    maxMin = Math.ceil(maxMin / 15) * 15;
 
-    if (allSlotsSet.size === 0) return generateTimeSlotsDynamic(45);
-    return Array.from(allSlotsSet).sort();
+    const slots: string[] = [];
+    for (let t = minMin; t < maxMin; t += 15) {
+      const h = Math.floor(t / 60);
+      const m = t % 60;
+      slots.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
+    }
+    return slots.length > 0 ? slots : generateTimeSlotsDynamic(15);
   }, [rawSchedules]);
 
   // === isSlotInSchedule: RÉPLICA EXACTA del profesional ===
