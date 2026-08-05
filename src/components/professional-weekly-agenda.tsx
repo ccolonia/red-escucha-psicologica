@@ -234,7 +234,14 @@ function generateTimeSlotsForSchedule(startTime: string, endTime: string, slotDu
   const startMin = startH * 60 + startM;
   const endMin = endH * 60 + endM;
   let current = startMin;
-  while (current < endMin) {
+  // === Slots estrictamente contiguos ===
+  // Solo generar un slot si el slot COMPLETO entra dentro del rango
+  // (current + slotDuration <= endMin). Esto evita:
+  // 1. Slots que se extienden past endTime (ej: 19:15-20:00 cuando endTime es 19:30)
+  // 2. Gaps artificiales por snapping/rounding
+  // El siguiente slot empieza EXACTAMENTE donde termina el anterior:
+  // currentStart = currentEnd (contiguo estricto, sin huecos)
+  while (current + slotDuration <= endMin) {
     const h = Math.floor(current / 60);
     const m = current % 60;
     slots.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
@@ -1146,8 +1153,8 @@ export function ProfessionalWeeklyAgenda({
                 const colIndex = dayIdx + 2;
 
                 let slotClass = "p-0.5 transition-colors z-10 h-full flex flex-col justify-stretch ";
-                if (state === "schedule") slotClass += "bg-amber-50/30 ";
-                else if (state === "available") slotClass += "bg-emerald-50/60 ";
+                if (state === "schedule") slotClass += "bg-amber-50 ";
+                else if (state === "available") slotClass += "bg-emerald-50 ";
                 else if (state === "booked") slotClass += "bg-white ";
 
                 if (slotIsPast) slotClass += "opacity-50 ";

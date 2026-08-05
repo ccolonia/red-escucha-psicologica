@@ -24,6 +24,11 @@ function minutesToTime(m: number): string {
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
 
+// === Generador de slots estrictamente contiguos ===
+// NO hay snapping/rounding a :00 o :30. El siguiente slot empieza EXACTAMENTE
+// donde termina el anterior (currentStart = currentEnd).
+// Ej: 14:00-19:30 con 45 min → 14:00, 14:45, 15:30, 16:15, 17:00, 17:45, 18:30
+// (sin gaps artificiales entre slots)
 function generateSlots(startTime: string, endTime: string, duration: number): string[] {
   const slots: string[] = [];
   let currentMinutes = timeToMinutes(startTime);

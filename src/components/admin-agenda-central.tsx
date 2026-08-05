@@ -1477,10 +1477,10 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 const colIndex = day.dayOfWeek + 1;
 
                 let slotClass = "p-0.5 transition-colors z-10 h-full flex flex-col justify-stretch ";
-                if (state === "schedule") slotClass += "bg-amber-50/30 ";
-                else if (state === "available") slotClass += "bg-emerald-50/60 ";
+                if (state === "schedule") slotClass += "bg-amber-50 ";
+                else if (state === "available") slotClass += "bg-emerald-50 ";
                 else if (state === "booked") slotClass += "bg-white ";
-                else if (state === "past") slotClass += "bg-emerald-50/30 ";
+                else if (state === "past") slotClass += "bg-emerald-50 ";
 
                 if (slotIsPast && state !== "booked") {
                   slotClass += "opacity-50 ";
