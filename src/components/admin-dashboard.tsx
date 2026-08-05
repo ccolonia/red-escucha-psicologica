@@ -57,6 +57,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -1974,6 +1975,39 @@ export function AdminPatients() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  // === Convertir a Profesional ===
+  const [convertTarget, setConvertTarget] = useState<{ email: string; name: string } | null>(null);
+  const [convertProfession, setConvertProfession] = useState("Psiquiatra");
+  const [convertCommissionRate, setConvertCommissionRate] = useState<string>("auto");
+  const [converting, setConverting] = useState(false);
+
+  const handleConvertToProfessional = async () => {
+    if (!convertTarget) return;
+    setConverting(true);
+    try {
+      const res = await fetch("/api/admin/convert-to-professional", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: convertTarget.email,
+          profession: convertProfession,
+          commissionRate: convertCommissionRate === "auto" ? undefined : Number(convertCommissionRate),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Error al convertir");
+        return;
+      }
+      toast.success(`${convertTarget.name} migrado a profesional (${convertProfession})`);
+      setConvertTarget(null);
+      loadPatients();
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setConverting(false);
+    }
+  };
 
   const loadPatients = useCallback(() => {
     const url = searchQuery
@@ -2179,6 +2213,19 @@ export function AdminPatients() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 border-purple-200 text-purple-600 hover:bg-purple-50"
+                      onClick={() => {
+                        setConvertTarget({ email: patient.user.email, name: patient.user.name });
+                        setConvertProfession("Psiquiatra");
+                        setConvertCommissionRate("auto");
+                      }}
+                      title="Convertir a Profesional"
+                    >
+                      <Stethoscope className="w-3.5 h-3.5" />
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -2507,6 +2554,62 @@ export function AdminPatients() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* === Modal Convertir a Profesional === */}
+      <Dialog open={!!convertTarget} onOpenChange={(open) => !open && setConvertTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-teal-900 flex items-center gap-2">
+              <Stethoscope className="w-5 h-5 text-purple-600" />
+              Convertir a Profesional
+            </DialogTitle>
+            <DialogDescription>
+              Migrar a <strong>{convertTarget?.name}</strong> ({convertTarget?.email}) de paciente a profesional.
+              Se eliminará su registro de paciente y se creará su ficha de profesional.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-2">
+              <Label className="text-xs">Profesión</Label>
+              <Select value={convertProfession} onValueChange={setConvertProfession}>
+                <SelectTrigger className="border-teal-200"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Psicólogo">Psicólogo (30% comisión)</SelectItem>
+                  <SelectItem value="Psiquiatra">Psiquiatra (20% comisión)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Comisión REP (override opcional)</Label>
+              <Select value={convertCommissionRate} onValueChange={setConvertCommissionRate}>
+                <SelectTrigger className="border-teal-200"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Automático (según profesión)</SelectItem>
+                  <SelectItem value="0.30">30%</SelectItem>
+                  <SelectItem value="0.20">20%</SelectItem>
+                  <SelectItem value="0.10">10%</SelectItem>
+                  <SelectItem value="0.25">25%</SelectItem>
+                  <SelectItem value="0.15">15%</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-slate-400">
+                El profesional quedará activo y aprobado automáticamente para poder ingresar al panel.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConvertTarget(null)} className="border-teal-300">Cancelar</Button>
+            <Button
+              onClick={handleConvertToProfessional}
+              disabled={converting}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {converting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Stethoscope className="w-4 h-4" />}
+              Convertir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
