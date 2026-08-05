@@ -50,6 +50,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
+import { SPECIALTIES, THERAPY_TYPES, TARGET_AUDIENCES, THERAPY_MODALITIES } from "@/lib/professional-categories";
 import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
 
 interface Appointment {
@@ -1443,62 +1444,8 @@ export function ProfessionalProfile() {
     "Terapista Ocupacional",
     "Trabajador Social",
   ];
-  const SPECIALTIES = [
-    "Psicología Clínica",
-  ];
-  const THERAPY_TYPES = [
-    "Adicciones",
-    "Deportología",
-    "Docente/Capacitador",
-    "EMDR",
-    "Logoterapia",
-    "Mindfulness",
-    "Neuropsicología",
-    "Otras terapias",
-    "Psicooncología",
-    "Psicoanálisis",
-    "Psicocorporal Reichiana",
-    "Psicodrama",
-    "Psicología clínica",
-    "Psicología deportiva",
-    "Psicología forense",
-    "Psicología geriátrica",
-    "Psicología laboral / organizacional",
-    "Psicología perinatal",
-    "Psicología positiva",
-    "Psicoterapia Integral",
-    "Psiconutrición",
-    "Terapia cognitivo-conductual",
-    "Terapia constructivista",
-    "Terapia gestáltica",
-    "Terapia humanista",
-    "Terapia junguiana",
-    "Terapia sistémica",
-    "Terapia transpersonal",
-    "Terapias vinculares",
-    "Trastornos alimentarios",
-  ];
-  const TARGET_AUDIENCES = [
-    "Adolescentes",
-    "Adultos",
-    "Adultos mayores",
-    "Familias",
-    "Jóvenes",
-    "Niños/as",
-    "Orientación a padres",
-    "Parejas",
-  ];
-  const THERAPY_MODALITIES = [
-    "Asesoría a Empresas",
-    "Discapacidad",
-    "Evaluaciones",
-    "Individual",
-    "Orientación a Padres",
-    "Orientación Vocacional",
-    "Pericias",
-    "Terapia Grupal",
-    "Vincular",
-  ];
+  // SPECIALTIES, THERAPY_TYPES, TARGET_AUDIENCES, THERAPY_MODALITIES
+  // importados de @/lib/professional-categories (Single Source of Truth)
   const ZONES_AVAILABLE = [
     "Flores", "Versalles", "Merlo", "Moreno", "Caballito", "Palermo",
     "Belgrano", "Recoleta", "Almagro", "Villa Urquiza", "San Isidro",

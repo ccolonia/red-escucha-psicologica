@@ -52,69 +52,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
+import { THERAPY_TYPES, SPECIALTIES, TARGET_AUDIENCES, THERAPY_MODALITIES } from "@/lib/professional-categories";
 
-const THERAPY_TYPES = [
-  "Adicciones",
-  "Ataques de Pánico",
-  "Deportología",
-  "EMDR",
-  "Logoterapia",
-  "Mindfulness",
-  "Neuropsicología",
-  "Otras terapias",
-  "Psicooncología",
-  "Psicoanálisis",
-  "Psicocorporal Reichiana",
-  "Psicodrama",
-  "Psicología clínica",
-  "Psicología deportiva",
-  "Psicología forense",
-  "Psicología geriátrica",
-  "Psicología laboral / organizacional",
-  "Psicología perinatal",
-  "Psicología positiva",
-  "Psicoterapia Integral",
-  "Psiconutrición",
-  "Psiquiatría de Enlace o Interconsulta",
-  "Psiquiatría Forense o Legal",
-  "Psiquiatría Infanto-Juvenil",
-  "Terapia cognitivo-conductual",
-  "Terapia constructivista",
-  "Terapia gestáltica",
-  "Terapia humanista",
-  "Terapia junguiana",
-  "Terapia sistémica",
-  "Terapia transpersonal",
-  "Terapias vinculares",
-  "Trastorno bipolar",
-  "Trastorno de ansiedad",
-  "Trastorno de personalidad",
-  "Trastorno obsesivo compulsivo",
-  "Trastornos alimentarios",
-];
-
-const TARGET_AUDIENCES = [
-  "Adolescentes",
-  "Adultos",
-  "Adultos mayores",
-  "Familias",
-  "Jóvenes",
-  "Niños/as",
-  "Orientación a padres",
-  "Parejas",
-];
-
-const THERAPY_MODALITIES = [
-  "Asesoría a Empresas",
-  "Discapacidad",
-  "Evaluaciones",
-  "Individual",
-  "Orientación a Padres",
-  "Orientación Vocacional",
-  "Pericias",
-  "Terapia Grupal",
-  "Vincular",
-];
+// === Listas centralizadas en @/lib/professional-categories ===
+// NO duplicar estas listas localmente. Importar siempre de la fuente única.
 
 const ZONES_HIERARCHY: { region: string; areas: string[] }[] = [
   {
@@ -172,41 +113,6 @@ const ZONES_HIERARCHY: { region: string; areas: string[] }[] = [
     region: "Prov. de Santa Fe",
     areas: ["Rosario", "Santa Fe"],
   },
-];
-
-const SPECIALTIES = [
-  // === Ordenadas alfabéticamente (es_AR, sin tildes) ===
-  "Acoso Laboral",
-  "Adicciones",
-  "Ansiedad y Ataques de Pánico",
-  "Autolesiones e Ideación Suicida",
-  "Bullying",
-  "Coparentalidad",
-  "Duelo y Pérdida",
-  "Hebefrenia",
-  "Neuropsicología",
-  "Pacientes Judicializados",
-  "Psicología Clínica",
-  "Psiquiatría Clínica",
-  "Psicología de la Salud",
-  "Psicología Deportiva",
-  "Psicología Educacional",
-  "Psicología Forense",
-  "Psicología Geriátrica",
-  "Psicología Laboral / Organizacional",
-  "Psicología Perinatal",
-  "Psicología Social / Comunitaria",
-  "Psicología Transcultural",
-  "Psiconutrición",
-  "Psicooncología",
-  "Psicosis y Esquizofrenia",
-  "Revinculaciones",
-  "Sexología / Terapia Sexual",
-  "Síndrome de Burnout",
-  "Trastorno Límite de la Personalidad (TLP)",
-  "Trastorno Obsesivo-Compulsivo (TOC)",
-  "Trastornos Alimentarios",
-  "Violencia y Abuso Sexual",
 ];
 
 const TITLES = ["Lic.", "Dr.", "Dra.", "Ninguno"];

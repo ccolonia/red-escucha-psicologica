@@ -61,47 +61,8 @@ const PROFESSIONS = [
   "Fonoaudiólogo/a", "Otra",
 ];
 
-const SPECIALTIES = [
-  "Psicología Clínica", "Psiquiatría Clínica", "Neuropsicología", "Psicología Laboral / Organizacional",
-  "Psicología Educacional", "Psicología Deportiva", "Psicología Forense",
-  "Psicología Social / Comunitaria", "Psicología de la Salud",
-  "Sexología / Terapia Sexual", "Adicciones", "Duelo y Pérdida",
-  "Trastornos Alimentarios", "Psicología Geriátrica", "Psicología Transcultural",
-  "Psicología Perinatal", "Psicooncología", "Psiconutrición",
-  "Violencia y Abuso Sexual", "Trastorno Obsesivo-Compulsivo (TOC)",
-  "Psicosis y Esquizofrenia", "Hebefrenia",
-  "Trastorno Límite de la Personalidad (TLP)",
-  "Ansiedad y Ataques de Pánico", "Síndrome de Burnout",
-  "Acoso Laboral", "Bullying", "Autolesiones e Ideación Suicida",
-];
-
-const THERAPY_TYPES = [
-  "Psicología clínica", "Psicoanálisis", "Terapia cognitivo-conductual",
-  "Terapias vinculares", "Terapia sistémica", "Logoterapia",
-  "Terapia gestáltica", "Neuropsicología", "Mindfulness",
-  "Psicología laboral / organizacional", "Psicología positiva",
-  "Psicología forense", "Adicciones", "EMDR",
-  "Trastornos alimentarios", "Psiconutrición", "Psicooncología",
-  "Psicología geriátrica", "Psicología deportiva", "Psicología perinatal",
-  "Terapia humanista", "Terapia junguiana", "Psicodrama",
-  "Psicoterapia Integral", "Deportología", "Psicocorporal Reichiana",
-  "Terapia transpersonal", "Terapia constructivista", "Otras terapias",
-  "Psiquiatría Infanto-Juvenil", "Psiquiatría Forense o Legal",
-  "Psiquiatría de Enlace o Interconsulta",
-  "Trastorno obsesivo compulsivo", "Trastorno de ansiedad",
-  "Trastorno bipolar", "Trastorno de personalidad", "Ataques de Pánico",
-];
-
-const TARGET_AUDIENCES = [
-  "Niños/as", "Adolescentes", "Adultos mayores", "Adultos",
-  "Jóvenes", "Parejas", "Familias", "Orientación a padres",
-];
-
-const THERAPY_MODALITIES = [
-  "Individual", "Vincular", "Evaluaciones", "Terapia Grupal",
-  "Orientación a Padres", "Asesoría a Empresas", "Pericias",
-  "Discapacidad", "Orientación Vocacional",
-];
+// === Listas centralizadas en @/lib/professional-categories ===
+import { SPECIALTIES, THERAPY_TYPES, TARGET_AUDIENCES, THERAPY_MODALITIES } from "@/lib/professional-categories";
 
 const MODALITIES = [
   { value: "presencial", label: "Presencial" },
