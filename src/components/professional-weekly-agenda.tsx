@@ -77,11 +77,13 @@ interface ScheduleEntry {
 }
 
 interface OverrideEntry {
+  id?: string;
   date: string;
   type: "block" | "extra";
   startTime?: string | null;
   endTime?: string | null;
   modality?: string | null;
+  slotDuration?: number | null;
 }
 
 // ===== Constants =====
@@ -305,36 +307,31 @@ function getSlotRowSpan(slotDuration: number): number {
   return Math.max(1, Math.round(slotDuration / GRID_INTERVAL_MIN));
 }
 
-// === Encontrar el startTime de slot para un time dado ===
-// Dado un time (ej: "14:15") y un schedule del día, encuentra el startTime
-// del slot que CONTIENE ese time. Ej: schedule 14:00-17:00 con slotDuration=45
-// → slots son 14:00, 14:45, 15:30, 16:15. Para time=14:15, el slot es 14:00
-// (porque 14:00 ≤ 14:15 < 14:45).
-// Returns null si el time no cae dentro de ningún slot del schedule.
-function findSlotStartForTime(
-  time: string,
-  schedule: ScheduleEntry | undefined
-): string | null {
-  if (!schedule) return null;
-  const slots = generateTimeSlotsForSchedule(
-    schedule.startTime,
-    schedule.endTime,
-    schedule.slotDuration
-  );
-  // Encontrar el último slot ≤ time
-  let result: string | null = null;
-  for (const s of slots) {
-    if (s <= time) result = s;
-    else break;
-  }
-  if (!result) return null;
-  // Verificar que time está dentro del slot (time < result + slotDuration)
-  const [rH, rM] = result.split(":").map(Number);
-  const rMin = rH * 60 + rM;
-  const [tH, tM] = time.split(":").map(Number);
-  const tMin = tH * 60 + tM;
-  if (tMin >= rMin + schedule.slotDuration) return null;
-  return result;
+// === Calcular posición absoluta en el CSS Grid para un slot ===
+// PROHIBIDO usar % (módulo) para evaluar inicios de slot.
+// En su lugar, calculamos la fila del grid relativa al gridStartMinutes
+// (la hora mínima visible de la grilla).
+//
+// Ej: gridStartMinutes=480 (08:00), slotStartTime="14:00" (840 min)
+//   rowStart = (840 - 480) / 15 + 1 = 360/15 + 1 = 24 + 1 = 25
+//   span = 45 / 15 = 3
+//   → gridRow: "25 / span 3"
+function getSlotGridPosition(
+  slotStartTimeStr: string,
+  durationMinutes: number,
+  gridStartMinutes: number
+): { rowStart: number; span: number } {
+  const [h, m] = slotStartTimeStr.split(":").map(Number);
+  const slotStartMin = h * 60 + m;
+  const rowStart = Math.floor((slotStartMin - gridStartMinutes) / GRID_INTERVAL_MIN) + 1;
+  const span = Math.max(1, Math.round(durationMinutes / GRID_INTERVAL_MIN));
+  return { rowStart, span };
+}
+
+// === Helper: convertir "HH:MM" a minutos desde medianoche ===
+function timeToMin(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
 }
 
 // ===== Component =====
@@ -616,16 +613,17 @@ export function ProfessionalWeeklyAgenda({
   const professionalId = propProfessionalId || fetchedProfessionalId;
 
   // === Eje Y ESTANDARIZADO en intervalos de 15 minutos ===
-  // FIX CRÍTICO: antes se construía uniendo los startTime de cada schedule,
-  // lo que generaba filas descalzadas (14:00, 14:15, 14:45, 15:00) cuando
-  // días con distinto inicio convivían en la misma grilla.
-  //
-  // AHORA: filas fijas cada 15 min desde el min startTime hasta el max endTime
-  // de todos los schedules. Los slots de 45 min se renderizan como bloques
-  // unificados con rowSpan=3 en la fila correspondiente a su startTime.
   const timeSlots = useMemo(() => {
     return generateStandardizedTimeSlots(schedules);
   }, [schedules]);
+
+  // === gridStartMinutes: la hora mínima visible de la grilla en minutos ===
+  // Se usa para calcular posiciones absolutas de slots en el CSS Grid.
+  // Ej: si timeSlots[0] = "08:00", gridStartMinutes = 480.
+  const gridStartMinutes = useMemo(() => {
+    if (timeSlots.length === 0) return 0;
+    return timeToMin(timeSlots[0]);
+  }, [timeSlots]);
 
   // Detect mobile screen
   useEffect(() => {
@@ -920,10 +918,15 @@ export function ProfessionalWeeklyAgenda({
       if (activatedSlot) return "available";
 
       // Verificar si la celda es el INICIO de un slot del schedule
+      // FIX: NO usar % (módulo). En su lugar, generar el array de slots
+      // y verificar si time está en ese array (match exacto).
       if (daySchedule) {
-        const slotStart = findSlotStartForTime(time, daySchedule);
-        // Es inicio de slot solo si time === slotStart (no es sub-intervalo)
-        if (slotStart === time && isSlotInSchedule(dayOfWeek, time)) {
+        const allSlots = generateTimeSlotsForSchedule(
+          daySchedule.startTime,
+          daySchedule.endTime,
+          daySchedule.slotDuration
+        );
+        if (allSlots.includes(time) && isSlotInSchedule(dayOfWeek, time)) {
           return "schedule";
         }
       }
@@ -1133,79 +1136,136 @@ export function ProfessionalWeeklyAgenda({
               </Fragment>
             ))}
 
-            {/* === CAPA 2: Slots posicionados por coordenadas gridRow/gridColumn === */}
-            {/* Cada slot es un div autónomo que se ubica en su celda (columna, fila)
-                sin afectar a las demás. NUNCA se omiten celdas de fondo. */}
-            {timeSlots.map((time, rowIdx) =>
-              weekDays.map((day, dayIdx) => {
-                const dateStr = format(day, "yyyy-MM-dd");
-                const dayOfWeek = dayIdx + 1;
-                const state = getCellState(dateStr, time, dayOfWeek);
-                const apt = getAppointmentForCell(dateStr, time);
-                const isCurrentDay = isToday(day);
-                const slotIsPast = isSlotInPast(dateStr, time);
+            {/* === CAPA 2: Slots posicionados por coordenadas directas === */}
+            {/* FIX CRÍTICO: NO iterar celda por celda evaluando % (módulo).
+                En su lugar, iterar el ARRAY DE SLOTS real generado por
+                generateTimeSlotsForSchedule y posicionar cada slot por su
+                coordenada absoluta en el CSS Grid.
+                Esto elimina el "efecto 14:15" donde 840 % 45 = 30 ≠ 0
+                descartaba las 14:00 como inicio de slot. */}
+            {weekDays.map((day, dayIdx) => {
+              const dateStr = format(day, "yyyy-MM-dd");
+              const dayOfWeek = dayIdx + 1;
+              const isCurrentDay = isToday(day);
+              const colIndex = dayIdx + 2;
+              const daySchedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
+              const slotDuration = daySchedule?.slotDuration || 45;
 
-                // Si es "outside", no renderizar slot (la celda de fondo ya está)
-                if (state === "outside") return null;
+              // 1. Generar slots del schedule (contiguos, sin snapping)
+              const scheduleSlots = daySchedule
+                ? generateTimeSlotsForSchedule(daySchedule.startTime, daySchedule.endTime, slotDuration)
+                : [];
 
-                const daySchedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
-                const spanRows = getSlotRowSpan(daySchedule?.slotDuration || 45);
-                const colIndex = dayIdx + 2;
+              // 2. Generar slots de overrides type="extra" (disponibilidad activada)
+              const extraOverrides = overrides.filter((o) => {
+                if (o.date !== dateStr || o.type !== "extra") return false;
+                if (!o.startTime || !o.endTime) return false;
+                return true;
+              });
 
-                let slotClass = "p-0.5 transition-colors z-10 h-full flex flex-col justify-stretch ";
-                if (state === "schedule") slotClass += "bg-amber-50 ";
-                else if (state === "available") slotClass += "bg-emerald-50 ";
-                else if (state === "booked") slotClass += "bg-white ";
+              // 3. Collect all slot items to render: schedule slots, extra overrides, appointments
+              type SlotItem = {
+                time: string;
+                duration: number;
+                type: "schedule" | "available" | "booked";
+                modality: string | null;
+                apt?: typeof visibleAppointments[0];
+              };
 
-                if (slotIsPast) slotClass += "opacity-50 ";
-                if (isCurrentDay) slotClass += "border-l-2 border-l-teal-300 ";
+              const slotItems: SlotItem[] = [];
 
-                const modality =
-                  (state === "schedule" || state === "available")
-                    ? getModalityForCell(dateStr, dayOfWeek, time)
-                    : null;
+              // Schedule slots (no activados, no con appointment)
+              for (const slotTime of scheduleSlots) {
+                // Check if there's an appointment at this exact time
+                const apt = visibleAppointments.find((a) => a.date === dateStr && a.time === slotTime);
+                if (apt && apt.status !== "cancelled_by_patient" && apt.status !== "cancelled") {
+                  slotItems.push({ time: slotTime, duration: slotDuration, type: "booked", modality: null, apt });
+                } else {
+                  // Check if this slot is activated by an extra override
+                  const isActivated = extraOverrides.some((o) => {
+                    if (!o.startTime) return false;
+                    const oStart = timeToMin(o.startTime);
+                    const oEnd = o.endTime ? timeToMin(o.endTime) : oStart + slotDuration;
+                    const sMin = timeToMin(slotTime);
+                    return sMin >= oStart && sMin < oEnd;
+                  });
+                  if (isActivated) {
+                    const modality = getModalityForCell(dateStr, dayOfWeek, slotTime);
+                    slotItems.push({ time: slotTime, duration: slotDuration, type: "available", modality });
+                  } else {
+                    const modality = getModalityForCell(dateStr, dayOfWeek, slotTime);
+                    slotItems.push({ time: slotTime, duration: slotDuration, type: "schedule", modality });
+                  }
+                }
+              }
 
+              // Extra override slots that DON'T align with schedule (extra availability outside schedule)
+              for (const o of extraOverrides) {
+                if (!o.startTime || !o.endTime) continue;
+                const oDuration = o.slotDuration || slotDuration;
+                const extraSlots = generateTimeSlotsForSchedule(o.startTime, o.endTime, oDuration);
+                for (const slotTime of extraSlots) {
+                  // Skip if already in scheduleSlots (avoid duplicates)
+                  if (scheduleSlots.includes(slotTime)) continue;
+                  const apt = visibleAppointments.find((a) => a.date === dateStr && a.time === slotTime);
+                  if (apt && apt.status !== "cancelled_by_patient" && apt.status !== "cancelled") {
+                    slotItems.push({ time: slotTime, duration: oDuration, type: "booked", modality: null, apt });
+                  } else {
+                    const modality = o.modality || "ambas";
+                    slotItems.push({ time: slotTime, duration: oDuration, type: "available", modality });
+                  }
+                }
+              }
+
+              return slotItems.map((slot) => {
+                const { rowStart, span } = getSlotGridPosition(slot.time, slot.duration, gridStartMinutes);
+                const slotIsPast = isSlotInPast(dateStr, slot.time);
                 const slotEnd = (() => {
-                  const d = daySchedule?.slotDuration || 45;
-                  const [h, m] = time.split(":").map(Number);
-                  const t = h * 60 + m + d;
+                  const [h, m] = slot.time.split(":").map(Number);
+                  const t = h * 60 + m + slot.duration;
                   return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
                 })();
 
+                let slotClass = "p-0.5 transition-colors z-10 h-full flex flex-col justify-stretch ";
+                if (slot.type === "schedule") slotClass += "bg-amber-50 ";
+                else if (slot.type === "available") slotClass += "bg-emerald-50 ";
+                else if (slot.type === "booked") slotClass += "bg-white ";
+                if (slotIsPast) slotClass += "opacity-50 ";
+                if (isCurrentDay) slotClass += "border-l-2 border-l-teal-300 ";
+
                 return (
                   <div
-                    key={`slot-${dateStr}-${time}`}
+                    key={`slot-${dateStr}-${slot.time}`}
                     className={slotClass}
                     style={{
-                      gridRow: `${rowIdx + 1} / span ${spanRows}`,
+                      gridRow: `${rowStart} / span ${span}`,
                       gridColumn: colIndex,
                     }}
-                    onClick={(state === "schedule" && !slotIsPast) ? () => handleActivateSlot(dateStr, time, dayOfWeek) : (state === "available" && !slotIsPast) ? () => handleDeactivateSlot(dateStr, time) : undefined}
-                    onMouseDown={(state === "schedule" || state === "available") && !slotIsPast ? (e) => { e.currentTarget.style.cursor = "pointer"; } : undefined}
+                    onClick={(slot.type === "schedule" && !slotIsPast) ? () => handleActivateSlot(dateStr, slot.time, dayOfWeek) : (slot.type === "available" && !slotIsPast) ? () => handleDeactivateSlot(dateStr, slot.time) : undefined}
                   >
-                    {state === "booked" && apt && renderAppointment(apt)}
-                    {state === "schedule" && (
+                    {slot.type === "booked" && slot.apt && renderAppointment(slot.apt)}
+                    {slot.type === "schedule" && (
                       <div
                         className="flex items-center justify-center w-full rounded text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition-colors flex-1 min-h-0"
-                        title={`${MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"} — click para activar como Disponible ${time}–${slotEnd} hs`}
+                        title={`${MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.label || "P|OL"} — click para activar como Disponible ${slot.time}–${slotEnd} hs`}
                       >
-                        {MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"}
+                        {MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.label || "P|OL"}
                       </div>
                     )}
-                    {state === "available" && (
+                    {slot.type === "available" && (
                       <div
                         className="flex items-center justify-center gap-0.5 w-full rounded text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors flex-1 min-h-0"
-                        title={`Disponible (${MODALITY_CELL_DISPLAY[modality || "ambas"]?.fullLabel || "Híbrida"}) ${time}–${slotEnd} hs — click para desactivar`}
+                        title={`Disponible (${MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.fullLabel || "Híbrida"}) ${slot.time}–${slotEnd} hs — click para desactivar`}
                       >
-                        <span>{MODALITY_CELL_DISPLAY[modality || "ambas"]?.emoji || "🔄"}</span>
+                        <span>{MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.emoji || "🔄"}</span>
                         <span>Disponible</span>
-                        <span className="text-[8px] opacity-75">({MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"})</span>
+                        <span className="text-[8px] opacity-75">({MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.label || "P|OL"})</span>
                       </div>
                     )}
                   </div>
                 );
-              })
-            )}
+              });
+            })}
           </div>
         </div>
       </div>

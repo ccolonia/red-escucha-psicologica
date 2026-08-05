@@ -1271,6 +1271,44 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
     return slots.length > 0 ? slots : generateTimeSlotsDynamic(15);
   }, [rawSchedules]);
 
+  // === gridStartMinutes: hora mínima visible de la grilla en minutos ===
+  const gridStartMinutes = useMemo(() => {
+    if (timeSlots.length === 0) return 0;
+    const [h, m] = timeSlots[0].split(":").map(Number);
+    return h * 60 + m;
+  }, [timeSlots]);
+
+  // === getSlotGridPosition: posición absoluta en CSS Grid ===
+  // PROHIBIDO usar % (módulo). Calcula la fila relativa a gridStartMinutes.
+  function getSlotGridPosition(slotStartTimeStr: string, durationMinutes: number) {
+    const [h, m] = slotStartTimeStr.split(":").map(Number);
+    const slotStartMin = h * 60 + m;
+    const rowStart = Math.floor((slotStartMin - gridStartMinutes) / 15) + 1;
+    const span = Math.max(1, Math.round(durationMinutes / 15));
+    return { rowStart, span };
+  }
+
+  // === Helper: "HH:MM" → minutos ===
+  function timeToMinLocal(t: string): number {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  }
+
+  // === generateSlotsForSchedule: genera slots contiguos para un schedule ===
+  function generateSlotsForSchedule(startTime: string, endTime: string, slotDuration: number): string[] {
+    const slots: string[] = [];
+    const sMin = timeToMinLocal(startTime);
+    const eMin = timeToMinLocal(endTime);
+    let current = sMin;
+    while (current + slotDuration <= eMin) {
+      const h = Math.floor(current / 60);
+      const m = current % 60;
+      slots.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
+      current += slotDuration;
+    }
+    return slots;
+  }
+
   // === isSlotInSchedule: RÉPLICA EXACTA del profesional ===
   // El profesional NO verifica si time coincide con un slot generado.
   // Verifica si time está DENTRO DEL RANGO del schedule:
@@ -1424,118 +1462,110 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
               </React.Fragment>
             ))}
 
-            {/* === CAPA 2: Slots posicionados por coordenadas === */}
-            {timeSlots.map((time, rowIdx) =>
-              WEEK_DAYS.map((day) => {
-                const dayData = professional.weeklySlots[day.dayOfWeek];
-                const dateStr = dayData?.date || "";
-                const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+            {/* === CAPA 2: Slots posicionados por coordenadas directas === */}
+            {/* FIX CRÍTICO: NO usar % (módulo) para evaluar inicios de slot.
+                Iterar el ARRAY DE SLOTS real y posicionar cada uno por
+                getSlotGridPosition(slotStartTime, duration, gridStartMinutes). */}
+            {WEEK_DAYS.map((day) => {
+              const dayData = professional.weeklySlots[day.dayOfWeek];
+              const dateStr = dayData?.date || "";
+              const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+              const colIndex = day.dayOfWeek + 1;
+              const daySchedule = rawSchedules.find((s: { dayOfWeek: number }) => s.dayOfWeek === day.dayOfWeek);
+              const slotDuration = daySchedule?.slotDuration || 45;
 
-                // Buscar bookedSlot por match exacto (sin snap-down)
-                const bookedSlot = dayData?.bookedSlots.find((s) => s.time === time);
+              // 1. Generar slots del schedule (contiguos, sin snapping)
+              const scheduleSlots = daySchedule
+                ? generateSlotsForSchedule(daySchedule.startTime, daySchedule.endTime, slotDuration)
+                : [];
 
-                // Buscar freeSlot exacto
-                const freeSlot = dayData?.availableSlots.find((s) => s.time === time);
+              type AdminSlotItem = {
+                time: string;
+                duration: number;
+                type: "schedule" | "available" | "booked" | "past";
+                freeSlot?: typeof dayData.availableSlots[0];
+                bookedSlot?: typeof dayData.bookedSlots[0];
+              };
 
-                const slotIsPast = dayData ? isSlotInPast(dayData.date, time) : false;
+              const slotItems: AdminSlotItem[] = [];
 
-                // Encontrar el schedule de este día para calcular slotStart y rowSpan
-                const daySchedule = rawSchedules.find((s: { dayOfWeek: number }) => s.dayOfWeek === day.dayOfWeek);
-                // Solo renderizar "schedule" si este time es el INICIO de un slot
-                const isSlotStart = (() => {
-                  if (!daySchedule) return false;
-                  const [sH, sM] = daySchedule.startTime.split(":").map(Number);
-                  const [eH, eM] = daySchedule.endTime.split(":").map(Number);
-                  const sMin = sH * 60 + sM;
-                  const eMin = eH * 60 + eM;
-                  const [tH, tM] = time.split(":").map(Number);
-                  const tMin = tH * 60 + tM;
-                  if (tMin < sMin || tMin >= eMin) return false;
-                  return (tMin - sMin) % daySchedule.slotDuration === 0;
-                })();
-
-                const effectiveFreeSlot = freeSlot;
-
-                let state: "schedule" | "available" | "booked" | "outside" | "past" = "outside";
+              for (const slotTime of scheduleSlots) {
+                const bookedSlot = dayData?.bookedSlots.find((s) => s.time === slotTime);
+                const freeSlot = dayData?.availableSlots.find((s) => s.time === slotTime);
+                const slotIsPast = dayData ? isSlotInPast(dayData.date, slotTime) : false;
 
                 if (bookedSlot && bookedSlot.status !== "blocked") {
-                  state = "booked";
-                } else if (effectiveFreeSlot && !slotIsPast) {
-                  state = "available";
-                } else if (effectiveFreeSlot && slotIsPast) {
-                  state = "past";
-                } else if (isSlotStart && isSlotInSchedule(day.dayOfWeek, time)) {
-                  state = "schedule";
+                  slotItems.push({ time: slotTime, duration: slotDuration, type: "booked", bookedSlot });
+                } else if (freeSlot && !slotIsPast) {
+                  slotItems.push({ time: slotTime, duration: slotDuration, type: "available", freeSlot });
+                } else if (freeSlot && slotIsPast) {
+                  slotItems.push({ time: slotTime, duration: slotDuration, type: "past", freeSlot });
                 } else {
-                  state = "outside";
+                  slotItems.push({ time: slotTime, duration: slotDuration, type: "schedule" });
                 }
+              }
 
-                // Si es "outside", no renderizar slot (la celda de fondo ya está)
-                if (state === "outside") return null;
-
-                const spanRows = Math.max(1, Math.round((daySchedule?.slotDuration || 45) / 15));
-                const colIndex = day.dayOfWeek + 1;
+              return slotItems.map((slot) => {
+                const { rowStart, span } = getSlotGridPosition(slot.time, slot.duration);
+                const slotIsPast = dayData ? isSlotInPast(dayData.date, slot.time) : false;
+                const modality = (slot.type === "schedule" || slot.type === "available" || slot.type === "past")
+                  ? getModalityForCell(day.dayOfWeek, slot.time)
+                  : null;
+                const scheduleInfo = slot.type === "past" ? getScheduleForCell(day.dayOfWeek, slot.time) : null;
 
                 let slotClass = "p-0.5 transition-colors z-10 h-full flex flex-col justify-stretch ";
-                if (state === "schedule") slotClass += "bg-amber-50 ";
-                else if (state === "available") slotClass += "bg-emerald-50 ";
-                else if (state === "booked") slotClass += "bg-white ";
-                else if (state === "past") slotClass += "bg-emerald-50 ";
-
-                if (slotIsPast && state !== "booked") {
-                  slotClass += "opacity-50 ";
-                }
+                if (slot.type === "schedule") slotClass += "bg-amber-50 ";
+                else if (slot.type === "available") slotClass += "bg-emerald-50 ";
+                else if (slot.type === "booked") slotClass += "bg-white ";
+                else if (slot.type === "past") slotClass += "bg-emerald-50 ";
+                if (slotIsPast && slot.type !== "booked") slotClass += "opacity-50 ";
                 if (isToday) slotClass += "border-l-2 border-l-teal-300 ";
 
                 const past = slotIsPast;
-                const modality = (state === "schedule" || state === "available" || state === "past")
-                  ? getModalityForCell(day.dayOfWeek, time)
-                  : null;
-                const scheduleInfo = state === "past" ? getScheduleForCell(day.dayOfWeek, time) : null;
 
                 return (
                   <div
-                    key={`slot-${day.dayOfWeek}-${time}`}
+                    key={`slot-${day.dayOfWeek}-${slot.time}`}
                     className={slotClass}
                     style={{
-                      gridRow: `${rowIdx + 1} / span ${spanRows}`,
+                      gridRow: `${rowStart} / span ${span}`,
                       gridColumn: colIndex,
                     }}
-                    onClick={(state === "available" && effectiveFreeSlot && !past) ? () => onSlotClick(effectiveFreeSlot, dayData!.date) : (state === "booked" && bookedSlot) ? () => onBookedSlotClick(bookedSlot) : undefined}
+                    onClick={(slot.type === "available" && slot.freeSlot && !past) ? () => onSlotClick(slot.freeSlot!, dayData!.date) : (slot.type === "booked" && slot.bookedSlot) ? () => onBookedSlotClick(slot.bookedSlot!) : undefined}
                   >
-                    {state === "schedule" && (
+                    {slot.type === "schedule" && (
                       <div
                         className="flex items-center justify-center w-full rounded text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 flex-1 min-h-0"
-                        title={`${MODALITY_LABELS[modality || "ambas"] || "P|OL"} ${time}–${(() => { const si = getScheduleForCell(day.dayOfWeek, time); if (si) { const [h,m] = time.split(":").map(Number); const t = h*60+m+si.slotDuration; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; } return ""; })()} hs — no disponible (el profesional debe activar este slot)`}
+                        title={`${MODALITY_LABELS[modality || "ambas"] || "P|OL"} ${slot.time}–${(() => { const si = getScheduleForCell(day.dayOfWeek, slot.time); if (si) { const [h,m] = slot.time.split(":").map(Number); const t = h*60+m+si.slotDuration; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; } return ""; })()} hs — no disponible (el profesional debe activar este slot)`}
                       >
                         {MODALITY_LABELS[modality || "ambas"] || "P|OL"}
                       </div>
                     )}
-                    {state === "available" && effectiveFreeSlot && (
+                    {slot.type === "available" && slot.freeSlot && (
                       <div
                         className="flex items-center justify-center gap-0.5 w-full rounded text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 flex-1 min-h-0"
-                        title={`Disponible (${MODALITY_EMOJI[effectiveFreeSlot.modality || "ambas"]?.fullLabel || "Híbrida"}) ${time}–${effectiveFreeSlot.endTime} hs — click para asignar turno`}
+                        title={`Disponible (${MODALITY_EMOJI[slot.freeSlot.modality || "ambas"]?.fullLabel || "Híbrida"}) ${slot.time}–${slot.freeSlot.endTime} hs — click para asignar turno`}
                       >
-                        <span>{MODALITY_EMOJI[effectiveFreeSlot.modality || "ambas"]?.emoji || "🔄"}</span>
+                        <span>{MODALITY_EMOJI[slot.freeSlot.modality || "ambas"]?.emoji || "🔄"}</span>
                         <span>Disponible</span>
-                        <span className="text-[8px] opacity-75">({MODALITY_LABELS[effectiveFreeSlot.modality || "ambas"] || "P|OL"})</span>
+                        <span className="text-[8px] opacity-75">({MODALITY_LABELS[slot.freeSlot.modality || "ambas"] || "P|OL"})</span>
                       </div>
                     )}
-                    {state === "past" && modality && scheduleInfo && (
+                    {slot.type === "past" && modality && scheduleInfo && (
                       <div
                         className={`flex items-center justify-center w-full rounded text-[10px] font-medium opacity-50 ${MODALITY_COLORS[modality] || MODALITY_COLORS.ambas} flex-1 min-h-0`}
-                        title={`Pasado — ${MODALITY_LABELS[modality] || modality} ${time} a ${scheduleInfo.endTime} hs`}
+                        title={`Pasado — ${MODALITY_LABELS[modality] || modality} ${slot.time} a ${scheduleInfo.endTime} hs`}
                       >
                         {MODALITY_LABELS[modality] || modality}
                       </div>
                     )}
-                    {state === "booked" && bookedSlot && (
-                      <BookedSlotCard slot={bookedSlot} past={past} />
+                    {slot.type === "booked" && slot.bookedSlot && (
+                      <BookedSlotCard slot={slot.bookedSlot} past={past} />
                     )}
                   </div>
                 );
-              })
-            )}
+              });
+            })}
           </div>
         </div>
       </div>
