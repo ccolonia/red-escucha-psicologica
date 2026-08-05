@@ -62,7 +62,7 @@ const PROFESSIONS = [
 ];
 
 const SPECIALTIES = [
-  "Psicología Clínica", "Neuropsicología", "Psicología Laboral / Organizacional",
+  "Psicología Clínica", "Psiquiatría Clínica", "Neuropsicología", "Psicología Laboral / Organizacional",
   "Psicología Educacional", "Psicología Deportiva", "Psicología Forense",
   "Psicología Social / Comunitaria", "Psicología de la Salud",
   "Sexología / Terapia Sexual", "Adicciones", "Duelo y Pérdida",
@@ -86,6 +86,10 @@ const THERAPY_TYPES = [
   "Terapia humanista", "Terapia junguiana", "Psicodrama",
   "Psicoterapia Integral", "Deportología", "Psicocorporal Reichiana",
   "Terapia transpersonal", "Terapia constructivista", "Otras terapias",
+  "Psiquiatría Infanto-Juvenil", "Psiquiatría Forense o Legal",
+  "Psiquiatría de Enlace o Interconsulta",
+  "Trastorno obsesivo compulsivo", "Trastorno de ansiedad",
+  "Trastorno bipolar", "Trastorno de personalidad", "Ataques de Pánico",
 ];
 
 const TARGET_AUDIENCES = [

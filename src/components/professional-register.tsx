@@ -55,6 +55,7 @@ import { toast } from "sonner";
 
 const THERAPY_TYPES = [
   "Adicciones",
+  "Ataques de Pánico",
   "Deportología",
   "EMDR",
   "Logoterapia",
@@ -74,6 +75,9 @@ const THERAPY_TYPES = [
   "Psicología positiva",
   "Psicoterapia Integral",
   "Psiconutrición",
+  "Psiquiatría de Enlace o Interconsulta",
+  "Psiquiatría Forense o Legal",
+  "Psiquiatría Infanto-Juvenil",
   "Terapia cognitivo-conductual",
   "Terapia constructivista",
   "Terapia gestáltica",
@@ -82,6 +86,10 @@ const THERAPY_TYPES = [
   "Terapia sistémica",
   "Terapia transpersonal",
   "Terapias vinculares",
+  "Trastorno bipolar",
+  "Trastorno de ansiedad",
+  "Trastorno de personalidad",
+  "Trastorno obsesivo compulsivo",
   "Trastornos alimentarios",
 ];
 
@@ -179,6 +187,7 @@ const SPECIALTIES = [
   "Neuropsicología",
   "Pacientes Judicializados",
   "Psicología Clínica",
+  "Psiquiatría Clínica",
   "Psicología de la Salud",
   "Psicología Deportiva",
   "Psicología Educacional",

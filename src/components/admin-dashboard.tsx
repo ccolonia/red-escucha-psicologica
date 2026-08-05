@@ -1152,6 +1152,9 @@ export function AdminProfessionals() {
                         <SelectItem value="Psicología Clínica">
                           Psicología Clínica
                         </SelectItem>
+                        <SelectItem value="Psiquiatría Clínica">
+                          Psiquiatría Clínica
+                        </SelectItem>
                         <SelectItem value="Terapia de Pareja y Familia">
                           Terapia de Pareja y Familia
                         </SelectItem>
@@ -1307,6 +1310,7 @@ export function AdminProfessionals() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="Psicología Clínica">Psicología Clínica</SelectItem>
+                                <SelectItem value="Psiquiatría Clínica">Psiquiatría Clínica</SelectItem>
                                 <SelectItem value="Terapia de Pareja y Familia">Terapia de Pareja y Familia</SelectItem>
                                 <SelectItem value="Psicología Infanto-Juvenil">Psicología Infanto-Juvenil</SelectItem>
                               </SelectContent>
