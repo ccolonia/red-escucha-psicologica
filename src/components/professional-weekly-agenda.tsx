@@ -1169,7 +1169,8 @@ export function ProfessionalWeeklyAgenda({
                   blockOverridesForDay: overrides.filter(o => o.date === dateStr && o.type === "block"),
                 });
               } else {
-                console.log(`[AGENDA DEBUG] ${dateStr} (dayOfWeek=${dayOfWeek}) — NO schedule found for this day. All schedules:`, schedules.map(s => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime })));
+                console.warn(`[AGENDA DEBUG] ${dateStr} (dayOfWeek=${dayOfWeek}) — NO schedule found for this day.`);
+                console.table(schedules.map(s => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime, slotDuration: s.slotDuration })));
               }
 
               // 2. Generar slots de overrides type="extra" (disponibilidad activada)

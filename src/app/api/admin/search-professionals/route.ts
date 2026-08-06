@@ -269,6 +269,7 @@ function getMondayOfWeek(dateStr: string): Date {
   const dayOfWeekJs = date.getDay(); // 0=Dom, 1=Lun, ..., 6=Sab
   const monday = new Date(date);
   monday.setDate(date.getDate() - (dayOfWeekJs === 0 ? 6 : dayOfWeekJs - 1));
+  console.log(`[getMondayOfWeek] dateStr=${dateStr} → date.getDay()=${dayOfWeekJs} → monday=${monday.toISOString().split("T")[0]}`);
   return monday;
 }
 
@@ -285,10 +286,13 @@ function generateWeekDates(monday: Date): { date: string; dayOfWeek: number }[] 
     d.setDate(monday.getDate() + i);
     // Usar formato YYYY-MM-DD con timezone Argentina forzada
     const isoDate = d.toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
-    // Calcular dayOfWeek en timezone Argentina también
-    const [yy, mm, dd] = isoDate.split("-").map(Number);
-    const dayOfWeekJs = new Date(yy, mm - 1, dd).getDay();
-    dates.push({ date: isoDate, dayOfWeek: dayOfWeekJs });
+    // === FIX: usar convención 1=Lunes, 2=Martes, ..., 6=Sábado, 0=Domingo ===
+    // ANTES: getDay() devuelve 0=Dom, 1=Lun, ..., 6=Sáb
+    // Pero ProfessionalSchedule en DB usa 1=Lun, 2=Mar, ..., 6=Sáb
+    // Como partimos de Monday (i=0=Lunes), podemos usar directamente i+1
+    // para Lunes-Sábado (1-6) y 0 para Domingo.
+    const dayOfWeek = i === 6 ? 0 : i + 1; // Lunes=1, ..., Sábado=6, Domingo=0
+    dates.push({ date: isoDate, dayOfWeek });
   }
   return dates;
 }

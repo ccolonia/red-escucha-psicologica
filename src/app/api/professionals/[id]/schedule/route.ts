@@ -23,6 +23,11 @@ export async function GET(
       orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
     });
 
+    // === LOG DE DIAGNÓSTICO ===
+    console.log(`[SCHEDULE GET] professionalId=${id} — ${schedules.length} schedules encontrados:`,
+      schedules.map(s => ({ id: s.id, dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime, slotDuration: s.slotDuration }))
+    );
+
     return NextResponse.json(schedules);
   } catch (error) {
     console.error("Get schedule error:", error);
@@ -278,6 +283,10 @@ export async function PUT(
       where: { professionalId: id },
       orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
     });
+
+    // === LOG DE DIAGNÓSTICO ===
+    console.log(`[SCHEDULE PUT] professionalId=${id} — Guardados ${schedules.length} schedules:`, schedules.map(s => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime, slotDuration: s.slotDuration })));
+    console.log(`[SCHEDULE PUT] Verificación post-guardado: ${result.length} schedules en DB:`, result.map(s => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime })));
 
     return NextResponse.json(result);
   } catch (error) {
