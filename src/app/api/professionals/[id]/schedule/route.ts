@@ -71,6 +71,26 @@ export async function POST(
       );
     }
 
+    // === VALIDACIÓN DE SUPERPOSICIÓN (backend) ===
+    // Verificar que no haya horarios superpuestos en el mismo día.
+    const existingSchedules = await db.professionalSchedule.findMany({
+      where: { professionalId: id, dayOfWeek },
+      select: { startTime: true, endTime: true },
+    });
+    for (const existing of existingSchedules) {
+      const overlap = startTime < existing.endTime && endTime > existing.startTime;
+      if (overlap) {
+        const dayName = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][dayOfWeek];
+        return NextResponse.json(
+          {
+            error: `Superposición detectada el ${dayName}: la nueva franja ${startTime}-${endTime} se solapa con la existente ${existing.startTime}-${existing.endTime}.`,
+            code: "SCHEDULE_OVERLAP",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const schedule = await db.professionalSchedule.create({
       data: {
         professionalId: id,
@@ -150,6 +170,31 @@ export async function PUT(
           { error: "La hora de inicio debe ser anterior a la hora de fin" },
           { status: 400 }
         );
+      }
+    }
+
+    // === VALIDACIÓN DE SUPERPOSICIÓN (backend) ===
+    // Verificar que no haya horarios superpuestos en el mismo día.
+    // Fórmula correcta: hasOverlap = (A_start < B_end) && (A_end > B_start)
+    // Esto detecta TODA superposición, incluyendo contigüidad exacta
+    // (15:30-16:30 vs 15:30-16:30 → overlap porque 15:30 < 16:30 && 16:30 > 15:30)
+    for (let i = 0; i < schedules.length; i++) {
+      for (let j = i + 1; j < schedules.length; j++) {
+        const a = schedules[i];
+        const b = schedules[j];
+        if (a.dayOfWeek === b.dayOfWeek) {
+          const overlap = a.startTime < b.endTime && a.endTime > b.startTime;
+          if (overlap) {
+            const dayName = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][a.dayOfWeek];
+            return NextResponse.json(
+              {
+                error: `Superposición detectada el ${dayName}: las franjas ${a.startTime}-${a.endTime} y ${b.startTime}-${b.endTime} se solapan. Eliminá o ajustá una de las franjas antes de guardar.`,
+                code: "SCHEDULE_OVERLAP",
+              },
+              { status: 409 }
+            );
+          }
+        }
       }
     }
 

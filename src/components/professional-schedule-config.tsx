@@ -306,6 +306,28 @@ export function ProfessionalScheduleConfig() {
   // Save all schedules
   const handleSaveSchedules = async () => {
     if (!professionalId) return;
+
+    // === Validación de superposición ANTES de enviar al backend ===
+    // Doble check: el frontend valida al agregar cada entrada, pero
+    // podemos tener estado inconsistente. Verificamos de nuevo antes de guardar.
+    for (let i = 0; i < schedules.length; i++) {
+      for (let j = i + 1; j < schedules.length; j++) {
+        const a = schedules[i];
+        const b = schedules[j];
+        if (a.dayOfWeek === b.dayOfWeek) {
+          const overlap = a.startTime < b.endTime && a.endTime > b.startTime;
+          if (overlap) {
+            const dayName = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][a.dayOfWeek];
+            toast.error(
+              `Superposición el ${dayName}: ${a.startTime}-${a.endTime} y ${b.startTime}-${b.endTime}. ` +
+              `Eliminá o ajustá una de las franjas antes de guardar.`
+            );
+            return; // NO guardar
+          }
+        }
+      }
+    }
+
     setSaving(true);
     try {
       const res = await fetch(`/api/professionals/${professionalId}/schedule`, {
