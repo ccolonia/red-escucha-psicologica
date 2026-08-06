@@ -26,6 +26,7 @@ export const SPECIALTIES = [
   "Neuropsicología",
   "Pacientes Judicializados",
   "Psicología Clínica",
+  "Psicopedagogía Clínica",
   "Psiquiatría Clínica",
   "Psicología de la Salud",
   "Psicología Deportiva",
@@ -52,11 +53,14 @@ export const SPECIALTIES = [
 export const THERAPY_TYPES = [
   "Adicciones",
   "Ataques de Pánico",
+  "Atención Temprana e Infantil",
   "Deportología",
   "EMDR",
   "Logoterapia",
   "Mindfulness",
   "Neuropsicología",
+  "Educación Especial e Inclusión",
+  "Orientación Vocacional y Ocupacional",
   "Otras terapias",
   "Psicooncología",
   "Psicoanálisis",
@@ -87,6 +91,7 @@ export const THERAPY_TYPES = [
   "Trastorno de personalidad",
   "Trastorno obsesivo compulsivo",
   "Trastornos alimentarios",
+  "Trastornos Específicos del Aprendizaje (TEA)",
 ];
 
 // === Público Objetivo (checkboxes) ===
