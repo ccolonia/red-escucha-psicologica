@@ -686,6 +686,9 @@ export function ProfessionalWeeklyAgenda({
         ),
       ])
         .then(([scheduleData, overridesData]) => {
+          console.log(`[AGENDA LOAD] professionalId=${professionalId} weekStart=${weekStartStr}`);
+          console.log(`[AGENDA LOAD] Schedules recibidos:`, scheduleData);
+          console.log(`[AGENDA LOAD] Overrides recibidos:`, Array.isArray(overridesData) ? `${overridesData.length} overrides` : overridesData);
           setSchedules(Array.isArray(scheduleData) ? scheduleData : []);
           setOverrides(Array.isArray(overridesData) ? overridesData : []);
         })
@@ -1155,6 +1158,19 @@ export function ProfessionalWeeklyAgenda({
               const scheduleSlots = daySchedule
                 ? generateTimeSlotsForSchedule(daySchedule.startTime, daySchedule.endTime, slotDuration)
                 : [];
+
+              // === LOGS DE DIAGNÓSTICO ===
+              if (daySchedule) {
+                console.log(`[AGENDA DEBUG] ${dateStr} (dayIdx=${dayIdx}, dayOfWeek=${dayOfWeek})`, {
+                  schedule: { startTime: daySchedule.startTime, endTime: daySchedule.endTime, slotDuration: daySchedule.slotDuration },
+                  generatedSlots: scheduleSlots,
+                  has15_30: scheduleSlots.includes("15:30"),
+                  overridesForDay: overrides.filter(o => o.date === dateStr).length,
+                  blockOverridesForDay: overrides.filter(o => o.date === dateStr && o.type === "block"),
+                });
+              } else {
+                console.log(`[AGENDA DEBUG] ${dateStr} (dayOfWeek=${dayOfWeek}) — NO schedule found for this day. All schedules:`, schedules.map(s => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime })));
+              }
 
               // 2. Generar slots de overrides type="extra" (disponibilidad activada)
               const extraOverrides = overrides.filter((o) => {
