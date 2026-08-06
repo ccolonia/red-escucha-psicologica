@@ -318,6 +318,7 @@ export function ProfessionalScheduleConfig() {
           const overlap = a.startTime < b.endTime && a.endTime > b.startTime;
           if (overlap) {
             const dayName = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][a.dayOfWeek];
+            console.warn(`[SAVE DEBUG] BLOQUEADO por superposición: ${dayName} ${a.startTime}-${a.endTime} vs ${b.startTime}-${b.endTime}`);
             toast.error(
               `Superposición el ${dayName}: ${a.startTime}-${a.endTime} y ${b.startTime}-${b.endTime}. ` +
               `Eliminá o ajustá una de las franjas antes de guardar.`
@@ -328,19 +329,30 @@ export function ProfessionalScheduleConfig() {
       }
     }
 
+    console.log(`[SAVE DEBUG] Validación OK. ${schedules.length} schedules listos para guardar.`);
+
     setSaving(true);
     try {
+      console.log(`[SAVE DEBUG] Iniciando PUT a /api/professionals/${professionalId}/schedule`);
+      console.log(`[SAVE DEBUG] Payload:`, JSON.stringify({ schedules }));
+      console.log(`[SAVE DEBUG] Schedules a enviar:`, schedules.map(s => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime, slotDuration: s.slotDuration })));
+
       const res = await fetch(`/api/professionals/${professionalId}/schedule`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ schedules }),
       });
+
+      console.log(`[SAVE DEBUG] Respuesta: status=${res.status} ok=${res.ok}`);
+
       if (res.ok) {
         const data = await res.json();
+        console.log(`[SAVE DEBUG] Datos recibidos:`, data);
         setSchedules(data);
         toast.success("Agenda semanal guardada exitosamente");
       } else {
         const error = await res.json();
+        console.error(`[SAVE DEBUG] Error del backend:`, error);
         toast.error(error.error || "Error al guardar agenda");
       }
     } catch {
