@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
           professionalName: appointment.professional.user.name,
           date: appointment.date,
           time: appointment.time,
+          timeEnd: null,
           modality: appointment.modality || "P",
         });
       } catch (err) {
@@ -91,9 +92,11 @@ export async function POST(request: NextRequest) {
           professionalEmail: appointment.professional.user.email,
           professionalName: appointment.professional.user.name,
           patientName: appointment.patient.user.name,
-          patientPhone: appointment.patient.user.phone || undefined,
+          patientPhone: appointment.patient.user.phone || null,
           date: appointment.date,
           time: appointment.time,
+          timeEnd: null,
+          reason: appointment.reason || "",
           modality: appointment.modality || "P",
         });
       } catch (err) {

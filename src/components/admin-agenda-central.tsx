@@ -129,6 +129,10 @@ interface BookedSlot {
   patientName: string;
   patientEmail: string | null;
   patientPhone: string | null;
+  patientEmailStatus?: string | null;
+  patientEmailSentAt?: string | null;
+  professionalEmailStatus?: string | null;
+  professionalEmailSentAt?: string | null;
 }
 
 // === Status labels para mostrar en el card del BookedSlot ===
@@ -1954,12 +1958,20 @@ interface FichaDialogProps {
 function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancelling, onReschedule, rescheduling }: FichaDialogProps) {
   const [rescheduleMode, setRescheduleMode] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
+  const [resending, setResending] = useState(false);
+  const [emailStatusOverride, setEmailStatusOverride] = useState<{
+    patient?: string;
+    professional?: string;
+    patientSentAt?: string;
+    professionalSentAt?: string;
+  }>({});
 
-  // Limpiar el modo reprogramar cuando se cierra el dialog
+  // Limpiar estados cuando se cierra el dialog
   useEffect(() => {
     if (!open) {
       setRescheduleMode(false);
       setRescheduleReason("");
+      setEmailStatusOverride({});
     }
   }, [open]);
 
@@ -1967,6 +1979,41 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
   const modalityLabel = slot.modality ? MODALITY_LABELS[slot.modality] || slot.modality : "—";
   const isRescheduled = slot.status === "rescheduled";
   const statusLabel = slot.status === "confirmed" ? "Confirmado" : slot.status === "pending" ? "Pendiente" : slot.status === "rescheduled" ? "Reprogramado" : slot.status;
+
+  // === Estados de email (con override para actualización en tiempo real) ===
+  const patientEmailStatus = emailStatusOverride.patient || slot.patientEmailStatus || "PENDING";
+  const professionalEmailStatus = emailStatusOverride.professional || slot.professionalEmailStatus || "PENDING";
+  const patientEmailSentAt = emailStatusOverride.patientSentAt || slot.patientEmailSentAt;
+  const professionalEmailSentAt = emailStatusOverride.professionalSentAt || slot.professionalEmailSentAt;
+
+  const handleResendEmail = async () => {
+    setResending(true);
+    try {
+      const res = await fetch(`/api/appointments/${slot.id}/resend-confirmation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient: "both" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Error al reenviar emails");
+        return;
+      }
+      // Actualizar badges en tiempo real
+      const now = new Date().toISOString();
+      setEmailStatusOverride({
+        patient: data.results?.patient || "SENT",
+        professional: data.results?.professional || "SENT",
+        patientSentAt: now,
+        professionalSentAt: now,
+      });
+      toast.success(data.message || "¡Mails de confirmación enviados exitosamente!");
+    } catch {
+      toast.error("Error de conexión al reenviar emails");
+    } finally {
+      setResending(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -2025,6 +2072,49 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
             </div>
           )}
 
+          {/* === Estado de Notificaciones por Email === */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide flex items-center gap-1.5">
+              <Mail className="w-3.5 h-3.5" /> Estado de Notificaciones
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {/* Email Paciente */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-slate-400">📧 Paciente</span>
+                {patientEmailStatus === "SENT" ? (
+                  <Badge variant="outline" className="text-[10px] bg-emerald-50 border-emerald-200 text-emerald-700 w-fit">
+                    ✅ Enviado{patientEmailSentAt ? ` (${new Date(patientEmailSentAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })})` : ""}
+                  </Badge>
+                ) : patientEmailStatus === "FAILED" ? (
+                  <Badge variant="outline" className="text-[10px] bg-red-50 border-red-200 text-red-600 w-fit">
+                    ❌ Falló
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] bg-slate-100 border-slate-200 text-slate-500 w-fit">
+                    ⏳ No enviado
+                  </Badge>
+                )}
+              </div>
+              {/* Email Profesional */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-slate-400">📧 Profesional</span>
+                {professionalEmailStatus === "SENT" ? (
+                  <Badge variant="outline" className="text-[10px] bg-emerald-50 border-emerald-200 text-emerald-700 w-fit">
+                    ✅ Enviado{professionalEmailSentAt ? ` (${new Date(professionalEmailSentAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })})` : ""}
+                  </Badge>
+                ) : professionalEmailStatus === "FAILED" ? (
+                  <Badge variant="outline" className="text-[10px] bg-red-50 border-red-200 text-red-600 w-fit">
+                    ❌ Falló
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] bg-slate-100 border-slate-200 text-slate-500 w-fit">
+                    ⏳ No enviado
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* === Modo Reprogramar: textarea para el motivo === */}
           {rescheduleMode && (
             <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 space-y-2">
@@ -2072,6 +2162,18 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
           {/* === Botones de acción (solo si NO estamos en modo reprogramar) === */}
           {!rescheduleMode && (
             <>
+              {/* === Botón Reenviar Email === */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResendEmail}
+                disabled={resending}
+                className="text-xs border-blue-300 text-blue-600 hover:bg-blue-50"
+              >
+                {resending ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Mail className="w-3 h-3 mr-1" />}
+                {resending ? "Enviando..." : "📧 Reenviar Email"}
+              </Button>
+
               {/* === Botón Reprogramar ===
                   Solo aparece para turnos confirmed/pending que NO sean pasados.
                   Misma lógica que Cancelar Turno, pero con motivo obligatorio. */}

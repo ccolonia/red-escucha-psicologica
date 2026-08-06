@@ -437,6 +437,10 @@ export async function GET(request: NextRequest) {
             modality: true,
             status: true,
             notes: true,
+            patientEmailStatus: true,
+            patientEmailSentAt: true,
+            professionalEmailStatus: true,
+            professionalEmailSentAt: true,
             patient: { select: { user: { select: { name: true, email: true, phone: true } } } },
           },
         },
@@ -525,6 +529,10 @@ export async function GET(request: NextRequest) {
             patientName: a.patient?.user?.name || "Paciente",
             patientEmail: a.patient?.user?.email || null,
             patientPhone: a.patient?.user?.phone || null,
+            patientEmailStatus: a.patientEmailStatus || null,
+            patientEmailSentAt: a.patientEmailSentAt || null,
+            professionalEmailStatus: a.professionalEmailStatus || null,
+            professionalEmailSentAt: a.professionalEmailSentAt || null,
           };
         });
 
