@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendTriagePatientNotification, sendTriageProfessionalNotification } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,12 +54,64 @@ export async function POST(request: NextRequest) {
         modality: modality || "P",
         reason: reason || null,
         status: appointmentStatus,
+        patientEmailStatus: "PENDING",
+        professionalEmailStatus: "PENDING",
       },
       include: {
-        patient: { include: { user: { select: { name: true } } } },
-        professional: { include: { user: { select: { name: true } } } },
+        patient: { include: { user: { select: { name: true, email: true, phone: true } } } },
+        professional: { include: { user: { select: { name: true, email: true, phone: true } } } },
       },
     });
+
+    // === Envío automático de emails de confirmación ===
+    // Fire-and-forget: no bloquea la respuesta al usuario.
+    // Guarda el resultado (SENT/FAILED) en la DB para trazabilidad.
+    (async () => {
+      let patientEmailStatus = "SENT";
+      let professionalEmailStatus = "SENT";
+
+      // Mail al paciente
+      try {
+        await sendTriagePatientNotification({
+          patientEmail: appointment.patient.user.email,
+          patientName: appointment.patient.user.name,
+          professionalName: appointment.professional.user.name,
+          date: appointment.date,
+          time: appointment.time,
+          modality: appointment.modality || "P",
+        });
+      } catch (err) {
+        console.error("Appointment creation - patient email error:", err);
+        patientEmailStatus = "FAILED";
+      }
+
+      // Mail al profesional
+      try {
+        await sendTriageProfessionalNotification({
+          professionalEmail: appointment.professional.user.email,
+          professionalName: appointment.professional.user.name,
+          patientName: appointment.patient.user.name,
+          patientPhone: appointment.patient.user.phone || undefined,
+          date: appointment.date,
+          time: appointment.time,
+          modality: appointment.modality || "P",
+        });
+      } catch (err) {
+        console.error("Appointment creation - professional email error:", err);
+        professionalEmailStatus = "FAILED";
+      }
+
+      // Actualizar estados en la DB
+      await db.appointment.update({
+        where: { id: appointment.id },
+        data: {
+          patientEmailStatus,
+          patientEmailSentAt: new Date(),
+          professionalEmailStatus,
+          professionalEmailSentAt: new Date(),
+        },
+      });
+    })();
 
     return NextResponse.json(appointment, { status: 201 });
   } catch (error) {

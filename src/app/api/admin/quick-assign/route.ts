@@ -300,10 +300,12 @@ export async function POST(request: NextRequest) {
           status: "confirmed",
           reason: null,
           notes: trimmedNotes,
+          patientEmailStatus: "PENDING",
+          professionalEmailStatus: "PENDING",
         },
         include: {
           patient: { include: { user: { select: { name: true, email: true, phone: true } } } },
-          professional: { include: { user: { select: { name: true } } } },
+          professional: { include: { user: { select: { name: true, email: true, phone: true } } } },
         },
       });
 
@@ -459,6 +461,21 @@ export async function POST(request: NextRequest) {
       }
     } catch (emailErr) {
       console.error("Quick-assign notification outer exception:", emailErr);
+    }
+
+    // === Actualizar estados de email en la DB ===
+    try {
+      await db.appointment.update({
+        where: { id: result.appointment.id },
+        data: {
+          patientEmailStatus: emailSent.patient ? "SENT" : "FAILED",
+          patientEmailSentAt: new Date(),
+          professionalEmailStatus: emailSent.professional ? "SENT" : "FAILED",
+          professionalEmailSentAt: new Date(),
+        },
+      });
+    } catch (updateErr) {
+      console.error("Failed to update email status:", updateErr);
     }
 
     return NextResponse.json({

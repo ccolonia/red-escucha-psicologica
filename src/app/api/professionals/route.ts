@@ -302,6 +302,7 @@ export async function PATCH(request: NextRequest) {
       internalNotes,
       evaluationStatus,
       // === Campos profesionales editables desde el Hub de Control Profesional ===
+      title,
       profession,
       cuil,
       therapyTypes,
@@ -374,7 +375,7 @@ export async function PATCH(request: NextRequest) {
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: { available?: boolean; license?: string; licenseVerified?: boolean; specialty?: string; bio?: string | null; internalNotes?: string | null; evaluationStatus?: string | null; dniVerified?: boolean; degreeVerified?: boolean; malpracticeInsuranceVerified?: boolean; taxRegistrationVerified?: boolean; nationalRegistryVerified?: boolean; profession?: string; cuil?: string | null; therapyTypes?: string; targetAudience?: string; therapyModality?: string; zones?: string; otherTherapyDetails?: string | null; cvData?: string | null; cvFileName?: string | null; cvMimeType?: string | null; onlineAttention?: boolean; presentialAttention?: boolean; homeAttention?: boolean; commissionRate?: number | null } = {};
+    const data: { available?: boolean; license?: string; licenseVerified?: boolean; specialty?: string; bio?: string | null; internalNotes?: string | null; evaluationStatus?: string | null; dniVerified?: boolean; degreeVerified?: boolean; malpracticeInsuranceVerified?: boolean; taxRegistrationVerified?: boolean; nationalRegistryVerified?: boolean; title?: string | null; profession?: string; cuil?: string | null; therapyTypes?: string; targetAudience?: string; therapyModality?: string; zones?: string; otherTherapyDetails?: string | null; cvData?: string | null; cvFileName?: string | null; cvMimeType?: string | null; onlineAttention?: boolean; presentialAttention?: boolean; homeAttention?: boolean; commissionRate?: number | null } = {};
 
     // === Helper: sanea arrays de strings ===
     // - Filtra nulls/undefined/no-strings
@@ -433,6 +434,9 @@ export async function PATCH(request: NextRequest) {
     // El profesional puede editar sus datos profesionales desde su perfil.
     // Los arrays se sanean (dedup case-insensitive + trim) antes de
     // serializarlos a JSON string (igual que en el registro).
+    if (title !== undefined) {
+      data.title = title || null;
+    }
     if (profession !== undefined) {
       data.profession = profession;
     }

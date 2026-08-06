@@ -50,7 +50,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
-import { SPECIALTIES, THERAPY_TYPES, TARGET_AUDIENCES, THERAPY_MODALITIES } from "@/lib/professional-categories";
+import { SPECIALTIES, THERAPY_TYPES, TARGET_AUDIENCES, THERAPY_MODALITIES, TITLES } from "@/lib/professional-categories";
 import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
 
 interface Appointment {
@@ -1410,6 +1410,7 @@ export function ProfessionalProfile() {
   const [savingEdit, setSavingEdit] = useState(false);
 
   // === Hub de Control Profesional: datos profesionales editables ===
+  const [title, setTitle] = useState("Ninguno");
   const [profession, setProfession] = useState("");
   const [license, setLicense] = useState("");
   const [cuil, setCuil] = useState("");
@@ -1507,6 +1508,7 @@ export function ProfessionalProfile() {
             setSpecialty(prof.specialty || "");
             setBio(prof.bio || "");
             // === Hub de Control Profesional ===
+            setTitle(prof.title || "Ninguno");
             setProfession(prof.profession || "");
             setLicense(prof.license || "");
             setCuil(prof.cuil || "");
@@ -1712,6 +1714,7 @@ export function ProfessionalProfile() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: professionalId,
+          title,
           profession,
           license,
           specialty,
@@ -2002,6 +2005,19 @@ export function ProfessionalProfile() {
           </CardHeader>
           <CardContent className="space-y-3 pt-4">
             <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-teal-700 font-medium">Título / Prefijo</Label>
+                <Select value={title} onValueChange={setTitle}>
+                  <SelectTrigger className="border-teal-200 h-9 text-sm">
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TITLES.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-teal-700 font-medium">Profesión</Label>
                 <Select value={profession} onValueChange={setProfession}>

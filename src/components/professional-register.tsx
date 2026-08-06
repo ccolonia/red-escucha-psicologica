@@ -52,7 +52,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
-import { THERAPY_TYPES, SPECIALTIES, TARGET_AUDIENCES, THERAPY_MODALITIES } from "@/lib/professional-categories";
+import { THERAPY_TYPES, SPECIALTIES, TARGET_AUDIENCES, THERAPY_MODALITIES, TITLES } from "@/lib/professional-categories";
 
 // === Listas centralizadas en @/lib/professional-categories ===
 // NO duplicar estas listas localmente. Importar siempre de la fuente única.
@@ -114,8 +114,6 @@ const ZONES_HIERARCHY: { region: string; areas: string[] }[] = [
     areas: ["Rosario", "Santa Fe"],
   },
 ];
-
-const TITLES = ["Lic.", "Dr.", "Dra.", "Ninguno"];
 
 export function ProfessionalRegister() {
   const { setCurrentView } = useAppStore();

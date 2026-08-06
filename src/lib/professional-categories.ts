@@ -120,3 +120,16 @@ export const PROFESSIONS = [
   "Psicólogo/a",
   "Psiquiatra",
 ];
+
+// === Títulos / Prefijos Académicos (para el campo title) ===
+export const TITLES = [
+  "Lic.",
+  "Dr.",
+  "Dra.",
+  "Psic.",
+  "Dr. en Psicología",
+  "Dra. en Psicología",
+  "Médico Psiquiatra",
+  "Médica Psiquiatra",
+  "Ninguno",
+];

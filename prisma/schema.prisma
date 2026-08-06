@@ -174,6 +174,14 @@ model Appointment {
   // (ej: "Motivos personales", "Reprogramación", "Incapacidad de asistencia").
   cancellationSource  String?
   cancellationReason  String?
+  // === Trazabilidad de envíos de email (notificaciones de turno) ===
+  // Registra el estado del envío de confirmación para paciente y profesional.
+  // Permite al admin ver si los mails salieron y reenviarlos si fallaron.
+  // Valores: "SENT" | "FAILED" | "PENDING" | null (null = no se intentó enviar)
+  patientEmailStatus       String?  @default("PENDING")
+  patientEmailSentAt       DateTime?
+  professionalEmailStatus  String?  @default("PENDING")
+  professionalEmailSentAt  DateTime?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
   patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
