@@ -1377,7 +1377,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
             const dayData = professional.weeklySlots[day.dayOfWeek];
             const dateStr = dayData?.date || "";
             const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
-            const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+            const isToday = dateStr === new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
             return (
               <div
                 key={day.dayOfWeek}
@@ -1419,7 +1419,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                 {WEEK_DAYS.map((day) => {
                   const dayData = professional.weeklySlots[day.dayOfWeek];
                   const dateStr = dayData?.date || "";
-                  const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+                  const isToday = dateStr === new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
                   return (
                     <div
                       key={`bg-${day.dayOfWeek}-${time}`}
@@ -1438,7 +1438,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
             {WEEK_DAYS.map((day) => {
               const dayData = professional.weeklySlots[day.dayOfWeek];
               const dateStr = dayData?.date || "";
-              const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+              const isToday = dateStr === new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
               const colIndex = day.dayOfWeek + 1;
               const daySchedule = rawSchedules.find((s: { dayOfWeek: number }) => s.dayOfWeek === day.dayOfWeek);
               const slotDuration = daySchedule?.slotDuration || 45;

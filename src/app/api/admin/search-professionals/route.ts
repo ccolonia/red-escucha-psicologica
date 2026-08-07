@@ -262,16 +262,6 @@ function computeBlockedSlots(
   return blockedSlots.sort((a, b) => a.time.localeCompare(b.time));
 }
 
-// === Helper: calcular el lunes de una semana (weekStartsOn: 1) ===
-function getMondayOfWeek(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  const dayOfWeekJs = date.getDay(); // 0=Dom, 1=Lun, ..., 6=Sab
-  const monday = new Date(date);
-  monday.setDate(date.getDate() - (dayOfWeekJs === 0 ? 6 : dayOfWeekJs - 1));
-  console.log(`[getMondayOfWeek] dateStr=${dateStr} → date.getDay()=${dayOfWeekJs} → monday=${monday.toISOString().split("T")[0]}`);
-  return monday;
-}
 
 // === Helper: generar 7 fechas ISO a partir del lunes ===
 // CRÍTICO: todas las fechas se generan en timezone Argentina (UTC-3)
@@ -279,19 +269,13 @@ function getMondayOfWeek(dateStr: string): Date {
 // el servidor Vercel está en UTC. Si no forzamos ARG_TZ, una fecha
 // como 2026-07-01 podría generarse como 2026-06-30 a ciertas horas,
 // causando que los overrides de bloqueo se apliquen al día equivocado.
-function generateWeekDates(monday: Date): { date: string; dayOfWeek: number }[] {
+function generateWeekDatesFromISO(mondayStr: string): { date: string; dayOfWeek: number }[] {
   const dates: { date: string; dayOfWeek: number }[] = [];
+  const [y, m, d] = mondayStr.split("-").map(Number);
   for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    // Usar formato YYYY-MM-DD con timezone Argentina forzada
-    const isoDate = d.toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
-    // === FIX: usar convención 1=Lunes, 2=Martes, ..., 6=Sábado, 0=Domingo ===
-    // ANTES: getDay() devuelve 0=Dom, 1=Lun, ..., 6=Sáb
-    // Pero ProfessionalSchedule en DB usa 1=Lun, 2=Mar, ..., 6=Sáb
-    // Como partimos de Monday (i=0=Lunes), podemos usar directamente i+1
-    // para Lunes-Sábado (1-6) y 0 para Domingo.
-    const dayOfWeek = i === 6 ? 0 : i + 1; // Lunes=1, ..., Sábado=6, Domingo=0
+    const date = new Date(Date.UTC(y, m - 1, d + i, 12, 0, 0));
+    const isoDate = date.toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+    const dayOfWeek = i === 6 ? 0 : i + 1;
     dates.push({ date: isoDate, dayOfWeek });
   }
   return dates;
@@ -328,8 +312,8 @@ export async function GET(request: NextRequest) {
     // === Calcular rango de la semana (Lun-Dom) ===
     const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
     const referenceDate = weekStartParam || todayStr;
-    const monday = getMondayOfWeek(referenceDate);
-    const weekDates = generateWeekDates(monday); // [{date, dayOfWeek} x7]
+    const mondayStr = getMondayOfWeekISO(referenceDate);
+    const weekDates = generateWeekDatesFromISO(mondayStr); // [{date, dayOfWeek} x7]
     const weekDateStrings = weekDates.map((w) => w.date);
 
     // === Construir where clause para professionals ===
