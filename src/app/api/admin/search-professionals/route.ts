@@ -263,6 +263,25 @@ function computeBlockedSlots(
 }
 
 
+// === Helper: calcular el lunes de una semana (weekStartsOn: 1) ===
+// FIX CRÍTICO: NO usar new Date() ni getDay() porque en Vercel (UTC)
+// una fecha como 2026-08-03T00:00:00Z corresponde al 2026-08-02 en
+// Argentina (UTC-3), causando un desfase de 1 día.
+function getMondayOfWeekISO(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  // Usar mediodía UTC para evitar cambios de día por timezone
+  const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  const argDateStr = date.toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+  const [ay, am, ad] = argDateStr.split("-").map(Number);
+  const argDate = new Date(Date.UTC(ay, am - 1, ad, 12, 0, 0));
+  const dayOfWeekJs = argDate.getUTCDay();
+  const offset = dayOfWeekJs === 0 ? -6 : -(dayOfWeekJs - 1);
+  const monday = new Date(Date.UTC(ay, am - 1, ad + offset, 12, 0, 0));
+  const mondayStr = monday.toLocaleDateString("sv-SE", { timeZone: ARG_TZ });
+  console.log(`[getMondayOfWeekISO] dateStr=${dateStr} → argDate=${argDateStr} → dayOfWeek=${dayOfWeekJs} → monday=${mondayStr}`);
+  return mondayStr;
+}
+
 // === Helper: generar 7 fechas ISO a partir del lunes ===
 // CRÍTICO: todas las fechas se generan en timezone Argentina (UTC-3)
 // para evitar desfasajes en el cambio de mes (ej: junio→julio) cuando
