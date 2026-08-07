@@ -1146,7 +1146,10 @@ export function ProfessionalWeeklyAgenda({
                 coordenada absoluta en el CSS Grid.
                 Esto elimina el "efecto 14:15" donde 840 % 45 = 30 ≠ 0
                 descartaba las 14:00 como inicio de slot. */}
-            {weekDays.map((day, dayIdx) => {
+            {/* APLANAR el array de arrays: weekDays.map devuelve un array por día,
+                pero CSS Grid necesita elementos planos. Usamos flat() para evitar
+                que React no renderice correctamente los elementos anidados. */}
+            {weekDays.flatMap((day, dayIdx) => {
               const dateStr = format(day, "yyyy-MM-dd");
               const dayOfWeek = dayIdx + 1;
               const isCurrentDay = isToday(day);
@@ -1237,6 +1240,11 @@ export function ProfessionalWeeklyAgenda({
               return slotItems.map((slot) => {
                 const { rowStart, span } = getSlotGridPosition(slot.time, slot.duration, gridStartMinutes);
                 const slotIsPast = isSlotInPast(dateStr, slot.time);
+
+                // === LOG DE RENDERIZADO ===
+                if (slot.time === "15:30") {
+                  console.log(`[RENDER DEBUG] Slot 15:30 → gridRow: ${rowStart} / span ${span}, gridColumn: ${colIndex}, type: ${slot.type}, gridStartMinutes: ${gridStartMinutes}, totalRows: ${timeSlots.length}`);
+                }
                 const slotEnd = (() => {
                   const [h, m] = slot.time.split(":").map(Number);
                   const t = h * 60 + m + slot.duration;
