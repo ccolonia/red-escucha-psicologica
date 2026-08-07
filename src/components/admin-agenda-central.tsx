@@ -1167,13 +1167,30 @@ export function AdminAgendaCentral() {
       <Dialog open={scheduleConfigDialog.open} onOpenChange={(open) => setScheduleConfigDialog(prev => ({ ...prev, open }))}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-teal-900 flex items-center gap-2">
-              <Settings2 className="w-5 h-5 text-teal-600" />
-              Configurar Agenda — {scheduleConfigDialog.professionalName}
-            </DialogTitle>
-            <DialogDescription>
-              Estás editando la agenda semanal de otro profesional. Los cambios se guardarán directamente en su cuenta.
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-teal-900 flex items-center gap-2">
+                  <Settings2 className="w-5 h-5 text-teal-600" />
+                  Configurar Agenda — {scheduleConfigDialog.professionalName}
+                </DialogTitle>
+                <DialogDescription>
+                  Estás editando la agenda semanal de otro profesional. Los cambios se guardarán directamente en su cuenta.
+                </DialogDescription>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 shrink-0"
+                onClick={() => {
+                  // Cerrar modal y refrescar grilla para ver los slots
+                  setScheduleConfigDialog(prev => ({ ...prev, open: false }));
+                  handleSearch();
+                  toast.info(`Mostrando agenda visual de ${scheduleConfigDialog.professionalName}`);
+                }}
+              >
+                👁️ Ver Agenda Visual
+              </Button>
+            </div>
           </DialogHeader>
           {scheduleConfigDialog.professionalId && (
             <div className="min-h-[400px]">
@@ -1188,6 +1205,13 @@ export function AdminAgendaCentral() {
             </div>
           )}
           <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setScheduleConfigDialog(prev => ({ ...prev, open: false }))}
+              className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            >
+              👁️ Ver Agenda Visual
+            </Button>
             <Button variant="outline" onClick={() => setScheduleConfigDialog(prev => ({ ...prev, open: false }))} className="border-teal-200 text-teal-600">
               Cerrar
             </Button>

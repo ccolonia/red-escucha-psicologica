@@ -686,7 +686,7 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                     </Select>
                   </div>
                 )}
-                {/* === Helper visual: cuántos slots se van a generar === */}
+                {/* === Helper visual: cuántos slots se van a generar (inline sutil) === */}
                 {(() => {
                   const [sh, sm] = newStart.split(":").map(Number);
                   const [eh, em] = newEnd.split(":").map(Number);
@@ -694,23 +694,11 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                   const slotsCount = Math.floor(blockMin / newDuration);
                   const isBlockTooShort = blockMin < newDuration;
                   return (
-                    <div className={`text-xs rounded-md px-3 py-2 ${
-                      isBlockTooShort
-                        ? "bg-red-50 border border-red-200 text-red-700"
-                        : "bg-teal-50 border border-teal-200 text-teal-700"
-                    }`}>
-                      {isBlockTooShort ? (
-                        <>
-                          ⚠️ <strong>El bloque dura {blockMin} min</strong> pero el turno es de {newDuration} min.
-                          <br />
-                          Ningún turno va a caber. Ampliá el bloque o reducí la duración.
-                        </>
-                      ) : (
-                        <>
-                          ✓ Bloque de <strong>{blockMin} min</strong> → se generarán <strong>{slotsCount} slot{slotsCount !== 1 ? "s" : ""}</strong> de {newDuration} min cada uno.
-                        </>
-                      )}
-                    </div>
+                    <p className={`text-[11px] ${isBlockTooShort ? "text-red-600 font-medium" : "text-teal-500"}`}>
+                      {isBlockTooShort
+                        ? `⚠️ El bloque dura ${blockMin} min pero el turno es de ${newDuration} min. Ningún turno va a caber.`
+                        : `💡 Generará ${slotsCount} slot${slotsCount !== 1 ? "s" : ""} de ${newDuration} min cada uno.`}
+                    </p>
                   );
                 })()}
               </div>
