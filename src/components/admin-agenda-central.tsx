@@ -48,6 +48,8 @@ import {
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { ProfessionalScheduleConfig } from "@/components/professional-schedule-config";
+import { Settings2, X } from "lucide-react";
 
 // ====================================================================
 // CONSTANTES
@@ -351,6 +353,13 @@ export function AdminAgendaCentral() {
     source: "patient" | "professional" | "";
     reason: string;
   }>({ open: false, slot: null, source: "", reason: "" });
+
+  // === Modal de Config. Agenda (modo admin) ===
+  const [scheduleConfigDialog, setScheduleConfigDialog] = useState<{
+    open: boolean;
+    professionalId: string | null;
+    professionalName: string;
+  }>({ open: false, professionalId: null, professionalName: "" });
 
   // === Calcular weekStart (lunes de la semana seleccionada) ===
   const monday = useMemo(() => getMondayOfWeek(weekOffset), [weekOffset]);
@@ -965,9 +974,22 @@ export function AdminAgendaCentral() {
                     </CardTitle>
                     <p className="text-xs text-teal-500">{activeProfessional.specialty} · {weekLabel}</p>
                   </div>
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 items-center">
                     <Badge variant="outline" className="text-[10px] bg-emerald-50 border-emerald-200 text-emerald-700">{activeProfessional.totalFreeSlots} libres</Badge>
                     <Badge variant="outline" className="text-[10px] bg-slate-50 border-slate-200 text-slate-600">{activeProfessional.totalBookedSlots} ocupados</Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[11px] border-teal-200 text-teal-600 hover:bg-teal-50"
+                      onClick={() => setScheduleConfigDialog({
+                        open: true,
+                        professionalId: activeProfessional.id,
+                        professionalName: activeProfessional.name,
+                      })}
+                      title="Configurar agenda de este profesional"
+                    >
+                      <Settings2 className="w-3.5 h-3.5 mr-1" /> Config. Agenda
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -1136,6 +1158,38 @@ export function AdminAgendaCentral() {
               ) : (
                 <><XCircle className="w-4 h-4 mr-2" /> Confirmar Cancelación</>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* === Modal Config. Agenda (modo admin) === */}
+      <Dialog open={scheduleConfigDialog.open} onOpenChange={(open) => setScheduleConfigDialog(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-teal-900 flex items-center gap-2">
+              <Settings2 className="w-5 h-5 text-teal-600" />
+              Configurar Agenda — {scheduleConfigDialog.professionalName}
+            </DialogTitle>
+            <DialogDescription>
+              Estás editando la agenda semanal de otro profesional. Los cambios se guardarán directamente en su cuenta.
+            </DialogDescription>
+          </DialogHeader>
+          {scheduleConfigDialog.professionalId && (
+            <div className="min-h-[400px]">
+              <ProfessionalScheduleConfig
+                key={scheduleConfigDialog.professionalId}
+                propProfessionalId={scheduleConfigDialog.professionalId}
+                onSaved={() => {
+                  toast.success(`Agenda de ${scheduleConfigDialog.professionalName} actualizada con éxito`);
+                  handleSearch(); // Refrescar la grilla visual
+                }}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleConfigDialog(prev => ({ ...prev, open: false }))} className="border-teal-200 text-teal-600">
+              Cerrar
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -117,9 +117,9 @@ const TIME_OPTIONS = (() => {
   return options;
 })();
 
-export function ProfessionalScheduleConfig() {
+export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { propProfessionalId?: string; onSaved?: () => void }) {
   const { data: session } = useSession();
-  const [professionalId, setProfessionalId] = useState<string>("");
+  const [professionalId, setProfessionalId] = useState<string>(propProfessionalId || "");
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
   const [overrides, setOverrides] = useState<OverrideEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,6 +159,12 @@ export function ProfessionalScheduleConfig() {
 
   // Load professional ID and data
   useEffect(() => {
+    // Si viene propProfessionalId (modo admin), cargar directamente
+    if (propProfessionalId) {
+      setProfessionalId(propProfessionalId);
+      loadData(propProfessionalId);
+      return;
+    }
     if (session?.user) {
       const userId = (session.user as { id: string }).id;
       fetch("/api/professionals?all=true&includeUnverified=true")
@@ -350,6 +356,7 @@ export function ProfessionalScheduleConfig() {
         console.log(`[SAVE DEBUG] Datos recibidos:`, data);
         setSchedules(data);
         toast.success("Agenda semanal guardada exitosamente");
+        if (onSaved) onSaved();
       } else {
         const error = await res.json();
         console.error(`[SAVE DEBUG] Error del backend:`, error);
