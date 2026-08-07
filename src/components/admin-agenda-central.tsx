@@ -49,7 +49,8 @@ import { toast } from "sonner";
 import { format, startOfWeek, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { ProfessionalScheduleConfig } from "@/components/professional-schedule-config";
-import { Settings2, X } from "lucide-react";
+import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
+import { Settings2, X, Eye, Wrench } from "lucide-react";
 
 // ====================================================================
 // CONSTANTES
@@ -359,7 +360,8 @@ export function AdminAgendaCentral() {
     open: boolean;
     professionalId: string | null;
     professionalName: string;
-  }>({ open: false, professionalId: null, professionalName: "" });
+    tab: "config" | "agenda";
+  }>({ open: false, professionalId: null, professionalName: "", tab: "config" });
 
   // === Calcular weekStart (lunes de la semana seleccionada) ===
   const monday = useMemo(() => getMondayOfWeek(weekOffset), [weekOffset]);
@@ -985,6 +987,7 @@ export function AdminAgendaCentral() {
                         open: true,
                         professionalId: activeProfessional.id,
                         professionalName: activeProfessional.name,
+                        tab: "config",
                       })}
                       title="Configurar agenda de este profesional"
                     >
@@ -1163,55 +1166,65 @@ export function AdminAgendaCentral() {
         </DialogContent>
       </Dialog>
 
-      {/* === Modal Config. Agenda (modo admin) === */}
+      {/* === Modal Config. Agenda con Tabs (modo admin) === */}
       <Dialog open={scheduleConfigDialog.open} onOpenChange={(open) => setScheduleConfigDialog(prev => ({ ...prev, open }))}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-teal-900 flex items-center gap-2">
-                  <Settings2 className="w-5 h-5 text-teal-600" />
-                  Configurar Agenda — {scheduleConfigDialog.professionalName}
-                </DialogTitle>
-                <DialogDescription>
-                  Estás editando la agenda semanal de otro profesional. Los cambios se guardarán directamente en su cuenta.
-                </DialogDescription>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 shrink-0"
-                onClick={() => {
-                  // Cerrar modal y refrescar grilla para ver los slots
-                  setScheduleConfigDialog(prev => ({ ...prev, open: false }));
-                  handleSearch();
-                  toast.info(`Mostrando agenda visual de ${scheduleConfigDialog.professionalName}`);
-                }}
-              >
-                👁️ Ver Agenda Visual
-              </Button>
-            </div>
+            <DialogTitle className="text-teal-900 flex items-center gap-2">
+              <Settings2 className="w-5 h-5 text-teal-600" />
+              {scheduleConfigDialog.professionalName}
+            </DialogTitle>
+            <DialogDescription>
+              Gestión de agenda profesional — Administrador
+            </DialogDescription>
           </DialogHeader>
-          {scheduleConfigDialog.professionalId && (
+
+          {/* === Tabs === */}
+          <div className="flex gap-2 border-b border-teal-100 pb-2 mb-3">
+            <button
+              onClick={() => setScheduleConfigDialog(prev => ({ ...prev, tab: "config" }))}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors ${
+                scheduleConfigDialog.tab === "config"
+                  ? "bg-teal-600 text-white"
+                  : "bg-teal-50 text-teal-600 hover:bg-teal-100"
+              }`}
+            >
+              <Wrench className="w-3.5 h-3.5" /> Configuración
+            </button>
+            <button
+              onClick={() => setScheduleConfigDialog(prev => ({ ...prev, tab: "agenda" }))}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors ${
+                scheduleConfigDialog.tab === "agenda"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" /> Agenda Visual
+            </button>
+          </div>
+
+          {/* === Tab 1: Configuración === */}
+          {scheduleConfigDialog.tab === "config" && scheduleConfigDialog.professionalId && (
             <div className="min-h-[400px]">
               <ProfessionalScheduleConfig
                 key={scheduleConfigDialog.professionalId}
                 propProfessionalId={scheduleConfigDialog.professionalId}
                 onSaved={() => {
                   toast.success(`Agenda de ${scheduleConfigDialog.professionalName} actualizada con éxito`);
-                  handleSearch(); // Refrescar la grilla visual
+                  handleSearch();
                 }}
               />
             </div>
           )}
+
+          {/* === Tab 2: Agenda Visual === */}
+          {scheduleConfigDialog.tab === "agenda" && scheduleConfigDialog.professionalId && (
+            <div className="min-h-[500px]">
+              <ProfessionalWeeklyAgenda professionalId={scheduleConfigDialog.professionalId} />
+            </div>
+          )}
+
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setScheduleConfigDialog(prev => ({ ...prev, open: false }))}
-              className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-            >
-              👁️ Ver Agenda Visual
-            </Button>
             <Button variant="outline" onClick={() => setScheduleConfigDialog(prev => ({ ...prev, open: false }))} className="border-teal-200 text-teal-600">
               Cerrar
             </Button>
