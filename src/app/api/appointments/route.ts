@@ -170,7 +170,11 @@ export async function GET(request: NextRequest) {
         }
       }
     }
-    // Admin sees all
+    // Admin sees all — but can optionally filter by professionalId
+    const professionalIdFilter = searchParams.get("professionalId");
+    if (professionalIdFilter && (role === "admin" || role === "super_admin")) {
+      where.professionalId = professionalIdFilter;
+    }
 
     if (status) {
       where.status = status;

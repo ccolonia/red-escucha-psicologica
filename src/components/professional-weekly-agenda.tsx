@@ -696,10 +696,13 @@ export function ProfessionalWeeklyAgenda({
     }
   }, [professionalId, currentWeekStart]);
 
-  // Load appointments
+  // Load appointments — filtrar por professionalId cuando se pasa como prop (modo admin)
   useEffect(() => {
     if (!professionalId) return;
-    fetch("/api/appointments")
+    const url = propProfessionalId
+      ? `/api/appointments?professionalId=${professionalId}`
+      : "/api/appointments";
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         setAppointments(Array.isArray(data) ? data : []);
@@ -709,7 +712,7 @@ export function ProfessionalWeeklyAgenda({
         toast.error("Error al cargar turnos");
         setLoading(false);
       });
-  }, [professionalId, currentWeekStart]);
+  }, [professionalId, currentWeekStart, propProfessionalId]);
 
   // Week navigation
   const goToPrevWeek = () =>
