@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
+import { normalizeText, tokenizeSearch, matchesAllTokens } from "@/lib/search-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,6 +57,11 @@ export async function GET(request: NextRequest) {
               { specialty: { contains: search, mode: "insensitive" } },
               { profession: { contains: search, mode: "insensitive" } },
               { zones: { contains: search, mode: "insensitive" } },
+              { therapyTypes: { contains: search, mode: "insensitive" } },
+              { targetAudience: { contains: search, mode: "insensitive" } },
+              { therapyModality: { contains: search, mode: "insensitive" } },
+              { officeAddress: { contains: search, mode: "insensitive" } },
+              { otherTherapyDetails: { contains: search, mode: "insensitive" } },
             ],
           },
         ];
@@ -63,7 +69,7 @@ export async function GET(request: NextRequest) {
         delete where.licenseVerified;
       }
 
-      const professionals = await db.professional.findMany({
+      let professionals = await db.professional.findMany({
         where,
         select: {
           id: true,
@@ -120,6 +126,27 @@ export async function GET(request: NextRequest) {
         orderBy: { user: { name: "asc" } },
       });
 
+      // === Post-filtrado por normalización (insensible a tildes) ===
+      if (search) {
+        const tokens = tokenizeSearch(search);
+        professionals = professionals.filter((p) => {
+          const fields = [
+            p.user?.name,
+            p.user?.email,
+            p.license,
+            p.specialty,
+            p.profession,
+            p.zones,
+            p.therapyTypes,
+            p.targetAudience,
+            p.therapyModality,
+            p.otherTherapyDetails,
+            p.bio,
+          ];
+          return matchesAllTokens(tokens, fields);
+        });
+      }
+
       // Return flat array for backward compatibility with all consumers
       return NextResponse.json(professionals);
     }
@@ -145,7 +172,7 @@ export async function GET(request: NextRequest) {
       where.licenseVerified = false;
     }
 
-    // Fuzzy search across name, email, license, specialty, profession, zones
+    // Fuzzy search across name, email, license, specialty, profession, zones, therapyTypes, targetAudience, therapyModality, officeAddress
     if (search) {
       const searchConditions: Prisma.ProfessionalWhereInput[] = [
         { user: { name: { contains: search, mode: "insensitive" } } },
@@ -154,6 +181,11 @@ export async function GET(request: NextRequest) {
         { specialty: { contains: search, mode: "insensitive" } },
         { profession: { contains: search, mode: "insensitive" } },
         { zones: { contains: search, mode: "insensitive" } },
+        { therapyTypes: { contains: search, mode: "insensitive" } },
+        { targetAudience: { contains: search, mode: "insensitive" } },
+        { therapyModality: { contains: search, mode: "insensitive" } },
+        { officeAddress: { contains: search, mode: "insensitive" } },
+        { otherTherapyDetails: { contains: search, mode: "insensitive" } },
       ];
 
       if (status === "approved") {
@@ -183,7 +215,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Run count + data in parallel for efficiency
-    const [totalCount, professionals, approvedCount] = await Promise.all([
+    const [totalCount, allProfessionals, approvedCount] = await Promise.all([
       db.professional.count({ where }),
       db.professional.findMany({
         where,
@@ -262,12 +294,38 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    // === Post-filtrado por normalización (insensible a tildes) ===
+    // La DB usa contains+insensitive que maneja mayúsculas pero NO tildes.
+    // Filtramos con normalizeText para que "psicologia" encuentre "Psicología".
+    let professionals = allProfessionals;
+    if (search) {
+      const tokens = tokenizeSearch(search);
+      professionals = allProfessionals.filter((p) => {
+        const fields = [
+          p.user?.name,
+          p.user?.email,
+          p.license,
+          p.specialty,
+          p.profession,
+          p.zones,
+          p.therapyTypes,
+          p.targetAudience,
+          p.therapyModality,
+          p.otherTherapyDetails,
+          p.bio,
+        ];
+        return matchesAllTokens(tokens, fields);
+      });
+    }
+
+    const filteredCount = professionals.length;
+
     return NextResponse.json({
       professionals,
       pagination: {
         currentPage: page,
-        totalPages: Math.ceil(totalCount / limit),
-        totalCount,
+        totalPages: Math.ceil(filteredCount / limit),
+        totalCount: filteredCount,
         limit,
       },
       approvedCount,
