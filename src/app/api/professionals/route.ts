@@ -45,29 +45,10 @@ export async function GET(request: NextRequest) {
         where.available = true;
       }
 
-      // Search is also supported in all mode
-      if (search) {
-        where.AND = [
-          { user: { active: true }, licenseVerified: true },
-          {
-            OR: [
-              { user: { name: { contains: search, mode: "insensitive" } } },
-              { user: { email: { contains: search, mode: "insensitive" } } },
-              { license: { contains: search, mode: "insensitive" } },
-              { specialty: { contains: search, mode: "insensitive" } },
-              { profession: { contains: search, mode: "insensitive" } },
-              { zones: { contains: search, mode: "insensitive" } },
-              { therapyTypes: { contains: search, mode: "insensitive" } },
-              { targetAudience: { contains: search, mode: "insensitive" } },
-              { therapyModality: { contains: search, mode: "insensitive" } },
-              { officeAddress: { contains: search, mode: "insensitive" } },
-              { otherTherapyDetails: { contains: search, mode: "insensitive" } },
-            ],
-          },
-        ];
-        delete where.user;
-        delete where.licenseVerified;
-      }
+      // === BÚSQUEDA 100% EN JS (sin contains en SQL) ===
+      // NO aplicamos contains en la DB porque Postgres es sensible a tildes.
+      // Traemos todos los profesionales activos y filtramos en memoria con
+      // normalizeText que elimina tildes/diacríticos.
 
       let professionals = await db.professional.findMany({
         where,
@@ -99,6 +80,7 @@ export async function GET(request: NextRequest) {
           presentialAttention: true,
           homeAttention: true,
           zones: true,
+          officeAddress: true,
           cvFileName: true,
           cvMimeType: true,
           internalNotes: true,
@@ -126,20 +108,31 @@ export async function GET(request: NextRequest) {
         orderBy: { user: { name: "asc" } },
       });
 
-      // === Post-filtrado por normalización (insensible a tildes) ===
+      // === Filtrado 100% en JS con normalización (insensible a tildes) ===
       if (search) {
         const tokens = tokenizeSearch(search);
         professionals = professionals.filter((p) => {
+          // Desestructurar JSON strings (zones, therapyTypes, etc.)
+          let zonesStr = p.zones || "";
+          try { zonesStr = JSON.parse(zonesStr).join(" "); } catch { /* no es JSON */ }
+          let therapyTypesStr = p.therapyTypes || "";
+          try { therapyTypesStr = JSON.parse(therapyTypesStr).join(" "); } catch { /* no es JSON */ }
+          let targetAudienceStr = p.targetAudience || "";
+          try { targetAudienceStr = JSON.parse(targetAudienceStr).join(" "); } catch { /* no es JSON */ }
+          let therapyModalityStr = p.therapyModality || "";
+          try { therapyModalityStr = JSON.parse(therapyModalityStr).join(" "); } catch { /* no es JSON */ }
+
           const fields = [
             p.user?.name,
             p.user?.email,
             p.license,
             p.specialty,
             p.profession,
-            p.zones,
-            p.therapyTypes,
-            p.targetAudience,
-            p.therapyModality,
+            zonesStr,
+            therapyTypesStr,
+            targetAudienceStr,
+            therapyModalityStr,
+            p.officeAddress,
             p.otherTherapyDetails,
             p.bio,
           ];
@@ -172,47 +165,8 @@ export async function GET(request: NextRequest) {
       where.licenseVerified = false;
     }
 
-    // Fuzzy search across name, email, license, specialty, profession, zones, therapyTypes, targetAudience, therapyModality, officeAddress
-    if (search) {
-      const searchConditions: Prisma.ProfessionalWhereInput[] = [
-        { user: { name: { contains: search, mode: "insensitive" } } },
-        { user: { email: { contains: search, mode: "insensitive" } } },
-        { license: { contains: search, mode: "insensitive" } },
-        { specialty: { contains: search, mode: "insensitive" } },
-        { profession: { contains: search, mode: "insensitive" } },
-        { zones: { contains: search, mode: "insensitive" } },
-        { therapyTypes: { contains: search, mode: "insensitive" } },
-        { targetAudience: { contains: search, mode: "insensitive" } },
-        { therapyModality: { contains: search, mode: "insensitive" } },
-        { officeAddress: { contains: search, mode: "insensitive" } },
-        { otherTherapyDetails: { contains: search, mode: "insensitive" } },
-      ];
-
-      if (status === "approved") {
-        // Merge search with the approved status filter
-        where.AND = [
-          { user: { active: true }, licenseVerified: true },
-          { OR: searchConditions },
-        ];
-        // Remove the top-level user/licenseVerified since AND handles it
-        delete where.user;
-        delete where.licenseVerified;
-      } else if (status === "pending") {
-        where.AND = [
-          { user: { active: false } },
-          { OR: searchConditions },
-        ];
-        delete where.user;
-      } else if (status === "unverified") {
-        where.AND = [
-          { licenseVerified: false },
-          { OR: searchConditions },
-        ];
-        delete where.licenseVerified;
-      } else {
-        where.OR = searchConditions;
-      }
-    }
+    // === BÚSQUEDA 100% EN JS (sin contains en SQL) ===
+    // No aplicamos contains en la DB. El filtrado se hace post-query en JS.
 
     // Run count + data in parallel for efficiency
     const [totalCount, allProfessionals, approvedCount] = await Promise.all([
@@ -247,6 +201,7 @@ export async function GET(request: NextRequest) {
           presentialAttention: true,
           homeAttention: true,
           zones: true,
+          officeAddress: true,
           cvFileName: true,
           cvMimeType: true,
           internalNotes: true,
@@ -294,23 +249,31 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // === Post-filtrado por normalización (insensible a tildes) ===
-    // La DB usa contains+insensitive que maneja mayúsculas pero NO tildes.
-    // Filtramos con normalizeText para que "psicologia" encuentre "Psicología".
+    // === Filtrado 100% en JS con normalización ===
     let professionals = allProfessionals;
     if (search) {
       const tokens = tokenizeSearch(search);
       professionals = allProfessionals.filter((p) => {
+        let zonesStr = p.zones || "";
+        try { zonesStr = JSON.parse(zonesStr).join(" "); } catch { /* no es JSON */ }
+        let therapyTypesStr = p.therapyTypes || "";
+        try { therapyTypesStr = JSON.parse(therapyTypesStr).join(" "); } catch { /* no es JSON */ }
+        let targetAudienceStr = p.targetAudience || "";
+        try { targetAudienceStr = JSON.parse(targetAudienceStr).join(" "); } catch { /* no es JSON */ }
+        let therapyModalityStr = p.therapyModality || "";
+        try { therapyModalityStr = JSON.parse(therapyModalityStr).join(" "); } catch { /* no es JSON */ }
+
         const fields = [
           p.user?.name,
           p.user?.email,
           p.license,
           p.specialty,
           p.profession,
-          p.zones,
-          p.therapyTypes,
-          p.targetAudience,
-          p.therapyModality,
+          zonesStr,
+          therapyTypesStr,
+          targetAudienceStr,
+          therapyModalityStr,
+          p.officeAddress,
           p.otherTherapyDetails,
           p.bio,
         ];
