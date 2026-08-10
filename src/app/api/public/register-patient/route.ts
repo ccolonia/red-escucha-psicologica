@@ -131,16 +131,20 @@ export async function POST(req: NextRequest) {
       console.error("⚠️ Error enviando notificación (no bloqueante):", emailError);
     }
 
-    // === Alerta por WhatsApp al admin ===
-    sendAppointmentAlert({
-      patientName: name.trim(),
-      patientPhone: phone?.trim() || "",
-      patientEmail: email.trim().toLowerCase(),
-      zone: reason || null,
-      modality: modality || null,
-      reason: notes || null,
-      age: age || null,
-    }).catch((err) => console.error("[WhatsApp Alert] Error no bloqueante:", err));
+    // === Alerta por WhatsApp al admin (await para que Vercel no corte el fire-and-forget) ===
+    try {
+      await sendAppointmentAlert({
+        patientName: name.trim(),
+        patientPhone: phone?.trim() || "",
+        patientEmail: email.trim().toLowerCase(),
+        zone: reason || null,
+        modality: modality || null,
+        reason: notes || null,
+        age: age || null,
+      });
+    } catch (err) {
+      console.error("[WhatsApp Alert] Error no bloqueante:", err);
+    }
 
     return NextResponse.json(
       { ...result, message: "Paciente registrado con éxito e ingresado al sistema de Triage" },

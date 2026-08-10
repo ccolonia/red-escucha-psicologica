@@ -138,16 +138,20 @@ export async function POST(request: NextRequest) {
         console.error("⚠️ Error enviando notificación (no bloqueante):", emailError);
       }
 
-      // === Alerta por WhatsApp al admin ===
-      sendAppointmentAlert({
-        patientName: name,
-        patientPhone: phone || "",
-        patientEmail: email,
-        zone: triageReason || null,
-        modality: triageModality || null,
-        reason: patientNotes || null,
-        age: age || null,
-      }).catch((err) => console.error("[WhatsApp Alert] Error no bloqueante:", err));
+      // === Alerta por WhatsApp al admin (await para que Vercel no corte el fire-and-forget) ===
+      try {
+        await sendAppointmentAlert({
+          patientName: name,
+          patientPhone: phone || "",
+          patientEmail: email,
+          zone: triageReason || null,
+          modality: triageModality || null,
+          reason: patientNotes || null,
+          age: age || null,
+        });
+      } catch (err) {
+        console.error("[WhatsApp Alert] Error no bloqueante:", err);
+      }
 
       return NextResponse.json(
         { message: "¡Gracias por tu consulta! En breve un integrante de nuestro equipo se pondrá en contacto contigo.", userId: existingUser.id },
@@ -384,16 +388,20 @@ export async function POST(request: NextRequest) {
       console.error("⚠️ Error enviando notificación de paciente (no bloqueante):", emailError);
     }
 
-    // === Alerta por WhatsApp al admin ===
-    sendAppointmentAlert({
-      patientName: name,
-      patientPhone: phone || "",
-      patientEmail: email,
-      zone: triageReason || null,
-      modality: triageModality || null,
-      reason: patientNotes || null,
-      age: age || null,
-    }).catch((err) => console.error("[WhatsApp Alert] Error no bloqueante:", err));
+    // === Alerta por WhatsApp al admin (await para que Vercel no corte el fire-and-forget) ===
+    try {
+      await sendAppointmentAlert({
+        patientName: name,
+        patientPhone: phone || "",
+        patientEmail: email,
+        zone: triageReason || null,
+        modality: triageModality || null,
+        reason: patientNotes || null,
+        age: age || null,
+      });
+    } catch (err) {
+      console.error("[WhatsApp Alert] Error no bloqueante:", err);
+    }
 
     return NextResponse.json(
       { message: "Cuenta creada exitosamente", userId: user.id },
