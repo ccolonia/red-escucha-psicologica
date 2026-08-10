@@ -57,7 +57,7 @@ ${data.age ? `👶 Edad: ${data.age}` : ""}
 
   if (metaToken && metaPhoneId) {
     try {
-      const res = await fetch(`https://graph.facebook.com/v18.0/${metaPhoneId}/messages`, {
+      const res = await fetch(`https://graph.facebook.com/v25.0/${metaPhoneId}/messages`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${metaToken}`,
