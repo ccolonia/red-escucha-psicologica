@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       notes,
       modality,
       reason,
+      age,
     } = body;
 
     // === Validaciones ===

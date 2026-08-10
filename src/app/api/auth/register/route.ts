@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
 import { sendProfessionalRegistrationConfirmation, sendNewProfessionalAdminNotification } from "@/lib/email";
+import { sendAppointmentAlert } from "@/lib/whatsapp-notify";
 
 export async function POST(request: NextRequest) {
   try {
@@ -136,6 +137,17 @@ export async function POST(request: NextRequest) {
       } catch (emailError) {
         console.error("⚠️ Error enviando notificación (no bloqueante):", emailError);
       }
+
+      // === Alerta por WhatsApp al admin ===
+      sendAppointmentAlert({
+        patientName: name,
+        patientPhone: phone || "",
+        patientEmail: email,
+        zone: triageReason || null,
+        modality: triageModality || null,
+        reason: patientNotes || null,
+        age: age || null,
+      }).catch((err) => console.error("[WhatsApp Alert] Error no bloqueante:", err));
 
       return NextResponse.json(
         { message: "¡Gracias por tu consulta! En breve un integrante de nuestro equipo se pondrá en contacto contigo.", userId: existingUser.id },
@@ -371,6 +383,17 @@ export async function POST(request: NextRequest) {
     } catch (emailError) {
       console.error("⚠️ Error enviando notificación de paciente (no bloqueante):", emailError);
     }
+
+    // === Alerta por WhatsApp al admin ===
+    sendAppointmentAlert({
+      patientName: name,
+      patientPhone: phone || "",
+      patientEmail: email,
+      zone: triageReason || null,
+      modality: triageModality || null,
+      reason: patientNotes || null,
+      age: age || null,
+    }).catch((err) => console.error("[WhatsApp Alert] Error no bloqueante:", err));
 
     return NextResponse.json(
       { message: "Cuenta creada exitosamente", userId: user.id },
