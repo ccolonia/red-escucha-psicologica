@@ -5,15 +5,32 @@
  * (ej: n8n, Make) para enviar mensajes al admin cuando un paciente solicita turno.
  *
  * Si el envío falla, se loguea el error pero NO bloquea el flujo del paciente.
+ *
+ * Soporta múltiples destinatarios: la variable ADMIN_WHATSAPP_NUMBER puede ser
+ * una lista separada por comas (ej: "541176683429,541168667898").
  */
-
-const ADMIN_WHATSAPP_NUMBER = process.env.ADMIN_WHATSAPP_NUMBER || "5491176683429";
 
 /**
  * Limpia un número de teléfono para formato wa.me (solo dígitos, con código de país).
  */
 function cleanPhone(phone: string): string {
   return phone.replace(/[^0-9]/g, "");
+}
+
+/**
+ * Devuelve la lista de números destinatarios configurados.
+ *
+ * Lee ADMIN_WHATSAPP_NUMBER (separado por comas) y devuelve un array
+ * de strings con los números limpios (solo dígitos).
+ *
+ * Ej: "541176683429, 541168667898" → ["541176683429", "541168667898"]
+ */
+function getAdminRecipients(): string[] {
+  const raw = process.env.ADMIN_WHATSAPP_NUMBER || "541176683429";
+  return raw
+    .split(",")
+    .map((n) => cleanPhone(n))
+    .filter((n) => n.length > 0);
 }
 
 /**
@@ -56,41 +73,55 @@ ${data.age ? `👶 Edad: ${data.age}` : ""}
   const metaPhoneId = process.env.META_WHATSAPP_PHONE_ID;
 
   if (metaToken && metaPhoneId) {
-    try {
-      const res = await fetch(`https://graph.facebook.com/v25.0/${metaPhoneId}/messages`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${metaToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to: ADMIN_WHATSAPP_NUMBER,
-          type: "text",
-          text: { body: message },
-        }),
-      });
-      if (!res.ok) {
-        const errBody = await res.text().catch(() => "unknown");
-        console.error("[WhatsApp Alert] Meta API error:", res.status, errBody);
-      } else {
-        console.log("[WhatsApp Alert] ✅ Enviado al admin:", ADMIN_WHATSAPP_NUMBER);
-      }
-    } catch (err) {
-      console.error("[WhatsApp Alert] Meta API exception:", err);
-    }
+    const destinos = getAdminRecipients();
+    console.log(`[WhatsApp Alert] Enviando a ${destinos.length} destinatario(s):`, destinos.join(", "));
+
+    // Enviar en paralelo a todos los destinatarios (más rápido que en serie)
+    const resultados = await Promise.allSettled(
+      destinos.map(async (to) => {
+        try {
+          const res = await fetch(`https://graph.facebook.com/v25.0/${metaPhoneId}/messages`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${metaToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              to,
+              type: "text",
+              text: { body: message },
+            }),
+          });
+          if (!res.ok) {
+            const errBody = await res.text().catch(() => "unknown");
+            console.error(`[WhatsApp Alert] Meta API error para ${to}:`, res.status, errBody);
+            return { to, ok: false, status: res.status };
+          }
+          console.log(`[WhatsApp Alert] ✅ Enviado a:`, to);
+          return { to, ok: true, status: 200 };
+        } catch (err) {
+          console.error(`[WhatsApp Alert] Meta API exception para ${to}:`, err);
+          return { to, ok: false, status: 0 };
+        }
+      })
+    );
+
+    const exitosos = resultados.filter((r) => r.status === "fulfilled" && r.value.ok).length;
+    console.log(`[WhatsApp Alert] Resumen: ${exitosos}/${destinos.length} enviados OK`);
     return;
   }
 
   // === Estrategia 2: Webhook de automatización (n8n, Make, etc.) ===
   const webhookUrl = process.env.WHATSAPP_WEBHOOK_URL;
   if (webhookUrl) {
+    const destinos = getAdminRecipients();
     try {
       const res = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to: ADMIN_WHATSAPP_NUMBER,
+          to: destinos, // array para que el webhook loopee
           message,
           waLink,
           ...data,
@@ -99,7 +130,7 @@ ${data.age ? `👶 Edad: ${data.age}` : ""}
       if (!res.ok) {
         console.error("[WhatsApp Alert] Webhook error:", res.status);
       } else {
-        console.log("[WhatsApp Alert] ✅ Enviado vía webhook");
+        console.log("[WhatsApp Alert] ✅ Enviado vía webhook a", destinos.length, "destinatario(s)");
       }
     } catch (err) {
       console.error("[WhatsApp Alert] Webhook exception:", err);
