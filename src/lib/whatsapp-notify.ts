@@ -51,22 +51,52 @@ export async function sendAppointmentAlert(data: {
   modality?: string | null;
   reason?: string | null;
   age?: string | null;
+  notes?: string | null;
 }): Promise<void> {
   const cleanPatientPhone = cleanPhone(data.patientPhone || "");
   const waLink = cleanPatientPhone ? `https://wa.me/${cleanPatientPhone}` : "";
 
+  // === Traducción humano-legible de los códigos internos ===
+  // Los valores de modality y reason vienen como códigos internos
+  // ("online", "ansiedad", etc.) que el admin reconoce pero no son
+  // muy amigables en el mensaje. Los traducimos a etiquetas legibles.
+  const modalityLabels: Record<string, string> = {
+    online: "Online",
+    presencial: "Presencial",
+    "híbrida": "Híbrida",
+  };
+  const reasonLabels: Record<string, string> = {
+    ansiedad: "Ansiedad",
+    depresion: "Depresión",
+    vinculos: "Vínculos / Pareja",
+    duelo: "Duelo / Pérdida",
+    autoestima: "Autoestima",
+    adicciones: "Adicciones",
+    estres: "Estrés",
+    laboral: "Laboral",
+    orientacion_padres: "Orientación a Padres",
+    evaluaciones: "Evaluaciones",
+    discapacidad: "Discapacidad",
+    infanto_juvenil: "Infanto Juvenil",
+    consulta_general: "Consulta General",
+    otros: "Otros",
+  };
+  const modalityLabel = data.modality ? (modalityLabels[data.modality] || data.modality) : null;
+  const reasonLabel = data.reason ? (reasonLabels[data.reason] || data.reason) : null;
+
   const message = `🚨 ¡NUEVA SOLICITUD DE TURNO!
 ----------------------------------
 👤 Paciente: ${data.patientName}
+🎂 Edad: ${data.age ? `${data.age} años` : "No informada"}
 📱 Teléfono: ${data.patientPhone || "No informado"}
 📧 Email: ${data.patientEmail || "No informado"}
+💻 Modalidad: ${modalityLabel || "No informada"}
+🎯 Motivo: ${reasonLabel || "No informado"}
 ${data.professional ? `👨‍⚕️ Profesional: ${data.professional}` : ""}
 ${data.zone ? `📍 Zona / Consulta: ${data.zone}` : ""}
-${data.modality ? `🔄 Modalidad: ${data.modality}` : ""}
-${data.reason ? `📝 Motivo: ${data.reason}` : ""}
-${data.age ? `👶 Edad: ${data.age}` : ""}
+${data.notes ? `📝 Notas: ${data.notes}` : ""}
 
-👉 Mandar mensaje directo: ${waLink || "Sin teléfono"}`;
+👉 Contactar: ${waLink || "Sin teléfono"}`;
 
   // === Estrategia 1: Meta WhatsApp Cloud API (si está configurada) ===
   const metaToken = process.env.META_WHATSAPP_TOKEN;

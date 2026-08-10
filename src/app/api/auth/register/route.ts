@@ -37,6 +37,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // === Validación estricta cuando es alta de paciente desde el form público ===
+    // Solo validamos estos 3 campos cuando enableTriage=true (es decir, cuando
+    // viene del formulario de contacto de la landing page, no de un admin
+    // creando profesional ni de un paciente existente haciendo login).
+    if (enableTriage) {
+      const validModalities = ["online", "presencial", "híbrida"];
+      const validReasons = [
+        "ansiedad", "depresion", "vinculos", "duelo", "autoestima",
+        "adicciones", "estres", "laboral", "orientacion_padres",
+        "evaluaciones", "discapacidad", "otros",
+        "infanto_juvenil", "consulta_general",
+      ];
+
+      if (!triageModality || !validModalities.includes(triageModality)) {
+        return NextResponse.json(
+          { error: "Modalidad es obligatoria (Presencial, Online o Híbrida)", code: "INVALID_MODALITY" },
+          { status: 400 }
+        );
+      }
+      if (!triageReason || !validReasons.includes(triageReason)) {
+        return NextResponse.json(
+          { error: "Motivo de consulta es obligatorio", code: "INVALID_REASON" },
+          { status: 400 }
+        );
+      }
+      const ageNum = typeof age === "number" ? age : parseInt(String(age ?? ""), 10);
+      if (
+        age === null ||
+        age === undefined ||
+        String(age).trim() === "" ||
+        !Number.isFinite(ageNum) ||
+        ageNum < 1 ||
+        ageNum > 120
+      ) {
+        return NextResponse.json(
+          { error: "Edad del paciente debe ser un número entero entre 1 y 120", code: "INVALID_AGE" },
+          { status: 400 }
+        );
+      }
+    }
+
     const existingUser = await db.user.findUnique({
       where: { email },
     });
@@ -144,9 +185,9 @@ export async function POST(request: NextRequest) {
           patientName: name,
           patientPhone: phone || "",
           patientEmail: email,
-          zone: triageReason || null,
           modality: triageModality || null,
-          reason: patientNotes || null,
+          reason: triageReason || null,
+          notes: patientNotes || null,
           age: age || null,
         });
       } catch (err) {
@@ -394,9 +435,9 @@ export async function POST(request: NextRequest) {
         patientName: name,
         patientPhone: phone || "",
         patientEmail: email,
-        zone: triageReason || null,
         modality: triageModality || null,
-        reason: patientNotes || null,
+        reason: triageReason || null,
+        notes: patientNotes || null,
         age: age || null,
       });
     } catch (err) {

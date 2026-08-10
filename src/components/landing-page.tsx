@@ -434,6 +434,13 @@ export function LandingPage() {
   });
   const [contactSent, setContactSent] = useState(false);
 
+  // === Errores de validación estricta por campo (para resaltar en rojo) ===
+  const [contactFieldErrors, setContactFieldErrors] = useState<{
+    modality?: string;
+    consultReason?: string;
+    patientAge?: string;
+  }>({});
+
   // === Auto-reset del formulario tras envío exitoso (3.5 segundos) ===
   // Después de mostrar "¡Consulta enviada!" por 3.5s, resetear el estado
   // para que el formulario vuelva a estar disponible sin refrescar la página.
@@ -693,6 +700,43 @@ export function LandingPage() {
     setContactSending(true);
     setContactError(false);
     setActiveApptError(null);
+    setContactFieldErrors({});
+
+    // === Validación estricta: Modalidad + Motivo + Edad ===
+    const errors: typeof contactFieldErrors = {};
+    const validModalities = ["presencial", "online", "híbrida"];
+    const validReasons = [
+      "ansiedad", "depresion", "vinculos", "duelo", "autoestima",
+      "adicciones", "estres", "laboral", "orientacion_padres",
+      "evaluaciones", "discapacidad", "otros",
+      "infanto_juvenil", "consulta_general",
+    ];
+
+    if (!contactForm.modality || !validModalities.includes(contactForm.modality)) {
+      errors.modality = "Seleccioná una modalidad (Presencial, Online o Híbrida).";
+    }
+    if (!contactForm.consultReason || !validReasons.includes(contactForm.consultReason)) {
+      errors.consultReason = "Seleccioná un motivo de consulta de la lista.";
+    }
+    const ageNum = parseInt(contactForm.patientAge, 10);
+    if (
+      !contactForm.patientAge ||
+      contactForm.patientAge.trim() === "" ||
+      !Number.isFinite(ageNum) ||
+      ageNum < 1 ||
+      ageNum > 120
+    ) {
+      errors.patientAge = "Ingresá una edad válida (entre 1 y 120 años).";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setContactFieldErrors(errors);
+      const firstErr = errors.modality || errors.consultReason || errors.patientAge;
+      toast.error(firstErr);
+      setContactSending(false);
+      return;
+    }
+
     try {
       // === Validar DNI ===
       const dniRegex = /^\d{7,8}$/;
@@ -2378,14 +2422,19 @@ export function LandingPage() {
                       {(
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="contact-modality" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Modalidad preferida</Label>
+                            <Label htmlFor="contact-modality" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                              Modalidad preferida <span className="text-red-500">*</span>
+                            </Label>
                             <Select
                               value={contactForm.modality}
-                              onValueChange={(value) =>
-                                setContactForm({ ...contactForm, modality: value })
-                              }
+                              onValueChange={(value) => {
+                                setContactForm({ ...contactForm, modality: value });
+                                if (contactFieldErrors.modality) {
+                                  setContactFieldErrors({ ...contactFieldErrors, modality: undefined });
+                                }
+                              }}
                             >
-                              <SelectTrigger className="border-beige-300 bg-beige-100 focus:ring-sage-300/20">
+                              <SelectTrigger className={`border-beige-300 bg-beige-100 focus:ring-sage-300/20 ${contactFieldErrors.modality ? "border-red-500 ring-1 ring-red-500/30" : ""}`}>
                                 <SelectValue placeholder="Seleccioná modalidad" />
                               </SelectTrigger>
                               <SelectContent>
@@ -2394,16 +2443,26 @@ export function LandingPage() {
                                 <SelectItem value="híbrida">Híbrida</SelectItem>
                               </SelectContent>
                             </Select>
+                            {contactFieldErrors.modality && (
+                              <p className="text-xs text-red-600" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                {contactFieldErrors.modality}
+                              </p>
+                            )}
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="consult-reason" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>Motivo de consulta</Label>
+                            <Label htmlFor="consult-reason" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                              Motivo de consulta <span className="text-red-500">*</span>
+                            </Label>
                             <Select
                               value={contactForm.consultReason}
-                              onValueChange={(value) =>
-                                setContactForm({ ...contactForm, consultReason: value })
-                              }
+                              onValueChange={(value) => {
+                                setContactForm({ ...contactForm, consultReason: value });
+                                if (contactFieldErrors.consultReason) {
+                                  setContactFieldErrors({ ...contactFieldErrors, consultReason: undefined });
+                                }
+                              }}
                             >
-                              <SelectTrigger className="border-beige-300 bg-beige-100 focus:ring-sage-300/20">
+                              <SelectTrigger className={`border-beige-300 bg-beige-100 focus:ring-sage-300/20 ${contactFieldErrors.consultReason ? "border-red-500 ring-1 ring-red-500/30" : ""}`}>
                                 <SelectValue placeholder="Seleccioná un motivo" />
                               </SelectTrigger>
                               <SelectContent>
@@ -2421,6 +2480,11 @@ export function LandingPage() {
                                 <SelectItem value="otros">Otros</SelectItem>
                               </SelectContent>
                             </Select>
+                            {contactFieldErrors.consultReason && (
+                              <p className="text-xs text-red-600" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                {contactFieldErrors.consultReason}
+                              </p>
+                            )}
                           </div>
                         </div>
                       )}
@@ -2444,10 +2508,18 @@ export function LandingPage() {
                               value={contactForm.patientAge}
                               onChange={(e) => {
                                 setContactForm({ ...contactForm, patientAge: e.target.value });
+                                if (contactFieldErrors.patientAge) {
+                                  setContactFieldErrors({ ...contactFieldErrors, patientAge: undefined });
+                                }
                               }}
                               placeholder="Ingresá la edad (1 a 120)"
-                              className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
+                              className={`border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20 ${contactFieldErrors.patientAge ? "border-red-500 ring-1 ring-red-500/30" : ""}`}
                             />
+                            {contactFieldErrors.patientAge && (
+                              <p className="text-xs text-red-600" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                                {contactFieldErrors.patientAge}
+                              </p>
+                            )}
                           </div>
 
                           {/* === Protocolo de Minoridad === */}

@@ -137,9 +137,9 @@ export async function POST(req: NextRequest) {
         patientName: name.trim(),
         patientPhone: phone?.trim() || "",
         patientEmail: email.trim().toLowerCase(),
-        zone: reason || null,
         modality: modality || null,
-        reason: notes || null,
+        reason: reason || null,
+        notes: notes || null,
         age: age || null,
       });
     } catch (err) {
