@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
-import { normalizeText, tokenizeSearch, matchesAllTokens } from "@/lib/search-utils";
+import { filterProfessionals } from "@/lib/search-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -110,34 +110,7 @@ export async function GET(request: NextRequest) {
 
       // === Filtrado 100% en JS con normalización (insensible a tildes) ===
       if (search) {
-        const tokens = tokenizeSearch(search);
-        professionals = professionals.filter((p) => {
-          // Desestructurar JSON strings (zones, therapyTypes, etc.)
-          let zonesStr = p.zones || "";
-          try { zonesStr = JSON.parse(zonesStr).join(" "); } catch { /* no es JSON */ }
-          let therapyTypesStr = p.therapyTypes || "";
-          try { therapyTypesStr = JSON.parse(therapyTypesStr).join(" "); } catch { /* no es JSON */ }
-          let targetAudienceStr = p.targetAudience || "";
-          try { targetAudienceStr = JSON.parse(targetAudienceStr).join(" "); } catch { /* no es JSON */ }
-          let therapyModalityStr = p.therapyModality || "";
-          try { therapyModalityStr = JSON.parse(therapyModalityStr).join(" "); } catch { /* no es JSON */ }
-
-          const fields = [
-            p.user?.name,
-            p.user?.email,
-            p.license,
-            p.specialty,
-            p.profession,
-            zonesStr,
-            therapyTypesStr,
-            targetAudienceStr,
-            therapyModalityStr,
-            p.officeAddress,
-            p.otherTherapyDetails,
-            p.bio,
-          ];
-          return matchesAllTokens(tokens, fields);
-        });
+        professionals = filterProfessionals(professionals, search);
       }
 
       // Return flat array for backward compatibility with all consumers
@@ -252,33 +225,7 @@ export async function GET(request: NextRequest) {
     // === Filtrado 100% en JS con normalización ===
     let professionals = allProfessionals;
     if (search) {
-      const tokens = tokenizeSearch(search);
-      professionals = allProfessionals.filter((p) => {
-        let zonesStr = p.zones || "";
-        try { zonesStr = JSON.parse(zonesStr).join(" "); } catch { /* no es JSON */ }
-        let therapyTypesStr = p.therapyTypes || "";
-        try { therapyTypesStr = JSON.parse(therapyTypesStr).join(" "); } catch { /* no es JSON */ }
-        let targetAudienceStr = p.targetAudience || "";
-        try { targetAudienceStr = JSON.parse(targetAudienceStr).join(" "); } catch { /* no es JSON */ }
-        let therapyModalityStr = p.therapyModality || "";
-        try { therapyModalityStr = JSON.parse(therapyModalityStr).join(" "); } catch { /* no es JSON */ }
-
-        const fields = [
-          p.user?.name,
-          p.user?.email,
-          p.license,
-          p.specialty,
-          p.profession,
-          zonesStr,
-          therapyTypesStr,
-          targetAudienceStr,
-          therapyModalityStr,
-          p.officeAddress,
-          p.otherTherapyDetails,
-          p.bio,
-        ];
-        return matchesAllTokens(tokens, fields);
-      });
+      professionals = filterProfessionals(allProfessionals, search);
     }
 
     const filteredCount = professionals.length;
