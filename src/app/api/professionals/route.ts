@@ -140,9 +140,88 @@ export async function GET(request: NextRequest) {
 
     // === BÚSQUEDA 100% EN JS (sin contains en SQL) ===
     // No aplicamos contains en la DB. El filtrado se hace post-query en JS.
+    // Si hay search, NO paginamos en la DB (traemos todo y filtramos en JS).
+    // Si no hay search, paginamos normalmente en la DB.
 
-    // Run count + data in parallel for efficiency
-    const [totalCount, allProfessionals, approvedCount] = await Promise.all([
+    const needsJsFilter = !!search;
+
+    if (needsJsFilter) {
+      // Traer TODOS los profesionales que matcheen el status (sin paginación)
+      const allProfessionals = await db.professional.findMany({
+        where,
+        select: {
+          id: true,
+          userId: true,
+          license: true,
+          licenseVerified: true,
+          specialty: true,
+          bio: true,
+          available: true,
+          title: true,
+          profession: true,
+          cuil: true,
+          gender: true,
+          therapyTypes: true,
+          targetAudience: true,
+          therapyModality: true,
+          commissionRate: true,
+          otherTherapyDetails: true,
+          onlineAttention: true,
+          presentialAttention: true,
+          homeAttention: true,
+          zones: true,
+          officeAddress: true,
+          cvFileName: true,
+          cvMimeType: true,
+          internalNotes: true,
+          evaluationStatus: true,
+          dniVerified: true,
+          degreeVerified: true,
+          malpracticeInsuranceVerified: true,
+          taxRegistrationVerified: true,
+          nationalRegistryVerified: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              active: true,
+              createdAt: true,
+              isApproved: true,
+              passwordSet: true,
+              hasAccessedPanel: true,
+            },
+          },
+        },
+        orderBy: { user: { name: "asc" } },
+      });
+
+      const approvedCount = await db.professional.count({
+        where: { user: { active: true }, licenseVerified: true },
+      });
+
+      const professionals = filterProfessionals(allProfessionals, search);
+      const filteredCount = professionals.length;
+      const startIdx = (page - 1) * limit;
+      const pagedProfessionals = professionals.slice(startIdx, startIdx + limit);
+
+      return NextResponse.json({
+        professionals: pagedProfessionals,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(filteredCount / limit),
+          totalCount: filteredCount,
+          limit,
+        },
+        approvedCount,
+      });
+    }
+
+    // Sin search: paginación normal en DB
+    const [totalCount, professionals, approvedCount] = await Promise.all([
       db.professional.count({ where }),
       db.professional.findMany({
         where,
@@ -222,20 +301,12 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // === Filtrado 100% en JS con normalización ===
-    let professionals = allProfessionals;
-    if (search) {
-      professionals = filterProfessionals(allProfessionals, search);
-    }
-
-    const filteredCount = professionals.length;
-
     return NextResponse.json({
       professionals,
       pagination: {
         currentPage: page,
-        totalPages: Math.ceil(filteredCount / limit),
-        totalCount: filteredCount,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount,
         limit,
       },
       approvedCount,
