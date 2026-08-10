@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sendContactNotification } from "@/lib/email";
+import { sendAppointmentAlert } from "@/lib/whatsapp-notify";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,6 +49,17 @@ export async function POST(request: NextRequest) {
     } catch (emailError) {
       console.error("⚠️ Error enviando notificación de contacto (no bloqueante):", emailError);
     }
+
+    // === Alerta por WhatsApp al admin ===
+    // Fire-and-forget: si falla, no bloquea la respuesta al paciente.
+    sendAppointmentAlert({
+      patientName: sanitizedData.name,
+      patientPhone: sanitizedData.phone || "",
+      patientEmail: sanitizedData.email,
+      zone: sanitizedData.reason,
+      modality: sanitizedData.modality,
+      reason: sanitizedData.message,
+    }).catch((err) => console.error("[WhatsApp Alert] Error no bloqueante:", err));
 
     // Log notification for server monitoring
     console.log(`📧 Nueva consulta de contacto: ${sanitizedData.name} (${sanitizedData.email}) - Motivo: ${sanitizedData.reason || "No especificado"}`);

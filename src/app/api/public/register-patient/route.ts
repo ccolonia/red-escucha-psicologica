@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { sanitizeDni, isValidDni } from "@/app/api/admin/patients/route";
 import { sendContactNotification } from "@/lib/email";
+import { sendAppointmentAlert } from "@/lib/whatsapp-notify";
 
 // === POST /api/public/register-patient ===
 // Endpoint PÚBLICO (sin autenticación) para que los visitantes de la
@@ -128,6 +129,17 @@ export async function POST(req: NextRequest) {
     } catch (emailError) {
       console.error("⚠️ Error enviando notificación (no bloqueante):", emailError);
     }
+
+    // === Alerta por WhatsApp al admin ===
+    sendAppointmentAlert({
+      patientName: name.trim(),
+      patientPhone: phone?.trim() || "",
+      patientEmail: email.trim().toLowerCase(),
+      zone: reason || null,
+      modality: modality || null,
+      reason: notes || null,
+      age: age || null,
+    }).catch((err) => console.error("[WhatsApp Alert] Error no bloqueante:", err));
 
     return NextResponse.json(
       { ...result, message: "Paciente registrado con éxito e ingresado al sistema de Triage" },
