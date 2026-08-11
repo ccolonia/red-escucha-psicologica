@@ -56,7 +56,11 @@ export async function sendAppointmentAlert(data: {
   // === Feature flag: pausa global de WhatsApp ===
   // Si WHATSAPP_PAUSED=true, no enviamos nada pero seguimos guardando en DB.
   // El pedido igual se registra normalmente (la pausa solo afecta WhatsApp).
-  if (process.env.WHATSAPP_PAUSED === "true") {
+  //
+  // ⚠️ PAUSA DE EMERGENCIA ACTIVADA — 2026-08-10
+  // Pausa solicitada por el admin por 24hs. Re-enable: cambiar a false.
+  const WHATSAPP_PAUSED = process.env.WHATSAPP_PAUSED === "true" || true;
+  if (WHATSAPP_PAUSED) {
     console.log("[WhatsApp Alert] ⏸️  PAUSADO por WHATSAPP_PAUSED=true — no se envía a los administradores. Datos del paciente igual se guardaron en DB.");
     console.log("[WhatsApp Alert] Paciente:", data.patientName, "| Email:", data.patientEmail, "| Motivo:", data.reason);
     return;
