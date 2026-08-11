@@ -59,7 +59,13 @@ export async function sendAppointmentAlert(data: {
   //
   // Para pausar: set WHATSAPP_PAUSED=true en Vercel + redeploy
   // Para re-activar: set WHATSAPP_PAUSED=false (o borrarla) + redeploy
-  if (process.env.WHATSAPP_PAUSED === "true") {
+  //
+  // ⚠️ FALLBACK TEMPORAL: si la env var no está definida, asumir pausa activa
+  // hasta que confirmemos que Vercel está inyectando la variable correctamente.
+  const pausedFlag = process.env.WHATSAPP_PAUSED;
+  const isPaused = pausedFlag === undefined ? true : pausedFlag === "true";
+  console.log("[WhatsApp Alert] DEBUG WHATSAPP_PAUSED =", JSON.stringify(pausedFlag), "| isPaused:", isPaused);
+  if (isPaused) {
     console.log("[WhatsApp Alert] ⏸️  PAUSADO por WHATSAPP_PAUSED=true — no se envía a los administradores. Datos del paciente igual se guardaron en DB.");
     console.log("[WhatsApp Alert] Paciente:", data.patientName, "| Email:", data.patientEmail, "| Motivo:", data.reason);
     return;
