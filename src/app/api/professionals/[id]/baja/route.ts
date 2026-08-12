@@ -79,10 +79,10 @@ export async function POST(
 
     // 3. Enviar email institucional de agradecimiento y notificación de baja
     // Hacemos esto ANTES de desactivar al user, por las dudas.
-    let emailResult: { data: unknown; error: unknown } | null = null;
+    let emailSent = false;
     let emailWarning: string | null = null;
     try {
-      emailResult = await sendBajaNotificationEmail({
+      const emailResult = await sendBajaNotificationEmail({
         professionalEmail,
         professionalName,
       });
@@ -93,8 +93,9 @@ export async function POST(
         );
         emailWarning = "El email de notificación no pudo enviarse, pero la baja se procesó igualmente.";
       } else {
+        emailSent = true;
         console.log(
-          `[Baja Professional] ✅ Email enviado a ${professionalEmail} (id: ${(emailResult.data as { id?: string })?.id || "n/a"})`
+          `[Baja Professional] ✅ Email enviado a ${professionalEmail} (id: ${emailResult.data?.id || "n/a"})`
         );
       }
     } catch (emailErr) {
@@ -134,7 +135,7 @@ export async function POST(
         name: professionalName,
         email: professionalEmail,
       },
-      emailSent: emailResult?.error == null,
+      emailSent,
       emailWarning,
     });
   } catch (error) {
