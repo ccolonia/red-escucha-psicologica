@@ -36,6 +36,9 @@ import {
   Filter,
   BadgeCheck,
   MessageCircle,
+  UserX,
+  LogOut,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -563,6 +566,16 @@ export function AdminProfessionals() {
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // === Baja Institucional de Profesional ===
+  // Modal de confirmación con vista previa del email institucional
+  const [bajaModalOpen, setBajaModalOpen] = useState(false);
+  const [bajaProfessional, setBajaProfessional] = useState<{
+    id: string;
+    name: string;
+    email: string;
+  } | null>(null);
+  const [bajaProcessing, setBajaProcessing] = useState(false);
+
   // ── Search, Pagination & Filter state ──
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -911,6 +924,48 @@ export function AdminProfessionals() {
       }
     } catch {
       toast.error("Error de conexión");
+    }
+  };
+
+  // === Baja Institucional de Profesional ===
+  // Abre el modal de confirmación con vista previa del email
+  const handleOpenBajaModal = (prof: {
+    id: string;
+    user: { name: string; email: string };
+  }) => {
+    setBajaProfessional({
+      id: prof.id,
+      name: prof.user.name || "Profesional",
+      email: prof.user.email,
+    });
+    setBajaModalOpen(true);
+  };
+
+  // Procesa la baja: llama al endpoint /api/professionals/[id]/baja
+  // que envía el email institucional y desactiva al user/professional
+  const handleConfirmBaja = async () => {
+    if (!bajaProfessional) return;
+    setBajaProcessing(true);
+    try {
+      const res = await fetch(`/api/professionals/${bajaProfessional.id}/baja`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Notificación enviada y baja procesada con éxito");
+        if (data.emailWarning) {
+          toast.warning(data.emailWarning);
+        }
+        setBajaModalOpen(false);
+        setBajaProfessional(null);
+        loadProfessionals();
+      } else {
+        toast.error(data.error || "Error al procesar la baja");
+      }
+    } catch {
+      toast.error("Error de conexión al procesar la baja");
+    } finally {
+      setBajaProcessing(false);
     }
   };
 
@@ -1501,6 +1556,21 @@ export function AdminProfessionals() {
                                 {prof.available ? "Desactivar" : "Activar"}
                               </Button>
                             )}
+                            {/* === Baja Institucional ===
+                                Procesa la baja formal: envía email institucional
+                                de agradecimiento + desactiva al user/professional */}
+                            {isActive && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 border-red-300 text-red-700 hover:text-white hover:bg-red-700 hover:border-red-700"
+                                onClick={() => handleOpenBajaModal(prof)}
+                                title="Procesar baja institucional y enviar email de agradecimiento"
+                              >
+                                <UserX className="w-3.5 h-3.5 mr-1" />
+                                Baja
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -1933,6 +2003,122 @@ export function AdminProfessionals() {
           )}
         </>
       )}
+
+      {/* === Modal de Baja Institucional de Profesional ===
+          Muestra vista previa del email institucional que se enviará
+          al profesional antes de confirmar la baja. */}
+      <Dialog open={bajaModalOpen} onOpenChange={(open) => {
+        if (!bajaProcessing) {
+          setBajaModalOpen(open);
+          if (!open) setBajaProfessional(null);
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-teal-100 pb-4">
+            {/* Logo institucional centrado */}
+            <div className="flex justify-center mb-3">
+              <img
+                src="/images/logo.png"
+                alt="Red Escucha Psicológica"
+                className="h-12 w-auto"
+              />
+            </div>
+            <DialogTitle className="text-teal-900 text-center text-xl">
+              Gestión de Baja Profesional
+            </DialogTitle>
+            <DialogDescription className="text-center text-teal-600">
+              Se enviará una notificación formal a{" "}
+              <span className="font-semibold text-teal-800">
+                {bajaProfessional?.name}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Vista previa del mensaje que recibirá el profesional */}
+          <div className="py-4 space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-amber-800">
+                <strong>Acción irreversible.</strong> Al confirmar, se enviará el
+                email de agradecimiento y se desactivará al profesional. No podrá
+                iniciar sesión pero sus turnos históricos se conservarán para
+                auditoría.
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs uppercase tracking-wide text-teal-500 font-semibold mb-2">
+                Vista previa del email
+              </div>
+              <div className="bg-gradient-to-br from-[#3a4d3a] to-[#2d3b2d] text-white p-4 rounded-t-lg">
+                <p className="text-sm font-semibold">Red Escucha Psicológica</p>
+                <p className="text-xs text-[#a8c0a8] italic mt-1">Gestión de Baja Profesional</p>
+              </div>
+              <div className="bg-white border border-t-0 border-teal-100 p-4 rounded-b-lg space-y-3 text-sm">
+                <p className="font-semibold text-teal-900">
+                  Asunto: <span className="font-normal">Agradecimiento y Notificación de Baja — Red Escucha Psicológica</span>
+                </p>
+                <hr className="border-teal-100" />
+                <p className="text-teal-800">
+                  Estimado/a <strong>{bajaProfessional?.name}</strong>:
+                </p>
+                <p className="text-teal-700 leading-relaxed">
+                  Queremos expresarte nuestro más sincero agradecimiento por el tiempo,
+                  la dedicación y el compromiso brindados a la comunidad de{" "}
+                  <strong>Red Escucha Psicológica</strong>.
+                </p>
+                <p className="text-teal-700 leading-relaxed">
+                  Confirmamos que a partir de la fecha hemos procesado la solicitud de{" "}
+                  <strong>baja de tu perfil</strong> en nuestra plataforma. Agradecemos
+                  haber compartido este camino con nosotros y te deseamos el mayor de
+                  los éxitos en tus futuros proyectos profesionales.
+                </p>
+                <div className="bg-[#faf7f2] border-l-4 border-[#8a3d3d] p-3 rounded text-teal-700 italic">
+                  Las puertas de Red Escucha Psicológica quedan abiertas para futuras colaboraciones.
+                </div>
+                <p className="text-teal-700">Atentamente,</p>
+                <p className="text-teal-900 font-semibold">
+                  Equipo de Coordinación<br />
+                  <span className="font-normal text-teal-600">Red Escucha Psicológica</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t border-teal-100 pt-4 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (!bajaProcessing) {
+                  setBajaModalOpen(false);
+                  setBajaProfessional(null);
+                }
+              }}
+              disabled={bajaProcessing}
+              className="border-teal-300 text-teal-700 hover:bg-teal-50"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmBaja}
+              disabled={bajaProcessing}
+              className="bg-red-700 hover:bg-red-800 text-white"
+            >
+              {bajaProcessing ? (
+                <>
+                  <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 w-4 h-4" />
+                  Enviar y Confirmar Baja
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

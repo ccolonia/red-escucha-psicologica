@@ -1525,3 +1525,114 @@ export async function sendCancellationByProfessionalEmail({
     return { data: null, error: err };
   }
 }
+
+// ============================================================================
+// BAJA INSTITUCIONAL DE PROFESIONAL
+// ============================================================================
+
+interface SendBajaNotificationParams {
+  professionalEmail: string;
+  professionalName: string;
+}
+
+/**
+ * Envía un email institucional de agradecimiento y notificación de baja
+ * al profesional que ha sido dado de baja desde el panel admin.
+ *
+ * El email tiene un tono formal, cálido y respetuoso, reflejando la
+ * cultura institucional de Red Escucha Psicológica.
+ *
+ * Retorna { data, error } — no lanza, para que el caller pueda manejar el error.
+ */
+export async function sendBajaNotificationEmail({
+  professionalEmail,
+  professionalName,
+}: SendBajaNotificationParams) {
+  try {
+    const resend = getResend();
+    const logoUrl = `${APP_URL}/images/logo.png`;
+    const fechaActual = new Date().toLocaleDateString("es-AR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "America/Argentina/Buenos_Aires",
+    });
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [professionalEmail],
+      subject: "Agradecimiento y Notificación de Baja — Red Escucha Psicológica",
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f0e8;color:#2d3b2d;">
+          <div style="max-width:600px;margin:0 auto;padding:20px;">
+            <div class="card" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+              <!-- Header institucional con logo -->
+              <div class="header" style="background:linear-gradient(135deg,#3a4d3a 0%,#2d3b2d 100%);padding:36px 30px;text-align:center;">
+                <img src="${logoUrl}" alt="Red Escucha Psicológica" style="max-width:200px;height:auto;margin-bottom:14px;display:block;margin-left:auto;margin-right:auto;" />
+                <h1 style="color:#f5f0e8;margin:0;font-size:22px;font-weight:700;letter-spacing:0.3px;">Gestión de Baja Profesional</h1>
+                <p class="subtitle" style="color:#a8c0a8;margin-top:8px;font-size:13px;font-style:italic;">${fechaActual}</p>
+              </div>
+
+              <!-- Cuerpo del mensaje -->
+              <div style="padding:36px 30px;">
+                <p style="font-size:16px;font-weight:600;color:#2d3b2d;margin-bottom:18px;">Estimado/a <strong>${professionalName}</strong>:</p>
+
+                <p style="font-size:15px;color:#4a5a4a;margin-bottom:18px;line-height:1.65;">
+                  Queremos expresarte nuestro más sincero agradecimiento por el tiempo, la dedicación
+                  y el compromiso brindados a la comunidad de <strong>Red Escucha Psicológica</strong>.
+                </p>
+
+                <p style="font-size:15px;color:#4a5a4a;margin-bottom:18px;line-height:1.65;">
+                  Confirmamos que a partir de la fecha hemos procesado la solicitud de
+                  <strong>baja de tu perfil</strong> en nuestra plataforma. Agradecemos haber
+                  compartido este camino con nosotros y te deseamos el mayor de los éxitos
+                  en tus futuros proyectos profesionales.
+                </p>
+
+                <div style="background:#faf7f2;border-left:4px solid #8a3d3d;border-radius:8px;padding:18px 20px;margin:24px 0;">
+                  <p style="font-size:14px;color:#5a4a4a;margin:0;line-height:1.6;font-style:italic;">
+                    Las puertas de Red Escucha Psicológica quedan abiertas para futuras colaboraciones.
+                  </p>
+                </div>
+
+                <p style="font-size:15px;color:#4a5a4a;margin-top:24px;line-height:1.65;">
+                  Atentamente,
+                </p>
+                <p style="font-size:15px;color:#2d3b2d;margin-top:6px;font-weight:600;">
+                  <strong>Equipo de Coordinación</strong><br>
+                  <span style="color:#6a8a6a;font-weight:500;">Red Escucha Psicológica</span>
+                </p>
+              </div>
+
+              <!-- Footer institucional -->
+              <div class="footer" style="background:#f5f0e8;padding:22px 30px;text-align:center;font-size:12px;color:#8a7a6a;border-top:1px solid #e8dfd3;">
+                <p style="margin:0 0 6px 0;font-weight:600;color:#6a5a4a;">Red Escucha Psicológica</p>
+                <p style="margin:0;">
+                  <a href="mailto:contacto@redescuchapsicologica.com" style="color:#8a7a6a;text-decoration:none;">contacto@redescuchapsicologica.com</a>
+                  &nbsp;·&nbsp;
+                  <a href="${APP_URL}" style="color:#8a7a6a;text-decoration:none;">www.redescuchapsicologica.com</a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending baja notification email:", error);
+      return { data: null, error };
+    }
+    return { data, error: null };
+  } catch (err) {
+    console.error("Error sending baja notification email:", err);
+    return { data: null, error: err };
+  }
+}
