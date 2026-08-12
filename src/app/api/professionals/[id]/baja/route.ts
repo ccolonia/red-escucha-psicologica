@@ -14,14 +14,16 @@ import { sendBajaNotificationEmail } from "@/lib/email";
 //   4. Envía email institucional de agradecimiento y notificación de baja
 //   5. Retorna confirmación
 //
-// El email se envía ANTES de desactivar al user para asegurarnos de que
-// el email del profesional siga siendo accesible. Si el email falla, igual
-// procesamos la baja pero reportamos el warning en la respuesta.
+// El envío de email está aislado en try/catch independiente: si el servicio
+// de mail falla (Resend no configurado, sin credenciales, etc.), NO se tumba
+// el endpoint. La baja en la DB se completa igual y se reporta el warning.
+//
+// ⚠️ Next.js 16: params es Promise — hay que hacer `await params`.
 // ============================================================================
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 1. Auth check — solo admin/super_admin puede dar de baja
@@ -40,7 +42,8 @@ export async function POST(
       );
     }
 
-    const professionalId = params.id;
+    // Next.js 16: params es una Promise, hay que await
+    const { id: professionalId } = await params;
 
     // 2. Buscar al profesional con su user (necesitamos el email)
     const professional = await db.professional.findUnique({
@@ -77,8 +80,10 @@ export async function POST(
     const professionalName = user.name || "Profesional";
     const professionalEmail = user.email;
 
-    // 3. Enviar email institucional de agradecimiento y notificación de baja
-    // Hacemos esto ANTES de desactivar al user, por las dudas.
+    // 3. === Envío de email institucional (TRY/CATCH INDEPENDIENTE) ===
+    // Si el servicio de mail falla (Resend no configurado, sin credenciales,
+    // error de red, etc.), NO se tumba el endpoint. La baja en la DB se
+    // completa igual y se reporta el warning al frontend.
     let emailSent = false;
     let emailWarning: string | null = null;
     try {
@@ -99,7 +104,8 @@ export async function POST(
         );
       }
     } catch (emailErr) {
-      console.error("[Baja Professional] Excepción enviando email:", emailErr);
+      // Aislado: el error de email NO propaga al try/catch externo
+      console.error("[BAJA EMAIL ERROR] No se pudo enviar el correo:", emailErr);
       emailWarning = "Hubo un error al enviar el email de notificación, pero la baja se procesó igualmente.";
     }
 
