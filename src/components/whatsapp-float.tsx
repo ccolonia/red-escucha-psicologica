@@ -22,7 +22,7 @@ import { X, Send } from "lucide-react";
  * de dos popups verdes al mismo tiempo).
  */
 
-const DEFAULT_WHATSAPP_NUMBER = "5491176683429";
+const DEFAULT_WHATSAPP_NUMBER = "541168667898";
 const DEFAULT_WHATSAPP_MESSAGE = "Hola, quisiera recibir información";
 
 export function WhatsAppFloat() {

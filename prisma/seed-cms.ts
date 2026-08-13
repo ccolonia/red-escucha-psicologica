@@ -169,12 +169,12 @@ async function main() {
     { key: "site_description", value: "Más de tres décadas acompañando tu bienestar emocional", group: "general" },
     // Contact
     { key: "contact_address", value: "Av. Sanabria 1616, CABA, Buenos Aires, Argentina", group: "contact" },
-    { key: "contact_phone", value: "+54 11 7668-3429", group: "contact" },
+    { key: "contact_phone", value: "+54 11 6866-7898", group: "contact" },
     { key: "contact_email", value: "contacto@redescuchapsicologica.com", group: "contact" },
     { key: "contact_hours_weekday", value: "Lunes a Viernes: 9:00 - 20:00", group: "contact" },
     { key: "contact_hours_saturday", value: "Sábados: 9:00 - 13:00", group: "contact" },
     // WhatsApp
-    { key: "whatsapp_number", value: "5491176683429", group: "whatsapp" },
+    { key: "whatsapp_number", value: "541168667898", group: "whatsapp" },
     { key: "whatsapp_message", value: "Hola, me gustaría obtener más información sobre los servicios de Red Escucha Psicológica", group: "whatsapp" },
     { key: "whatsapp_enabled", value: "true", group: "whatsapp" },
     // Sections

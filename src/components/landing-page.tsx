@@ -747,12 +747,12 @@ export function LandingPage() {
       }
 
       // === Validar teléfono ===
-      // El phone viene en formato E.164 (ej: "5491176683429" para AR,
+      // El phone viene en formato E.164 (ej: "541168667898" para AR,
       // "51998465686" para PE). Validar que tenga al menos 8 dígitos
       // después del código de país (códigos van de 1 a 3 dígitos).
       const phoneDigits = contactForm.phone.replace(/[^0-9]/g, "");
       if (phoneDigits.length < 8) {
-        toast.error("El teléfono debe incluir código de país + número local (ej: +54 11 7668 3429)");
+        toast.error("El teléfono debe incluir código de país + número local (ej: +54 11 6866 7898)");
         setContactSending(false);
         return;
       }
@@ -1207,7 +1207,7 @@ export function LandingPage() {
                 Visible en todos los tamaños (mobile + PC). */}
             <div className="flex flex-1 items-center justify-center">
               <a
-                href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
+                href={`https://wa.me/${cmsConfig.whatsapp_number || "541168667898"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="relative inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium text-sm px-4 py-1.5 rounded-full shadow-md border border-amber-300/40 whitespace-nowrap backdrop-blur-sm cursor-pointer transition-colors"
@@ -1723,7 +1723,7 @@ export function LandingPage() {
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2 justify-center mt-4">
                     <a
-                      href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent("Necesito hablar con un profesional de urgencia")}`}
+                      href={`https://wa.me/${cmsConfig.whatsapp_number || "541168667898"}?text=${encodeURIComponent("Necesito hablar con un profesional de urgencia")}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-medium text-sm px-5 py-2.5 rounded-full transition-all"
@@ -2304,7 +2304,7 @@ export function LandingPage() {
               <div className="mt-8 space-y-6">
                 {[
                   ...(cmsConfig.contact_address ? [{ icon: MapPin, title: "Dirección", text: cmsConfig.contact_address }] : []),
-                  { icon: Phone, title: "Teléfono", text: cmsConfig.contact_phone || "+54 11 7668-3429" },
+                  { icon: Phone, title: "Teléfono", text: cmsConfig.contact_phone || "+54 11 6866-7898" },
                   { icon: Mail, title: "Email", text: cmsConfig.contact_email || "contacto@redescuchapsicologica.com" },
                   { icon: Clock, title: "Horarios", text: [cmsConfig.contact_hours_weekday || "24 horas, los 365 días del año", ...(cmsConfig.contact_hours_saturday ? [cmsConfig.contact_hours_saturday] : [])].join("\n") },
                 ].map((item, i) => (
@@ -2656,7 +2656,7 @@ export function LandingPage() {
               <h4 className="font-serif font-semibold text-beige-50 mb-3">Contacto</h4>
               <ul className="space-y-2 text-sm text-beige-300 font-light" style={{ fontFamily: "Montserrat, sans-serif" }}>
                 {cmsConfig.contact_address && <li>{cmsConfig.contact_address}</li>}
-                <li>{cmsConfig.contact_phone || "+54 11 7668-3429"}</li>
+                <li>{cmsConfig.contact_phone || "+54 11 6866-7898"}</li>
                 <li>{cmsConfig.contact_email || "contacto@redescuchapsicologica.com"}</li>
               </ul>
               {/* Social Media Icons — debajo de Contacto */}
@@ -2828,7 +2828,7 @@ export function LandingPage() {
           cmsConfig.whatsapp_enabled !== "false" */}
       {false && cmsConfig.whatsapp_enabled !== "false" && (
       <a
-        href={`https://wa.me/${cmsConfig.whatsapp_number || "5491176683429"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
+        href={`https://wa.me/${cmsConfig.whatsapp_number || "541168667898"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
         rel="noopener noreferrer"
         aria-label="Contactar por WhatsApp"
         className="fixed z-50 w-14 h-14 bg-[#25D366] hover:bg-[#20bd5a] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"

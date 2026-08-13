@@ -1257,7 +1257,7 @@ export function ProfessionalRegister() {
                       <p>
                         <em>contacto@redescuchapsicologica.com</em><br />
                         <em>www.redescuchapsicologica.com</em><br />
-                        <em>+54 11 7668-3429</em><br />
+                        <em>+54 11 6866-7898</em><br />
                         <strong>ESCUCHAR · ACOMPAÑAR · TRANSFORMAR</strong>
                       </p>
                     </div>
