@@ -199,6 +199,9 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
         }
 
         try {
+          // === DEBUG: log de lo que se envía a Meta ===
+          console.log(`[WhatsApp Alert] POST a Meta API para ${to} (phoneId=${metaPhoneId})`);
+
           const res = await fetch(`https://graph.facebook.com/v25.0/${metaPhoneId}/messages`, {
             method: "POST",
             headers: {
@@ -208,20 +211,28 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
             body: JSON.stringify({
               messaging_product: "whatsapp",
               to,
-              type: "text",
-              text: { body: message },
+              type: "template",
+              template: {
+                name: "hello_world",
+                language: { code: "en_US" }
+              },
             }),
           });
+
+          // === DEBUG: log completo de la respuesta de Meta ===
+          const respBody = await res.text();
+          console.log(`[WhatsApp Alert] Meta API response para ${to}: HTTP ${res.status}`);
+          console.log(`[WhatsApp Alert] Meta API body:`, respBody);
+
           if (!res.ok) {
-            const errBody = await res.text().catch(() => "unknown");
-            console.error(`[WhatsApp Alert] Meta API error para ${to}:`, res.status, errBody);
-            return { to, ok: false, status: res.status };
+            console.error(`[WhatsApp Alert] Meta API error para ${to}:`, res.status, respBody);
+            return { to, ok: false, status: res.status, error: respBody };
           }
           console.log(`[WhatsApp Alert] ✅ Enviado a:`, to);
-          return { to, ok: true, status: 200 };
+          return { to, ok: true, status: 200, response: respBody };
         } catch (err) {
           console.error(`[WhatsApp Alert] Meta API exception para ${to}:`, err);
-          return { to, ok: false, status: 0 };
+          return { to, ok: false, status: 0, error: String(err) };
         }
       })
     );
