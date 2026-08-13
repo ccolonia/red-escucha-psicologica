@@ -199,7 +199,22 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
         }
 
         try {
-          // === DEBUG: log de lo que se envía a Meta ===
+          // === TEMPLATE con variables del paciente ===
+          // Meta en modo desarrollo (Test Number +1 555) NO permite texto libre
+          // fuera de la ventana de 24hs. Solo permite templates aprobados.
+          // Por eso usamos el template "nueva_solicitud_turno" con variables.
+          //
+          // Template body (creado en Meta Business Manager):
+          // 🚨 ¡NUEVA SOLICITUD DE TURNO!
+          // 👤 Paciente: {{1}}
+          // 🎂 Edad: {{2}}
+          // 📱 Teléfono: {{3}}
+          // 📧 Email: {{4}}
+          // 💻 Modalidad: {{5}}
+          // 🎯 Motivo: {{6}}
+          // 📝 Notas: {{7}}
+          // 👉 Contactar: {{8}}
+
           console.log(`[WhatsApp Alert] POST a Meta API para ${to} (phoneId=${metaPhoneId})`);
 
           const res = await fetch(`https://graph.facebook.com/v25.0/${metaPhoneId}/messages`, {
@@ -213,8 +228,23 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
               to,
               type: "template",
               template: {
-                name: "hello_world",
-                language: { code: "en_US" }
+                name: "nueva_solicitud_turno",
+                language: { code: "es_AR" },
+                components: [
+                  {
+                    type: "body",
+                    parameters: [
+                      { type: "text", text: data.patientName || "No informado" },                              // {{1}} Paciente
+                      { type: "text", text: data.age ? `${data.age} años` : "No informada" },                  // {{2}} Edad
+                      { type: "text", text: data.patientPhone || "No informado" },                             // {{3}} Teléfono
+                      { type: "text", text: data.patientEmail || "No informado" },                             // {{4}} Email
+                      { type: "text", text: modalityLabel || "No informada" },                                 // {{5}} Modalidad
+                      { type: "text", text: reasonLabel || "No informado" },                                   // {{6}} Motivo
+                      { type: "text", text: data.notes || "Sin notas" },                                       // {{7}} Notas
+                      { type: "text", text: waLink || "Sin teléfono" },                                        // {{8}} Contactar
+                    ],
+                  },
+                ],
               },
             }),
           });
