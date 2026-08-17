@@ -50,7 +50,7 @@ import { format, startOfWeek, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { ProfessionalScheduleConfig } from "@/components/professional-schedule-config";
 import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
-import { Settings2, X, Eye, Wrench } from "lucide-react";
+import { Settings2, X, Eye, Wrench, FileText, BadgeCheck, ShieldCheck, Download } from "lucide-react";
 
 // ====================================================================
 // CONSTANTES
@@ -209,6 +209,29 @@ interface ProfessionalResult {
   totalFreeSlots: number;
   totalBookedSlots: number;
   hasAvailability: boolean;
+  // === Campos de perfil profesional (tarea 2026-08-18: Ver Perfil) ===
+  // La API de /api/admin/search-professionals ya devuelve estos campos,
+  // pero el frontend no los declaraba. Los agregamos para mostrar la ficha
+  // completa del profesional en el tab "Perfil" del modal de Agenda Central.
+  license?: string | null;
+  licenseVerified?: boolean;
+  title?: string | null;
+  bio?: string | null;
+  cuil?: string | null;
+  gender?: string | null;
+  commissionRate?: number | null;
+  therapyTypes?: string | null;       // JSON-string array
+  targetAudience?: string | null;     // JSON-string array
+  therapyModality?: string | null;    // JSON-string array
+  otherTherapyDetails?: string | null;
+  onlineAttention?: boolean;
+  presentialAttention?: boolean;
+  homeAttention?: boolean;
+  zones?: string | null;              // JSON-string array
+  cvFileName?: string | null;
+  internalNotes?: string | null;
+  evaluationStatus?: string | null;
+  createdAt?: string;
 }
 
 interface SearchResponse {
@@ -360,7 +383,7 @@ export function AdminAgendaCentral() {
     open: boolean;
     professionalId: string | null;
     professionalName: string;
-    tab: "config" | "agenda";
+    tab: "config" | "agenda" | "profile";
   }>({ open: false, professionalId: null, professionalName: "", tab: "config" });
 
   // === Calcular weekStart (lunes de la semana seleccionada) ===
@@ -1170,9 +1193,24 @@ export function AdminAgendaCentral() {
       <Dialog open={scheduleConfigDialog.open} onOpenChange={(open) => setScheduleConfigDialog(prev => ({ ...prev, open }))}>
         <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-teal-900 flex items-center gap-2">
-              <Settings2 className="w-5 h-5 text-teal-600" />
-              {scheduleConfigDialog.professionalName}
+            <DialogTitle className="text-teal-900 flex items-center gap-2 justify-between flex-wrap">
+              <span className="flex items-center gap-2">
+                <Settings2 className="w-5 h-5 text-teal-600" />
+                {scheduleConfigDialog.professionalName}
+              </span>
+              {/* === Botón "Ver Perfil" en el header ===
+                  Acceso directo al tab "Perfil" con la ficha completa del profesional.
+                  Mantiene el professionalId del modal actual (no abre otro modal). */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs border-sage-300 text-sage-700 hover:bg-sage-50 hover:text-sage-800"
+                onClick={() => setScheduleConfigDialog(prev => ({ ...prev, tab: "profile" }))}
+                title="Ver ficha completa del profesional"
+              >
+                <User className="w-3.5 h-3.5 mr-1" />
+                Ver Perfil
+              </Button>
             </DialogTitle>
             <DialogDescription>
               Gestión de agenda profesional — Administrador
@@ -1180,7 +1218,7 @@ export function AdminAgendaCentral() {
           </DialogHeader>
 
           {/* === Tabs === */}
-          <div className="flex gap-2 border-b border-teal-100 pb-2 mb-3">
+          <div className="flex gap-2 border-b border-teal-100 pb-2 mb-3 flex-wrap">
             <button
               onClick={() => setScheduleConfigDialog(prev => ({ ...prev, tab: "config" }))}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors ${
@@ -1200,6 +1238,16 @@ export function AdminAgendaCentral() {
               }`}
             >
               <Eye className="w-3.5 h-3.5" /> Agenda Visual
+            </button>
+            <button
+              onClick={() => setScheduleConfigDialog(prev => ({ ...prev, tab: "profile" }))}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors ${
+                scheduleConfigDialog.tab === "profile"
+                  ? "bg-sage-600 text-white"
+                  : "bg-sage-50 text-sage-700 hover:bg-sage-100"
+              }`}
+            >
+              <User className="w-3.5 h-3.5" /> Perfil
             </button>
           </div>
 
@@ -1223,6 +1271,291 @@ export function AdminAgendaCentral() {
               <ProfessionalWeeklyAgenda professionalId={scheduleConfigDialog.professionalId} />
             </div>
           )}
+
+          {/* === Tab 3: Perfil del Profesional ===
+              Muestra la ficha completa del profesional con todos sus datos.
+              Reutiliza el patrón de expanded section de admin-dashboard.tsx. */}
+          {scheduleConfigDialog.tab === "profile" && scheduleConfigDialog.professionalId && (() => {
+            // Buscar al profesional en el estado de resultados para tener todos sus datos
+            const prof = searchResults.find(p => p.id === scheduleConfigDialog.professionalId);
+            if (!prof) {
+              return (
+                <div className="min-h-[400px] flex items-center justify-center">
+                  <div className="text-center text-teal-600">
+                    <User className="w-12 h-12 mx-auto mb-3 text-teal-400" />
+                    <p className="text-sm">No se encontraron datos del profesional.</p>
+                    <p className="text-xs text-teal-500 mt-1">Cerrá el modal y volvé a abrirlo desde la búsqueda.</p>
+                  </div>
+                </div>
+              );
+            }
+
+            // === Helpers para parsear JSON arrays de forma segura ===
+            const dedupCaseInsensitive = (arr: string[]): string[] => {
+              const seen = new Set<string>();
+              const result: string[] = [];
+              for (const item of arr) {
+                const key = String(item).trim().toLowerCase();
+                if (!key || seen.has(key)) continue;
+                seen.add(key);
+                result.push(item);
+              }
+              return result;
+            };
+            const parseJsonArray = (val: string | null | undefined): string[] => {
+              if (!val) return [];
+              try {
+                const parsed = JSON.parse(val);
+                return Array.isArray(parsed) ? dedupCaseInsensitive(parsed.map(String)) : [];
+              } catch {
+                return [];
+              }
+            };
+            const parsedTherapyTypes = parseJsonArray(prof.therapyTypes);
+            const parsedTargetAudience = parseJsonArray(prof.targetAudience);
+            const parsedTherapyModality = parseJsonArray(prof.therapyModality);
+            const parsedZones = parseJsonArray(prof.zones);
+
+            // Calcular comisión efectiva
+            const commissionRate = prof.commissionRate != null
+              ? `${Math.round(prof.commissionRate * 100)}%`
+              : prof.profession && prof.profession.toLowerCase().includes("psiquiatr")
+                ? "20% (auto)"
+                : "30% (auto)";
+
+            return (
+              <div className="min-h-[400px] space-y-4">
+                {/* === Encabezado del perfil === */}
+                <div className="bg-gradient-to-br from-teal-50 to-sage-50 rounded-lg p-4 border border-teal-100">
+                  <div className="flex items-start gap-3">
+                    <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                      <User className="w-7 h-7 text-teal-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-teal-900 truncate">
+                        {prof.title ? `${prof.title} ` : ""}{prof.name}
+                      </h3>
+                      <p className="text-sm text-teal-700">{prof.specialty}</p>
+                      {prof.profession && (
+                        <p className="text-xs text-teal-500 mt-0.5">{prof.profession}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* === Datos profesionales === */}
+                <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                  {prof.license && (
+                    <div className="flex items-center gap-2">
+                      <BadgeCheck className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                      <span className="text-teal-500">Matrícula:</span>
+                      <span className="text-teal-800 font-medium">{prof.license}</span>
+                      {prof.licenseVerified && (
+                        <Badge variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">
+                          Verificada
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-teal-500">Comisión REP:</span>{" "}
+                    <span className="text-teal-800 font-medium">{commissionRate}</span>
+                  </div>
+                  {prof.cuil && (
+                    <div>
+                      <span className="text-teal-500">CUIT/CUIL:</span>{" "}
+                      <span className="text-teal-800">{prof.cuil}</span>
+                    </div>
+                  )}
+                  {prof.gender && (
+                    <div>
+                      <span className="text-teal-500">Sexo:</span>{" "}
+                      <span className="text-teal-800">{prof.gender}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* === Contacto === */}
+                <div>
+                  <h4 className="text-sm font-semibold text-teal-700 mb-2 flex items-center gap-1">
+                    <Mail className="w-4 h-4" /> Contacto
+                  </h4>
+                  <div className="grid sm:grid-cols-2 gap-2 text-sm bg-teal-50/50 p-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 text-teal-500" />
+                      <span className="text-teal-800 break-all">{prof.email}</span>
+                    </div>
+                    {prof.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 text-teal-500" />
+                        <span className="text-teal-800">{prof.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* === Modalidad de atención === */}
+                <div>
+                  <h4 className="text-sm font-semibold text-teal-700 mb-2">Modalidad de atención</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {prof.onlineAttention && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">Online</Badge>
+                    )}
+                    {prof.presentialAttention && (
+                      <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">Presencial</Badge>
+                    )}
+                    {prof.homeAttention && (
+                      <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200 text-purple-700">Domicilio</Badge>
+                    )}
+                    {!prof.onlineAttention && !prof.presentialAttention && !prof.homeAttention && (
+                      <span className="text-xs text-teal-500 italic">No informada</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* === Tipos de terapia === */}
+                {parsedTherapyTypes.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Tipos de terapia</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {parsedTherapyTypes.map((t) => (
+                        <Badge key={t} variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{t}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* === Otras terapias (detalle) === */}
+                {prof.otherTherapyDetails && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Detalle de otras terapias</h4>
+                    <p className="text-sm text-teal-700 bg-amber-50 border border-amber-200 p-3 rounded">
+                      {prof.otherTherapyDetails}
+                    </p>
+                  </div>
+                )}
+
+                {/* === Dirigido a === */}
+                {parsedTargetAudience.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Dirigido a</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {parsedTargetAudience.map((t) => (
+                        <Badge key={t} variant="outline" className="text-xs bg-sage-50 border-sage-200 text-sage-700">{t}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* === Modalidad de terapia === */}
+                {parsedTherapyModality.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Modalidad de terapia</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {parsedTherapyModality.map((m) => (
+                        <Badge key={m} variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">{m}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* === Zonas de atención === */}
+                {parsedZones.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Zonas de atención</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {parsedZones.map((z) => (
+                        <Badge key={z} variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">{z}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* === Direcciones de consultorio === */}
+                {prof.addresses && prof.addresses.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Direcciones de atención presencial</h4>
+                    <div className="space-y-1.5">
+                      {prof.addresses.map((addr) => (
+                        <div key={addr.id} className={`text-sm p-2 rounded border ${addr.isActive ? "bg-teal-50 border-teal-200" : "bg-gray-50 border-gray-200"}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="font-medium text-teal-700">{addr.label}</span>
+                              <p className="text-teal-800">{addr.address}</p>
+                            </div>
+                            {addr.isActive && (
+                              <Badge variant="outline" className="text-xs bg-teal-100 border-teal-300 text-teal-800 flex-shrink-0">
+                                Activa
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* === Bio === */}
+                {prof.bio && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Sobre su práctica</h4>
+                    <p className="text-sm text-teal-700 bg-teal-50 p-3 rounded leading-relaxed">{prof.bio}</p>
+                  </div>
+                )}
+
+                {/* === CV / Curriculum === */}
+                {prof.cvFileName && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-700 mb-2">CV / Curriculum</h4>
+                    <a
+                      href={`/api/professionals/cv?id=${prof.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-teal-600 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-2 rounded-lg border border-teal-200 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span className="font-medium">{prof.cvFileName}</span>
+                      <Download className="w-3.5 h-3.5 ml-1" />
+                    </a>
+                  </div>
+                )}
+
+                {/* === Estado de evaluación === */}
+                {prof.evaluationStatus && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-700 mb-2 flex items-center gap-1">
+                      <ShieldCheck className="w-4 h-4" /> Estado de evaluación
+                    </h4>
+                    <Badge variant="outline" className="text-xs bg-sage-50 border-sage-200 text-sage-700">
+                      {prof.evaluationStatus}
+                    </Badge>
+                  </div>
+                )}
+
+                {/* === Notas internas (solo admin) === */}
+                {prof.internalNotes && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-amber-700 mb-2">Notas internas (admin)</h4>
+                    <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 p-3 rounded whitespace-pre-wrap">
+                      {prof.internalNotes}
+                    </p>
+                  </div>
+                )}
+
+                {/* === Fecha de registro === */}
+                {prof.createdAt && (
+                  <div className="text-xs text-teal-500 pt-3 border-t border-teal-100">
+                    Registrado el {new Date(prof.createdAt).toLocaleDateString("es-AR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                      timeZone: "America/Argentina/Buenos_Aires",
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setScheduleConfigDialog(prev => ({ ...prev, open: false }))} className="border-teal-200 text-teal-600">
