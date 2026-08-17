@@ -1276,8 +1276,28 @@ export function AdminAgendaCentral() {
               Muestra la ficha completa del profesional con todos sus datos.
               Reutiliza el patrón de expanded section de admin-dashboard.tsx. */}
           {scheduleConfigDialog.tab === "profile" && scheduleConfigDialog.professionalId && (() => {
-            // Buscar al profesional en el estado de resultados para tener todos sus datos
-            const prof = searchResults.find(p => p.id === scheduleConfigDialog.professionalId);
+            // === Búsqueda DEFENSIVA del profesional en el estado ===
+            // searchResults es un objeto SearchResponse, NO un array directo.
+            // Estructura real: { criteria, summary, results: ProfessionalResult[], ... }
+            // Pero por las dudas, soportamos múltiples formas posibles por si
+            // la API cambia o viene un array plano en alguna otra situación.
+            const safeArray = <T,>(val: unknown): T[] => {
+              if (Array.isArray(val)) return val as T[];
+              if (val && typeof val === "object") {
+                const obj = val as Record<string, unknown>;
+                // Posibles campos donde podría estar el array
+                if (Array.isArray(obj.results)) return obj.results as T[];
+                if (Array.isArray(obj.data)) return obj.data as T[];
+                if (Array.isArray(obj.professionals)) return obj.professionals as T[];
+              }
+              return [];
+            };
+
+            const professionalList = safeArray<ProfessionalResult>(searchResults);
+            const prof = professionalList.find(
+              (p) => p.id === scheduleConfigDialog.professionalId
+            );
+
             if (!prof) {
               return (
                 <div className="min-h-[400px] flex items-center justify-center">
@@ -1315,6 +1335,7 @@ export function AdminAgendaCentral() {
             const parsedTargetAudience = parseJsonArray(prof.targetAudience);
             const parsedTherapyModality = parseJsonArray(prof.therapyModality);
             const parsedZones = parseJsonArray(prof.zones);
+            const safeAddresses = Array.isArray(prof.addresses) ? prof.addresses : [];
 
             // Calcular comisión efectiva
             const commissionRate = prof.commissionRate != null
@@ -1472,11 +1493,11 @@ export function AdminAgendaCentral() {
                 )}
 
                 {/* === Direcciones de consultorio === */}
-                {prof.addresses && prof.addresses.length > 0 && (
+                {safeAddresses.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold text-teal-700 mb-2">Direcciones de atención presencial</h4>
                     <div className="space-y-1.5">
-                      {prof.addresses.map((addr) => (
+                      {safeAddresses.map((addr) => (
                         <div key={addr.id} className={`text-sm p-2 rounded border ${addr.isActive ? "bg-teal-50 border-teal-200" : "bg-gray-50 border-gray-200"}`}>
                           <div className="flex items-start justify-between gap-2">
                             <div>
