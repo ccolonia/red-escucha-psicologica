@@ -122,12 +122,33 @@ export async function PATCH(
       }
     }
 
-    // Validate the status transition
-    if (!validTransitions[currentStatus]?.includes(status)) {
-      return NextResponse.json(
-        { error: `No se puede cambiar de ${currentStatus} a ${status}` },
-        { status: 400 }
-      );
+    // === Validación de transición de estado ===
+    // Si el caller está reagendando (envía newDate + newTime + status='confirmed'),
+    // permitimos el cambio desde CUALQUIER estado válido (pending, confirmed, rescheduled).
+    // El flujo de reagendamiento no debería bloquearse por la validación de transiciones
+    // porque es un caso especial: el turno se mueve a otra fecha/hora.
+    //
+    // FIX (tarea 2026-08-18): antes se bloqueaba "confirmed → confirmed" cuando
+    // un turno confirmado se reagendaba directamente sin pasar por "rescheduled".
+    // Ahora: si isRescheduleFlow=true, saltamos la validación de transiciones.
+    if (!isRescheduleFlow) {
+      if (!validTransitions[currentStatus]?.includes(status)) {
+        return NextResponse.json(
+          { error: `No se puede cambiar de ${currentStatus} a ${status}` },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Validación especial para el flujo de reagendamiento:
+      // Solo permitimos reagendar desde estados "activos" (pending, confirmed, rescheduled)
+      // NO permitimos reagendar turnos cancelados/completados/ausentes.
+      const validRescheduleOrigins = ["pending", "confirmed", "rescheduled"];
+      if (!validRescheduleOrigins.includes(currentStatus)) {
+        return NextResponse.json(
+          { error: `No se puede reagendar un turno en estado ${currentStatus}` },
+          { status: 400 }
+        );
+      }
     }
 
     // Authorization: professionals can only manage their own appointments
