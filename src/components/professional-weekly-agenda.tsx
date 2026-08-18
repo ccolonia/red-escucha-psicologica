@@ -423,10 +423,19 @@ export function ProfessionalWeeklyAgenda({
   const [rescheduleNewTime, setRescheduleNewTime] = useState("");
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
 
+  // === Checkbox: "Aún no tengo la nueva fecha" ===
+  // Cuando el profesional presiona "Reprogramar" en un turno confirmed/pending,
+  // puede elegir entre:
+  //   A) Definir nueva fecha y hora AHORA → PATCH con status='confirmed' + newDate + newTime
+  //   B) Marcar este checkbox → oculta pickers y solo deja marcar como pendiente
+  //      PATCH con status='rescheduled' (sin fecha, para reagendar después)
+  const [reschedulePendingOnly, setReschedulePendingOnly] = useState(false);
+
   // === Handler: confirmar reagendamiento con nueva fecha/hora ===
   // Llama a PATCH /api/appointments/[id] con:
-  //   { status: "confirmed", newDate, newTime }
+  //   { status: "confirmed", newDate, newTime, notes }
   // El backend actualiza date/time del turno y dispara email al paciente.
+  // Las notes se envían para que queden registradas en el turno (motivo del cambio).
   const handleRescheduleNewDate = async () => {
     if (!fichaAppointment) return;
     setRescheduleError(null);
@@ -443,6 +452,12 @@ export function ProfessionalWeeklyAgenda({
           status: "confirmed",
           newDate: rescheduleNewDate,
           newTime: rescheduleNewTime,
+          // === Enviar notes si el profesional escribió un motivo ===
+          // El backend persiste notes en el appointment, así queda registrado
+          // el motivo del reagendamiento en la ficha del turno.
+          notes: rescheduleReason.trim()
+            ? `[Reagendado por profesional] ${rescheduleReason.trim()}`
+            : undefined,
         }),
       });
       const data = await res.json();
@@ -457,13 +472,20 @@ export function ProfessionalWeeklyAgenda({
                   status: "confirmed",
                   date: rescheduleNewDate,
                   time: rescheduleNewTime,
+                  notes: rescheduleReason.trim()
+                    ? `[Reagendado por profesional] ${rescheduleReason.trim()}`
+                    : a.notes,
                 }
               : a
           )
         );
+        // Resetear todos los estados del modo Reagendar
+        setRescheduleMode(false);
         setRescheduleNewDateMode(false);
         setRescheduleNewDate("");
         setRescheduleNewTime("");
+        setRescheduleReason("");
+        setReschedulePendingOnly(false);
         setFichaDialogOpen(false);
       } else {
         setRescheduleError(data.error || "Error al reagendar el turno");
@@ -1852,39 +1874,131 @@ export function ProfessionalWeeklyAgenda({
                     </div>
                   )}
                 </div>
-                {/* === Modo Reprogramar: textarea para el motivo === */}
+                {/* === Modo Reprogramar UNIFICADO (tarea 2026-08-18) ===
+                    Antes: solo pedía motivo → turno quedaba 'rescheduled' → profesional
+                    tenía que buscarlo en otra lista para reagendar.
+                    
+                    Ahora: en la misma vista se puede elegir:
+                    A) Nueva fecha + nueva hora + motivo opcional → confirma y reagenda
+                       en un solo paso (PATCH con status='confirmed' + newDate + newTime).
+                    B) Marcar checkbox "Aún no tengo la nueva fecha" → oculta pickers
+                       y solo deja motivo → PATCH con status='rescheduled' (pendiente).
+                    
+                    Esto unifica el flujo: el profesional puede reagendar directo
+                    sin tener que ir a otra pantalla. */}
                 {rescheduleMode && !rescheduleNewDateMode && fichaAppointment && (
-                  <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 space-y-2">
+                  <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 space-y-3">
                     <div className="flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-orange-600" />
                       <p className="text-sm font-semibold text-orange-800">Reprogramar turno</p>
                     </div>
-                    <p className="text-xs text-orange-700">
-                      Indicá el motivo de la reprogramación. El turno quedará en estado
-                      "Reprogramado" y deberás coordinar nueva fecha con el paciente.
-                    </p>
-                    <textarea
-                      value={rescheduleReason}
-                      onChange={(e) => setRescheduleReason(e.target.value)}
-                      placeholder="Ej: Tengo una urgencia, se reprogramará para la próxima semana..."
-                      className="w-full min-h-[80px] rounded-md border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                      rows={3}
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        className="bg-orange-500 hover:bg-orange-600 text-white"
-                        disabled={rescheduling || rescheduleReason.trim().length < 3}
-                        onClick={handleRescheduleFromFicha}
-                      >
-                        {rescheduling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</> : <><CheckCircle2 className="w-3 h-3 mr-1" /> Confirmar Reprogramación</>}
-                      </Button>
+
+                    {/* === Checkbox: "Aún no tengo la nueva fecha" ===
+                        Si se marca, se ocultan los pickers de fecha/hora
+                        y el botón principal pasa a ser "Marcar como Pendiente". */}
+                    <label className="flex items-center gap-2 text-xs text-orange-800 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={reschedulePendingOnly}
+                        onChange={(e) => setReschedulePendingOnly(e.target.checked)}
+                        className="w-4 h-4 rounded border-orange-300 text-orange-600 focus:ring-orange-300"
+                      />
+                      Aún no tengo la nueva fecha (dejar pendiente de coordinación)
+                    </label>
+
+                    {/* === Pickers de nueva fecha/hora (solo si NO marcó pendiente) === */}
+                    {!reschedulePendingOnly && (
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-orange-700">Nueva fecha</Label>
+                          <Input
+                            type="date"
+                            value={rescheduleNewDate}
+                            onChange={(e) => setRescheduleNewDate(e.target.value)}
+                            min={new Date().toISOString().split("T")[0]}
+                            className="border-orange-200 bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-orange-700">Nueva hora</Label>
+                          <Input
+                            type="time"
+                            value={rescheduleNewTime}
+                            onChange={(e) => setRescheduleNewTime(e.target.value)}
+                            step={900}
+                            className="border-orange-200 bg-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* === Textarea de motivo (opcional en ambos casos) === */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-orange-700">
+                        Motivo / Notas {reschedulePendingOnly ? "(opcional)" : "(opcional)"}
+                      </Label>
+                      <textarea
+                        value={rescheduleReason}
+                        onChange={(e) => setRescheduleReason(e.target.value)}
+                        placeholder={
+                          reschedulePendingOnly
+                            ? "Ej: Tengo una urgencia, se coordinará nueva fecha con el paciente..."
+                            : "Ej: Tengo un conflicto de agenda, paso el turno al nuevo horario..."
+                        }
+                        className="w-full min-h-[60px] rounded-md border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                        rows={2}
+                      />
+                    </div>
+
+                    {/* === Error message si hay === */}
+                    {rescheduleError && (
+                      <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded">
+                        {rescheduleError}
+                      </div>
+                    )}
+
+                    {/* === Botones de acción === */}
+                    <div className="flex gap-2 flex-wrap">
+                      {/* Caso A: Con nueva fecha/hora → Confirmar y Reagendar */}
+                      {!reschedulePendingOnly && (
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                          disabled={rescheduling || !rescheduleNewDate || !rescheduleNewTime}
+                          onClick={handleRescheduleNewDate}
+                        >
+                          {rescheduling
+                            ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</>
+                            : <><CalendarPlus className="w-3 h-3 mr-1" /> Confirmar y Reagendar Turno</>}
+                        </Button>
+                      )}
+
+                      {/* Caso B: Sin fecha → Marcar como Pendiente */}
+                      {reschedulePendingOnly && (
+                        <Button
+                          size="sm"
+                          className="bg-orange-500 hover:bg-orange-600 text-white"
+                          disabled={rescheduling}
+                          onClick={handleRescheduleFromFicha}
+                        >
+                          {rescheduling
+                            ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</>
+                            : <><AlertCircle className="w-3 h-3 mr-1" /> Marcar como Pendiente de Reagendar</>}
+                        </Button>
+                      )}
+
                       <Button
                         size="sm"
                         variant="outline"
                         className="border-slate-300 text-slate-600 hover:bg-slate-50"
-                        onClick={() => { setRescheduleMode(false); setRescheduleReason(""); }}
+                        onClick={() => {
+                          setRescheduleMode(false);
+                          setRescheduleReason("");
+                          setRescheduleNewDate("");
+                          setRescheduleNewTime("");
+                          setReschedulePendingOnly(false);
+                          setRescheduleError(null);
+                        }}
                         disabled={rescheduling}
                       >
                         Cancelar
@@ -2050,6 +2164,7 @@ export function ProfessionalWeeklyAgenda({
                     setRescheduleNewDate("");
                     setRescheduleNewTime("");
                     setRescheduleError(null);
+                    setReschedulePendingOnly(false);
                   }} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
                 </DialogFooter>
               </>
