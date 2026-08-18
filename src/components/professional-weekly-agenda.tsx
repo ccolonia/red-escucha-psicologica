@@ -436,6 +436,9 @@ export function ProfessionalWeeklyAgenda({
   //   { status: "confirmed", newDate, newTime, notes }
   // El backend actualiza date/time del turno y dispara email al paciente.
   // Las notes se envían para que queden registradas en el turno (motivo del cambio).
+  //
+  // VALIDACIÓN DE DISPONIBILIDAD: antes de confirmar, verifica que no haya
+  // otro turno ya ocupando ese slot en la agenda del profesional.
   const handleRescheduleNewDate = async () => {
     if (!fichaAppointment) return;
     setRescheduleError(null);
@@ -443,6 +446,25 @@ export function ProfessionalWeeklyAgenda({
       setRescheduleError("Debés seleccionar fecha y hora");
       return;
     }
+
+    // === Validación de disponibilidad ===
+    // Verificar que el profesional no tenga otro turno confirmado/pendiente
+    // en esa fecha y hora (excluyendo el propio turno que se está reagendando).
+    const conflict = appointments.find(
+      (a) =>
+        a.id !== fichaAppointment.id &&
+        a.date === rescheduleNewDate &&
+        a.time === rescheduleNewTime &&
+        (a.status === "confirmed" || a.status === "pending")
+    );
+    if (conflict) {
+      const conflictName = conflict.patient?.user?.name || "otro paciente";
+      setRescheduleError(
+        `⚠️ Ya tenés un turno confirmado con ${conflictName} en esa fecha y hora. Elegí otro horario.`
+      );
+      return;
+    }
+
     setRescheduling(true);
     try {
       const res = await fetch(`/api/appointments/${fichaAppointment.id}`, {
@@ -1893,59 +1915,38 @@ export function ProfessionalWeeklyAgenda({
                       <p className="text-sm font-semibold text-orange-800">Reprogramar turno</p>
                     </div>
 
-                    {/* === Checkbox: "Aún no tengo la nueva fecha" ===
-                        Si se marca, se ocultan los pickers de fecha/hora
-                        y el botón principal pasa a ser "Marcar como Pendiente". */}
-                    <label className="flex items-center gap-2 text-xs text-orange-800 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={reschedulePendingOnly}
-                        onChange={(e) => setReschedulePendingOnly(e.target.checked)}
-                        className="w-4 h-4 rounded border-orange-300 text-orange-600 focus:ring-orange-300"
-                      />
-                      Aún no tengo la nueva fecha (dejar pendiente de coordinación)
-                    </label>
-
-                    {/* === Pickers de nueva fecha/hora (solo si NO marcó pendiente) === */}
-                    {!reschedulePendingOnly && (
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-orange-700">Nueva fecha</Label>
-                          <Input
-                            type="date"
-                            value={rescheduleNewDate}
-                            onChange={(e) => setRescheduleNewDate(e.target.value)}
-                            min={new Date().toISOString().split("T")[0]}
-                            className="border-orange-200 bg-white"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-orange-700">Nueva hora</Label>
-                          <Input
-                            type="time"
-                            value={rescheduleNewTime}
-                            onChange={(e) => setRescheduleNewTime(e.target.value)}
-                            step={900}
-                            className="border-orange-200 bg-white"
-                          />
-                        </div>
+                    {/* === Pickers de nueva fecha/hora (siempre visibles, vacíos por defecto) === */}
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-orange-700">Nueva fecha</Label>
+                        <Input
+                          type="date"
+                          value={rescheduleNewDate}
+                          onChange={(e) => setRescheduleNewDate(e.target.value)}
+                          min={new Date().toISOString().split("T")[0]}
+                          className="border-orange-200 bg-white"
+                        />
                       </div>
-                    )}
+                      <div className="space-y-1">
+                        <Label className="text-xs text-orange-700">Nueva hora</Label>
+                        <Input
+                          type="time"
+                          value={rescheduleNewTime}
+                          onChange={(e) => setRescheduleNewTime(e.target.value)}
+                          step={900}
+                          className="border-orange-200 bg-white"
+                        />
+                      </div>
+                    </div>
 
-                    {/* === Textarea de motivo (opcional en ambos casos) === */}
+                    {/* === Textarea de motivo (opcional) === */}
                     <div className="space-y-1">
-                      <Label className="text-xs text-orange-700">
-                        Motivo / Notas {reschedulePendingOnly ? "(opcional)" : "(opcional)"}
-                      </Label>
+                      <Label className="text-xs text-orange-700">Motivo / Notas (opcional)</Label>
                       <textarea
                         value={rescheduleReason}
                         onChange={(e) => setRescheduleReason(e.target.value)}
-                        placeholder={
-                          reschedulePendingOnly
-                            ? "Ej: Tengo una urgencia, se coordinará nueva fecha con el paciente..."
-                            : "Ej: Tengo un conflicto de agenda, paso el turno al nuevo horario..."
-                        }
-                        className="w-full min-h-[60px] rounded-md border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                        placeholder="Ej: Tengo un conflicto de agenda, paso el turno al nuevo horario..."
+                        className="w-full min-h-[60px] rounded-md border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none:ring-2 focus:ring-orange-300"
                         rows={2}
                       />
                     </div>
@@ -1957,35 +1958,33 @@ export function ProfessionalWeeklyAgenda({
                       </div>
                     )}
 
-                    {/* === Botones de acción === */}
+                    {/* === Dos botones directos (sin checkbox) ===
+                        - Verde: solo se activa si hay fecha + hora seleccionadas
+                        - Naranja: siempre visible, deja pendiente sin fecha */}
                     <div className="flex gap-2 flex-wrap">
-                      {/* Caso A: Con nueva fecha/hora → Confirmar y Reagendar */}
-                      {!reschedulePendingOnly && (
-                        <Button
-                          size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                          disabled={rescheduling || !rescheduleNewDate || !rescheduleNewTime}
-                          onClick={handleRescheduleNewDate}
-                        >
-                          {rescheduling
-                            ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</>
-                            : <><CalendarPlus className="w-3 h-3 mr-1" /> Confirmar y Reagendar Turno</>}
-                        </Button>
-                      )}
+                      {/* Botón Verde: Confirmar y Reagendar */}
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={rescheduling || !rescheduleNewDate || !rescheduleNewTime}
+                        onClick={handleRescheduleNewDate}
+                      >
+                        {rescheduling
+                          ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</>
+                          : <><CalendarPlus className="w-3 h-3 mr-1" /> 🗓️ Confirmar y Reagendar</>}
+                      </Button>
 
-                      {/* Caso B: Sin fecha → Marcar como Pendiente */}
-                      {reschedulePendingOnly && (
-                        <Button
-                          size="sm"
-                          className="bg-orange-500 hover:bg-orange-600 text-white"
-                          disabled={rescheduling}
-                          onClick={handleRescheduleFromFicha}
-                        >
-                          {rescheduling
-                            ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</>
-                            : <><AlertCircle className="w-3 h-3 mr-1" /> Marcar como Pendiente de Reagendar</>}
-                        </Button>
-                      )}
+                      {/* Botón Naranja: Dejar Pendiente de Coordinación */}
+                      <Button
+                        size="sm"
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                        disabled={rescheduling}
+                        onClick={handleRescheduleFromFicha}
+                      >
+                        {rescheduling
+                          ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</>
+                          : <><AlertCircle className="w-3 h-3 mr-1" /> ⏳ Dejar Pendiente de Coordinación</>}
+                      </Button>
 
                       <Button
                         size="sm"
@@ -1996,7 +1995,6 @@ export function ProfessionalWeeklyAgenda({
                           setRescheduleReason("");
                           setRescheduleNewDate("");
                           setRescheduleNewTime("");
-                          setReschedulePendingOnly(false);
                           setRescheduleError(null);
                         }}
                         disabled={rescheduling}
