@@ -1606,13 +1606,23 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
               const dateStr = dayData?.date || "";
               const isToday = dateStr === new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
               const colIndex = day.dayOfWeek + 1;
-              const daySchedule = rawSchedules.find((s: { dayOfWeek: number }) => s.dayOfWeek === day.dayOfWeek);
-              const slotDuration = daySchedule?.slotDuration || 45;
 
-              // 1. Generar slots del schedule (contiguos, sin snapping)
-              const scheduleSlots = daySchedule
-                ? generateSlotsForSchedule(daySchedule.startTime, daySchedule.endTime, slotDuration)
-                : [];
+              // === FIX: .filter() en vez de .find() para soportar MÚLTIPLES
+              // franjas horarias por día (ej: Jueves 09-13 Online + 16-17 Presencial).
+              // Antes usábamos .find() que solo tomaba la primera franja y
+              // dejaba los demás bloques del día vacíos en la grilla. ===
+              const daySchedules = rawSchedules.filter((s: { dayOfWeek: number }) => s.dayOfWeek === day.dayOfWeek);
+
+              // 1. Generar slots de TODAS las franjas del día (contiguos, sin snapping)
+              const scheduleSlots: string[] = [];
+              for (const sch of daySchedules) {
+                const dur = sch.slotDuration || 45;
+                const slots = generateSlotsForSchedule(sch.startTime, sch.endTime, dur);
+                // Evitar duplicados por las dudas
+                for (const s of slots) {
+                  if (!scheduleSlots.includes(s)) scheduleSlots.push(s);
+                }
+              }
 
               type AdminSlotItem = {
                 time: string;
@@ -1624,7 +1634,20 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
 
               const slotItems: AdminSlotItem[] = [];
 
+              // Helper local: obtener slotDuration de la franja específica
+              // que contiene este slot (para múltiples franjas por día)
+              const getOwningSchedule = (slotTime: string) => {
+                return daySchedules.find(
+                  (s: { startTime: string; endTime: string; slotDuration?: number }) =>
+                    slotTime >= s.startTime && slotTime < s.endTime
+                );
+              };
+
               for (const slotTime of scheduleSlots) {
+                // Buscar la franja específica que contiene este slot
+                const owningSchedule = getOwningSchedule(slotTime);
+                const slotDuration = owningSchedule?.slotDuration || 45;
+
                 const bookedSlot = dayData?.bookedSlots.find((s) => s.time === slotTime);
                 const freeSlot = dayData?.availableSlots.find((s) => s.time === slotTime);
                 const slotIsPast = dayData ? isSlotInPast(dayData.date, slotTime) : false;

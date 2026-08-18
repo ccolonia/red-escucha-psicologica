@@ -417,10 +417,17 @@ export function ProfessionalWeeklyAgenda({
       toast.error("No se puede activar un slot que ya pasó");
       return;
     }
-    // Calcular endTime según slotDuration del schedule
-    const schedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
-    const dur = schedule?.slotDuration || 45;
-    const modality = schedule?.modality || "ambas";
+    // Calcular endTime según slotDuration y modality de la FRANJA ESPECÍFICA
+    // que contiene este slot (FIX: múltiples franjas por día).
+    // Antes usábamos .find() por dayOfWeek y tomábamos la primera franja,
+    // lo cual daba slotDuration/modality incorrectos para slots de franjas
+    // secundarias (ej: tarde si la primera franja era la mañana).
+    const daySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek);
+    const owningSchedule = daySchedules.find(
+      (s) => time >= s.startTime && time < s.endTime
+    ) || daySchedules[0]; // fallback a la primera franja del día
+    const dur = owningSchedule?.slotDuration || 45;
+    const modality = owningSchedule?.modality || "ambas";
     const [h, m] = time.split(":").map(Number);
     const total = h * 60 + m + dur;
     const endTime = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
@@ -911,8 +918,8 @@ export function ProfessionalWeeklyAgenda({
         return "booked";
       }
 
-      // Encontrar el schedule de este día
-      const daySchedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
+      // Encontrar TODOS los schedules de este día (FIX: múltiples franjas por día)
+      const daySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek);
 
       // Verificar si la celda es el INICIO de un slot activado (override extra)
       const activatedSlot = overrides.find((o) => {
@@ -923,14 +930,15 @@ export function ProfessionalWeeklyAgenda({
       });
       if (activatedSlot) return "available";
 
-      // Verificar si la celda es el INICIO de un slot del schedule
-      // FIX: NO usar % (módulo). En su lugar, generar el array de slots
-      // y verificar si time está en ese array (match exacto).
-      if (daySchedule) {
+      // Verificar si la celda es el INICIO de un slot de CUALQUIERA de las
+      // franjas del día. Iteramos todas y nos quedamos con la primera que
+      // matchee (rara vez habrá más de una, porque las franjas no se solapan).
+      // FIX: antes usábamos .find() y solo checkeábamos la primera franja.
+      for (const sch of daySchedules) {
         const allSlots = generateTimeSlotsForSchedule(
-          daySchedule.startTime,
-          daySchedule.endTime,
-          daySchedule.slotDuration
+          sch.startTime,
+          sch.endTime,
+          sch.slotDuration
         );
         if (allSlots.includes(time) && isSlotInSchedule(dayOfWeek, time)) {
           return "schedule";
@@ -1157,20 +1165,31 @@ export function ProfessionalWeeklyAgenda({
               const dayOfWeek = dayIdx + 1;
               const isCurrentDay = isToday(day);
               const colIndex = dayIdx + 2;
-              const daySchedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
-              const slotDuration = daySchedule?.slotDuration || 45;
 
-              // 1. Generar slots del schedule (contiguos, sin snapping)
-              const scheduleSlots = daySchedule
-                ? generateTimeSlotsForSchedule(daySchedule.startTime, daySchedule.endTime, slotDuration)
-                : [];
+              // === FIX: .filter() en vez de .find() para soportar MÚLTIPLES
+              // franjas horarias por día (ej: Jueves 09-13 Online + 16-17 Presencial).
+              // Antes usábamos .find() que solo tomaba la primera franja y
+              // dejaba los demás bloques del día vacíos en la grilla. ===
+              const daySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek);
+
+              // 1. Generar slots de TODAS las franjas del día (contiguos, sin snapping)
+              // Para cada franja, generamos sus slots y los acumulamos en un array plano.
+              const scheduleSlots: string[] = [];
+              for (const sch of daySchedules) {
+                const dur = sch.slotDuration || 45;
+                const slots = generateTimeSlotsForSchedule(sch.startTime, sch.endTime, dur);
+                // Evitar duplicados por las dudas (no debería pasar si las franjas no se solapan)
+                for (const s of slots) {
+                  if (!scheduleSlots.includes(s)) scheduleSlots.push(s);
+                }
+              }
 
               // === LOGS DE DIAGNÓSTICO ===
-              if (daySchedule) {
+              if (daySchedules.length > 0) {
                 console.log(`[AGENDA DEBUG] ${dateStr} (dayIdx=${dayIdx}, dayOfWeek=${dayOfWeek})`, {
-                  schedule: { startTime: daySchedule.startTime, endTime: daySchedule.endTime, slotDuration: daySchedule.slotDuration },
+                  schedulesCount: daySchedules.length,
+                  schedules: daySchedules.map(s => ({ startTime: s.startTime, endTime: s.endTime, slotDuration: s.slotDuration, modality: s.modality })),
                   generatedSlots: scheduleSlots,
-                  has15_30: scheduleSlots.includes("15:30"),
                   overridesForDay: overrides.filter(o => o.date === dateStr).length,
                   blockOverridesForDay: overrides.filter(o => o.date === dateStr && o.type === "block"),
                 });
@@ -1197,8 +1216,18 @@ export function ProfessionalWeeklyAgenda({
 
               const slotItems: SlotItem[] = [];
 
+              // Helper local: obtener slotDuration y modality de la franja que
+              // contiene este tiempo (para soportar múltiples franjas por día)
+              const getOwningSchedule = (slotTime: string) => {
+                return daySchedules.find((s) => slotTime >= s.startTime && slotTime < s.endTime);
+              };
+
               // Schedule slots (no activados, no con appointment)
               for (const slotTime of scheduleSlots) {
+                // Buscar la franja específica que contiene este slot
+                const owningSchedule = getOwningSchedule(slotTime);
+                const slotDuration = owningSchedule?.slotDuration || 45;
+
                 // Check if there's an appointment at this exact time
                 const apt = visibleAppointments.find((a) => a.date === dateStr && a.time === slotTime);
                 if (apt && apt.status !== "cancelled_by_patient" && apt.status !== "cancelled") {
@@ -1225,7 +1254,7 @@ export function ProfessionalWeeklyAgenda({
               // Extra override slots that DON'T align with schedule (extra availability outside schedule)
               for (const o of extraOverrides) {
                 if (!o.startTime || !o.endTime) continue;
-                const oDuration = o.slotDuration || slotDuration;
+                const oDuration = o.slotDuration || 45;
                 const extraSlots = generateTimeSlotsForSchedule(o.startTime, o.endTime, oDuration);
                 for (const slotTime of extraSlots) {
                   // Skip if already in scheduleSlots (avoid duplicates)
