@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { sendCancellationByProfessionalEmail } from "@/lib/email";
+import { sendCancellationByProfessionalEmail, sendRescheduleNotificationEmail } from "@/lib/email";
 
 // Valid status transitions
 // "cancelled_by_professional" is an intermediate state: professional cancelled but
@@ -34,7 +34,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, notes, cancellationSource, cancellationReason } = body;
+    const { status, notes, cancellationSource, cancellationReason, newDate, newTime } = body;
 
     if (!status) {
       return NextResponse.json(
@@ -64,6 +64,42 @@ export async function PATCH(
         { status: 404 }
       );
     }
+
+    // === Validación de newDate/newTime (cuando se está reagendando) ===
+    // Si el nuevo status es "confirmed" y el turno actual está en "rescheduled",
+    // el caller debe enviar newDate y newTime para asignar la nueva fecha/hora.
+    const isRescheduleFlow =
+      status === "confirmed" &&
+      currentAppointment.status === "rescheduled" &&
+      (newDate || newTime);
+
+    if (isRescheduleFlow) {
+      if (!newDate || !newTime) {
+        return NextResponse.json(
+          { error: "Para reagendar se requiere newDate y newTime" },
+          { status: 400 }
+        );
+      }
+      // Validar formato de fecha (YYYY-MM-DD)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+        return NextResponse.json(
+          { error: "newDate debe tener formato YYYY-MM-DD" },
+          { status: 400 }
+        );
+      }
+      // Validar formato de hora (HH:MM)
+      if (!/^\d{2}:\d{2}$/.test(newTime)) {
+        return NextResponse.json(
+          { error: "newTime debe tener formato HH:MM" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Fetch the current appointment to validate status transition
+    // Incluimos user (email, name, phone) para poder enviar el email de
+    // cancelación sin otra query si el status es cancelled_by_professional
+    // (HECHO ARRIBA — esta sección se eliminó por duplicación)
 
     const currentStatus = currentAppointment.status;
 
@@ -113,6 +149,19 @@ export async function PATCH(
       data: {
         status,
         notes: notes || undefined,
+        // === Reagendamiento: actualizar fecha/hora si es el flujo de reschedule ===
+        // Si el caller mandó newDate y newTime, los persistimos. Esto mueve
+        // el turno a su nueva posición en la grilla.
+        ...(isRescheduleFlow
+          ? {
+              date: newDate,
+              time: newTime,
+              // Resetear el estado de envío de email para que se reenvíe
+              // la confirmación al paciente con los nuevos datos
+              patientEmailStatus: "PENDING",
+              patientEmailSentAt: null,
+            }
+          : {}),
         // === Origen de cancelación (tarea 2026-07-23) ===
         // Solo persistir si el nuevo status es de cancelación
         cancellationSource:
@@ -125,7 +174,7 @@ export async function PATCH(
             : null,
       },
       include: {
-        patient: { include: { user: { select: { name: true } } } },
+        patient: { include: { user: { select: { name: true, email: true } } } },
         professional: { include: { user: { select: { name: true } } } },
       },
     });
@@ -179,6 +228,72 @@ export async function PATCH(
         }
       } catch (err) {
         console.error("Failed to send cancellation email to patient:", err);
+      }
+    }
+
+    // === Email al paciente cuando se REAGENDA con nueva fecha/hora ===
+    // Si el caller mandó newDate/newTime y el status pasó a "confirmed",
+    // disparamos email de reconfirmación con los nuevos datos al paciente.
+    //
+    // Try/catch aislado: si el email falla, la reprogramación en DB NO se cancela.
+    if (isRescheduleFlow && appointment.patient.user.email) {
+      try {
+        // Calcular timeEnd según schedule del profesional para el nuevo día
+        let newTimeEnd: string | null = null;
+        const [h, m] = newTime.split(":").map(Number);
+        const newDayOfWeek = new Date(newDate + "T12:00:00").getDay() || 7;
+        const professionalSchedules = await db.professionalSchedule.findMany({
+          where: {
+            professionalId: currentAppointment.professionalId,
+            dayOfWeek: newDayOfWeek,
+          },
+          select: { slotDuration: true },
+          take: 1,
+        });
+        const slotDuration = professionalSchedules[0]?.slotDuration || 45;
+        const totalMin = h * 60 + m + slotDuration;
+        newTimeEnd = `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
+
+        // Buscar dirección de consultorio si la modalidad es presencial
+        let officeAddress: string | null = null;
+        if (currentAppointment.modality === "P") {
+          const addresses = await db.professionalAddress.findMany({
+            where: {
+              professionalId: currentAppointment.professionalId,
+              isActive: true,
+            },
+            take: 1,
+          });
+          officeAddress = addresses[0]?.address || null;
+        }
+
+        const rescheduleEmailResult = await sendRescheduleNotificationEmail({
+          patientEmail: appointment.patient.user.email,
+          patientName: appointment.patient.user.name,
+          professionalName: appointment.professional.user.name,
+          newDate,
+          newTime,
+          newTimeEnd,
+          modality: currentAppointment.modality || "P",
+          officeAddress,
+        });
+        emailSent.patient = !rescheduleEmailResult.error;
+        if (rescheduleEmailResult.error) {
+          console.error("Failed to send reschedule email to patient:", rescheduleEmailResult.error);
+        } else {
+          console.log(`[Reagendamiento] ✅ Email enviado a ${appointment.patient.user.email} para turno ${id}`);
+          // Marcar el email como enviado en la DB
+          await db.appointment.update({
+            where: { id },
+            data: {
+              patientEmailStatus: "SENT",
+              patientEmailSentAt: new Date(),
+            },
+          });
+        }
+      } catch (emailErr) {
+        // Aislado: el error de email NO propaga al try/catch externo
+        console.error("[Reagendamiento] Error enviando email:", emailErr);
       }
     }
 

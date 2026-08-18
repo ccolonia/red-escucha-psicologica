@@ -103,7 +103,11 @@ export async function getUpcomingAvailableSlots(
       appointments: {
         where: {
           date: { in: dateStrings },
-          status: { in: ["pending", "confirmed", "rescheduled"] },
+          // === FIX: rescheduled NO ocupa slot (libera el horario original) ===
+          // Cuando un turno pasa a "rescheduled", el slot original debe quedar
+          // LIBRE para que el Derivador/Triage pueda asignar otro paciente.
+          // Solo "pending" y "confirmed" ocupan slot activamente.
+          status: { in: ["pending", "confirmed"] },
         },
         select: { date: true, time: true },
       },

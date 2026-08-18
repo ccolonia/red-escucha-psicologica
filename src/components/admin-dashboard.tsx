@@ -499,6 +499,33 @@ export function AdminAppointments() {
                     >
                       {STATUS_MAP[apt.status]?.label || apt.status}
                     </Badge>
+
+                    {/* === Alerta +48h para turnos Reprogramados sin reagendar ===
+                        Si el turno está en estado "rescheduled" y pasaron más de
+                        48hs desde que se marcó (updatedAt), mostrar badge de
+                        alerta para que la coordinación intervenga. */}
+                    {apt.status === "rescheduled" && (() => {
+                      const updatedAt = new Date(apt.updatedAt);
+                      const now = new Date();
+                      const diffHours = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
+                      if (diffHours > 48) {
+                        return (
+                          <Badge variant="destructive" className="text-xs bg-red-100 text-red-700 border-red-300 hover:bg-red-200">
+                            ⚠️ Requiere intervención Admin (+48h)
+                          </Badge>
+                        );
+                      }
+                      // Entre 24 y 48 horas: alerta warning
+                      if (diffHours > 24) {
+                        return (
+                          <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200">
+                            ⏰ Pendiente de reagendar ({Math.floor(diffHours)}h)
+                          </Badge>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     {apt.status === "pending" && (
                       <Button
                         size="sm"
@@ -508,6 +535,23 @@ export function AdminAppointments() {
                         }
                       >
                         Confirmar
+                      </Button>
+                    )}
+
+                    {/* === Botón "Reagendar" para turnos Reprogramados ===
+                        Acceso directo para asignar nueva fecha/hora.
+                        Abre el modal de edición con un botón rápido. */}
+                    {apt.status === "rescheduled" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => {
+                          toast.info(`Para reagendar, abrí la Agenda Central y buscá el turno de ${apt.patient.user.name}`);
+                        }}
+                        title="Ir a Agenda Central para reagendar con nueva fecha/hora"
+                      >
+                        🗓️ Reagendar
                       </Button>
                     )}
                   </div>

@@ -1636,3 +1636,126 @@ export async function sendBajaNotificationEmail({
     return { data: null, error: err };
   }
 }
+
+// ============================================================================
+// REAGENDAMIENTO DE TURNO
+// ============================================================================
+
+interface SendRescheduleEmailParams {
+  patientEmail: string;
+  patientName: string;
+  professionalName: string;
+  newDate: string;       // ISO date "YYYY-MM-DD"
+  newTime: string;       // "HH:MM"
+  newTimeEnd?: string | null;
+  modality: string;      // "P", "OL"
+  officeAddress?: string | null;
+}
+
+/**
+ * Envía email al paciente cuando su turno fue reagendado con una nueva fecha/hora.
+ *
+ * Se invoca desde PATCH /api/appointments/[id] cuando:
+ * - El turno estaba en estado "rescheduled" (pendiente de reagendar)
+ * - Y se le setea nueva fecha/hora → pasa a "confirmed"
+ *
+ * Try/catch aislado: si el email falla, la reprogramación en DB NO se cancela.
+ */
+export async function sendRescheduleNotificationEmail({
+  patientEmail,
+  patientName,
+  professionalName,
+  newDate,
+  newTime,
+  newTimeEnd,
+  modality,
+  officeAddress,
+}: SendRescheduleEmailParams) {
+  try {
+    const resend = getResend();
+    const logoUrl = `${APP_URL}/images/logo.png`;
+    const modalityLabel = modality === "OL" ? "Online (videollamada)" : "Presencial";
+    const timeDisplay = newTimeEnd
+      ? `${newTime} a ${newTimeEnd} hs`
+      : `${newTime} hs`;
+    // Formatear fecha "2026-08-18" → "18 de agosto de 2026"
+    const fechaFormateada = new Date(newDate + "T12:00:00Z").toLocaleDateString("es-AR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "America/Argentina/Buenos_Aires",
+    });
+    const officeInfo = (modality === "P" && officeAddress)
+      ? `<div class="field"><div class="label" style="font-size:12px;color:#8a7a6a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Dirección</div><div class="value" style="font-size:15px;color:#2d3b2d;">${officeAddress}</div></div>`
+      : "";
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [patientEmail],
+      subject: "Tu turno fue reagendado - Red Escucha Psicológica",
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f0e8;color:#2d3b2d;">
+          <div style="max-width:600px;margin:0 auto;padding:20px;">
+            <div class="card" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+              <div class="header" style="background:linear-gradient(135deg,#3a4d3a 0%,#2d3b2d 100%);padding:30px;text-align:center;">
+                <img src="${logoUrl}" alt="Red Escucha Psicológica" style="max-width:180px;height:auto;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+                <h1 style="color:#f5f0e8;margin:0;font-size:20px;font-weight:700;">Turno Reagendado</h1>
+                <p class="subtitle" style="color:#a8c0a8;margin-top:6px;font-size:13px;">Confirmamos tu nueva fecha y hora</p>
+              </div>
+              <div style="padding:30px;">
+                <p style="font-size:16px;font-weight:600;color:#2d3b2d;margin-bottom:16px;">Hola, ${patientName}:</p>
+                <p style="font-size:15px;color:#4a5a4a;margin-bottom:20px;line-height:1.65;">
+                  Te confirmamos que tu turno con <strong>${professionalName}</strong> fue reagendado.
+                  A continuación te compartimos los detalles actualizados:
+                </p>
+                <div class="highlight" style="background:#faf7f2;border-radius:12px;padding:20px;margin:20px 0;">
+                  <div class="field" style="margin-bottom:12px;">
+                    <div class="label" style="font-size:12px;color:#8a7a6a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Nueva fecha</div>
+                    <div class="value" style="font-size:16px;color:#2d3b2d;font-weight:600;">${fechaFormateada}</div>
+                  </div>
+                  <div class="field" style="margin-bottom:12px;">
+                    <div class="label" style="font-size:12px;color:#8a7a6a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Horario</div>
+                    <div class="value" style="font-size:16px;color:#2d3b2d;font-weight:600;">${timeDisplay}</div>
+                  </div>
+                  <div class="field" style="margin-bottom:12px;">
+                    <div class="label" style="font-size:12px;color:#8a7a6a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Modalidad</div>
+                    <div class="value" style="font-size:15px;color:#2d3b2d;">${modalityLabel}</div>
+                  </div>
+                  ${officeInfo}
+                </div>
+                <p style="font-size:14px;color:#4a5a4a;margin-top:20px;">
+                  Si tenés alguna duda o necesitás modificar el turno, podés escribir a
+                  <a href="mailto:contacto@redescuchapsicologica.com" style="color:#6a8a6a;">contacto@redescuchapsicologica.com</a>
+                  o respondiendo este email.
+                </p>
+                <p style="font-size:14px;color:#4a5a4a;margin-top:16px;">
+                  ¡Gracias por tu confianza!
+                </p>
+              </div>
+              <div class="footer" style="background:#f5f0e8;padding:20px 30px;text-align:center;font-size:12px;color:#8a7a6a;">
+                Red Escucha Psicológica<br>
+                <a href="mailto:contacto@redescuchapsicologica.com" style="color:#8a7a6a;">contacto@redescuchapsicologica.com</a>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending reschedule notification email:", error);
+      return { data: null, error };
+    }
+    return { data, error: null };
+  } catch (err) {
+    console.error("Error sending reschedule notification email:", err);
+    return { data: null, error: err };
+  }
+}

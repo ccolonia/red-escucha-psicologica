@@ -243,7 +243,8 @@ export async function PUT(
         where: {
           professionalId: id,
           date: { gte: todayStr },
-          status: { in: ["pending", "confirmed", "rescheduled"] },
+          // === FIX: rescheduled NO ocupa slot (libera el horario original) ===
+          status: { in: ["pending", "confirmed"] },
         },
         select: { date: true, time: true },
       });

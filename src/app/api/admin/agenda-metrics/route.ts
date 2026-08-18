@@ -108,10 +108,11 @@ export async function GET() {
     }
 
     // === 3. bookedSlotsThisWeek: appointments activos en el rango ===
+    // === FIX: rescheduled NO ocupa slot (libera el horario original) ===
     const bookedAppointments = await db.appointment.findMany({
       where: {
         date: { in: weekDates },
-        status: { in: ["pending", "confirmed", "rescheduled"] },
+        status: { in: ["pending", "confirmed"] },
       },
       select: {
         id: true,
