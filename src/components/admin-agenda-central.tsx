@@ -50,6 +50,7 @@ import { format, startOfWeek, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { ProfessionalScheduleConfig } from "@/components/professional-schedule-config";
 import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
+import { ProfessionalProfile } from "@/components/professional-dashboard";
 import { Settings2, X, Eye, Wrench, FileText, BadgeCheck, ShieldCheck, Download } from "lucide-react";
 
 // ====================================================================
@@ -1272,311 +1273,31 @@ export function AdminAgendaCentral() {
             </div>
           )}
 
-          {/* === Tab 3: Perfil del Profesional ===
-              Muestra la ficha completa del profesional con todos sus datos.
-              Reutiliza el patrón de expanded section de admin-dashboard.tsx. */}
-          {scheduleConfigDialog.tab === "profile" && scheduleConfigDialog.professionalId && (() => {
-            // === Búsqueda DEFENSIVA del profesional en el estado ===
-            // searchResults es un objeto SearchResponse, NO un array directo.
-            // Estructura real: { criteria, summary, results: ProfessionalResult[], ... }
-            // Pero por las dudas, soportamos múltiples formas posibles por si
-            // la API cambia o viene un array plano en alguna otra situación.
-            const safeArray = <T,>(val: unknown): T[] => {
-              if (Array.isArray(val)) return val as T[];
-              if (val && typeof val === "object") {
-                const obj = val as Record<string, unknown>;
-                // Posibles campos donde podría estar el array
-                if (Array.isArray(obj.results)) return obj.results as T[];
-                if (Array.isArray(obj.data)) return obj.data as T[];
-                if (Array.isArray(obj.professionals)) return obj.professionals as T[];
-              }
-              return [];
-            };
+          {/* === Tab 3: Perfil del Profesional (Hub de Control Profesional) ===
+              Se renderiza el componente real <ProfessionalProfile> con el
+              professionalId pasado como prop. Esto permite al admin ver y editar
+              TODOS los datos del profesional (Hub de Control Profesional completo)
+              sin tener que navegar a otra vista.
 
-            const professionalList = safeArray<ProfessionalResult>(searchResults);
-            const prof = professionalList.find(
-              (p) => p.id === scheduleConfigDialog.professionalId
-            );
+              El componente ProfessionalProfile cuando recibe propProfessionalId:
+              - Entra en "modo admin": carga directamente al profesional por ID
+              - Oculta las secciones "Datos Personales" y "Cambiar Contraseña"
+                (no sería seguro que un admin edite eso desde acá)
+              - Muestra TODO el Hub de Control Profesional completo:
+                Identidad, Modalidades, Tipos de Terapia, Dirigido a,
+                Modalidad de Terapia, Zonas, Sobre su Práctica, CV
+              - Muestra las Direcciones de Atención Presencial
 
-            if (!prof) {
-              return (
-                <div className="min-h-[400px] flex items-center justify-center">
-                  <div className="text-center text-teal-600">
-                    <User className="w-12 h-12 mx-auto mb-3 text-teal-400" />
-                    <p className="text-sm">No se encontraron datos del profesional.</p>
-                    <p className="text-xs text-teal-500 mt-1">Cerrá el modal y volvé a abrirlo desde la búsqueda.</p>
-                  </div>
-                </div>
-              );
-            }
-
-            // === Helpers para parsear JSON arrays de forma segura ===
-            const dedupCaseInsensitive = (arr: string[]): string[] => {
-              const seen = new Set<string>();
-              const result: string[] = [];
-              for (const item of arr) {
-                const key = String(item).trim().toLowerCase();
-                if (!key || seen.has(key)) continue;
-                seen.add(key);
-                result.push(item);
-              }
-              return result;
-            };
-            const parseJsonArray = (val: string | null | undefined): string[] => {
-              if (!val) return [];
-              try {
-                const parsed = JSON.parse(val);
-                return Array.isArray(parsed) ? dedupCaseInsensitive(parsed.map(String)) : [];
-              } catch {
-                return [];
-              }
-            };
-            const parsedTherapyTypes = parseJsonArray(prof.therapyTypes);
-            const parsedTargetAudience = parseJsonArray(prof.targetAudience);
-            const parsedTherapyModality = parseJsonArray(prof.therapyModality);
-            const parsedZones = parseJsonArray(prof.zones);
-            const safeAddresses = Array.isArray(prof.addresses) ? prof.addresses : [];
-
-            // Calcular comisión efectiva
-            const commissionRate = prof.commissionRate != null
-              ? `${Math.round(prof.commissionRate * 100)}%`
-              : prof.profession && prof.profession.toLowerCase().includes("psiquiatr")
-                ? "20% (auto)"
-                : "30% (auto)";
-
-            return (
-              <div className="min-h-[400px] space-y-4">
-                {/* === Encabezado del perfil === */}
-                <div className="bg-gradient-to-br from-teal-50 to-sage-50 rounded-lg p-4 border border-teal-100">
-                  <div className="flex items-start gap-3">
-                    <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
-                      <User className="w-7 h-7 text-teal-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-teal-900 truncate">
-                        {prof.title ? `${prof.title} ` : ""}{prof.name}
-                      </h3>
-                      <p className="text-sm text-teal-700">{prof.specialty}</p>
-                      {prof.profession && (
-                        <p className="text-xs text-teal-500 mt-0.5">{prof.profession}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* === Datos profesionales === */}
-                <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                  {prof.license && (
-                    <div className="flex items-center gap-2">
-                      <BadgeCheck className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                      <span className="text-teal-500">Matrícula:</span>
-                      <span className="text-teal-800 font-medium">{prof.license}</span>
-                      {prof.licenseVerified && (
-                        <Badge variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">
-                          Verificada
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-teal-500">Comisión REP:</span>{" "}
-                    <span className="text-teal-800 font-medium">{commissionRate}</span>
-                  </div>
-                  {prof.cuil && (
-                    <div>
-                      <span className="text-teal-500">CUIT/CUIL:</span>{" "}
-                      <span className="text-teal-800">{prof.cuil}</span>
-                    </div>
-                  )}
-                  {prof.gender && (
-                    <div>
-                      <span className="text-teal-500">Sexo:</span>{" "}
-                      <span className="text-teal-800">{prof.gender}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* === Contacto === */}
-                <div>
-                  <h4 className="text-sm font-semibold text-teal-700 mb-2 flex items-center gap-1">
-                    <Mail className="w-4 h-4" /> Contacto
-                  </h4>
-                  <div className="grid sm:grid-cols-2 gap-2 text-sm bg-teal-50/50 p-3 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-3.5 h-3.5 text-teal-500" />
-                      <span className="text-teal-800 break-all">{prof.email}</span>
-                    </div>
-                    {prof.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 text-teal-500" />
-                        <span className="text-teal-800">{prof.phone}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* === Modalidad de atención === */}
-                <div>
-                  <h4 className="text-sm font-semibold text-teal-700 mb-2">Modalidad de atención</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {prof.onlineAttention && (
-                      <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">Online</Badge>
-                    )}
-                    {prof.presentialAttention && (
-                      <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">Presencial</Badge>
-                    )}
-                    {prof.homeAttention && (
-                      <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200 text-purple-700">Domicilio</Badge>
-                    )}
-                    {!prof.onlineAttention && !prof.presentialAttention && !prof.homeAttention && (
-                      <span className="text-xs text-teal-500 italic">No informada</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* === Tipos de terapia === */}
-                {parsedTherapyTypes.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Tipos de terapia</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {parsedTherapyTypes.map((t) => (
-                        <Badge key={t} variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">{t}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* === Otras terapias (detalle) === */}
-                {prof.otherTherapyDetails && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Detalle de otras terapias</h4>
-                    <p className="text-sm text-teal-700 bg-amber-50 border border-amber-200 p-3 rounded">
-                      {prof.otherTherapyDetails}
-                    </p>
-                  </div>
-                )}
-
-                {/* === Dirigido a === */}
-                {parsedTargetAudience.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Dirigido a</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {parsedTargetAudience.map((t) => (
-                        <Badge key={t} variant="outline" className="text-xs bg-sage-50 border-sage-200 text-sage-700">{t}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* === Modalidad de terapia === */}
-                {parsedTherapyModality.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Modalidad de terapia</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {parsedTherapyModality.map((m) => (
-                        <Badge key={m} variant="outline" className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700">{m}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* === Zonas de atención === */}
-                {parsedZones.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Zonas de atención</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {parsedZones.map((z) => (
-                        <Badge key={z} variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">{z}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* === Direcciones de consultorio === */}
-                {safeAddresses.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Direcciones de atención presencial</h4>
-                    <div className="space-y-1.5">
-                      {safeAddresses.map((addr) => (
-                        <div key={addr.id} className={`text-sm p-2 rounded border ${addr.isActive ? "bg-teal-50 border-teal-200" : "bg-gray-50 border-gray-200"}`}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <span className="font-medium text-teal-700">{addr.label}</span>
-                              <p className="text-teal-800">{addr.address}</p>
-                            </div>
-                            {addr.isActive && (
-                              <Badge variant="outline" className="text-xs bg-teal-100 border-teal-300 text-teal-800 flex-shrink-0">
-                                Activa
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* === Bio === */}
-                {prof.bio && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-teal-700 mb-2">Sobre su práctica</h4>
-                    <p className="text-sm text-teal-700 bg-teal-50 p-3 rounded leading-relaxed">{prof.bio}</p>
-                  </div>
-                )}
-
-                {/* === CV / Curriculum === */}
-                {prof.cvFileName && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-teal-700 mb-2">CV / Curriculum</h4>
-                    <a
-                      href={`/api/professionals/cv?id=${prof.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-teal-600 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-2 rounded-lg border border-teal-200 transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span className="font-medium">{prof.cvFileName}</span>
-                      <Download className="w-3.5 h-3.5 ml-1" />
-                    </a>
-                  </div>
-                )}
-
-                {/* === Estado de evaluación === */}
-                {prof.evaluationStatus && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-teal-700 mb-2 flex items-center gap-1">
-                      <ShieldCheck className="w-4 h-4" /> Estado de evaluación
-                    </h4>
-                    <Badge variant="outline" className="text-xs bg-sage-50 border-sage-200 text-sage-700">
-                      {prof.evaluationStatus}
-                    </Badge>
-                  </div>
-                )}
-
-                {/* === Notas internas (solo admin) === */}
-                {prof.internalNotes && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-amber-700 mb-2">Notas internas (admin)</h4>
-                    <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 p-3 rounded whitespace-pre-wrap">
-                      {prof.internalNotes}
-                    </p>
-                  </div>
-                )}
-
-                {/* === Fecha de registro === */}
-                {prof.createdAt && (
-                  <div className="text-xs text-teal-500 pt-3 border-t border-teal-100">
-                    Registrado el {new Date(prof.createdAt).toLocaleDateString("es-AR", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                      timeZone: "America/Argentina/Buenos_Aires",
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+              Al cerrar el modal, el estado de la Agenda Central se mantiene
+              intacto (no se pierden cambios no guardados en horarios). */}
+          {scheduleConfigDialog.tab === "profile" && scheduleConfigDialog.professionalId && (
+            <div className="min-h-[400px]">
+              <ProfessionalProfile
+                key={scheduleConfigDialog.professionalId}
+                propProfessionalId={scheduleConfigDialog.professionalId}
+              />
+            </div>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setScheduleConfigDialog(prev => ({ ...prev, open: false }))} className="border-teal-200 text-teal-600">

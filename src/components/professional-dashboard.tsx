@@ -1376,7 +1376,7 @@ export function ProfessionalPatients() {
   );
 }
 
-export function ProfessionalProfile() {
+export function ProfessionalProfile({ propProfessionalId }: { propProfessionalId?: string }) {
   const { data: session } = useSession();
   const [name, setName] = useState(session?.user?.name || "");
   const [phone, setPhone] = useState("");
@@ -1384,7 +1384,15 @@ export function ProfessionalProfile() {
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [professionalId, setProfessionalId] = useState<string | null>(null);
+  const [professionalId, setProfessionalId] = useState<string | null>(propProfessionalId || null);
+
+  // === Modo admin: cuando se pasa propProfessionalId, el componente se usa
+  // para ver/editar a OTRO profesional (no al logueado). En ese caso:
+  // - No mostramos la sección "Cambiar contraseña" (no sería seguro que un admin
+  //   cambie la contraseña de otro profesional desde acá).
+  // - No mostramos la sección "Datos Personales" con email editable.
+  // - El resto del Hub de Control Profesional + Direcciones sí se muestra.
+  const isAdminMode = !!propProfessionalId;
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -1496,6 +1504,61 @@ export function ProfessionalProfile() {
   };
 
   useEffect(() => {
+    // === Modo admin: si se pasa propProfessionalId, cargar ese profesional ===
+    // directamente por su ID sin buscar por session.userId.
+    if (propProfessionalId) {
+      fetch("/api/professionals?all=true&includeUnverified=true")
+        .then((res) => res.json())
+        .then((data) => {
+          const profs = Array.isArray(data) ? data : [];
+          const prof = profs.find((p: { id: string }) => p.id === propProfessionalId);
+          if (prof) {
+            setProfessionalId(prof.id);
+            setSpecialty(prof.specialty || "");
+            setBio(prof.bio || "");
+            // === Hub de Control Profesional ===
+            setTitle(prof.title || "Ninguno");
+            setProfession(prof.profession || "");
+            setLicense(prof.license || "");
+            setCuil(prof.cuil || "");
+            setTherapyTypes(parseJsonArray(prof.therapyTypes));
+            setOtherTherapyDetails(prof.otherTherapyDetails || "");
+            setTargetAudience(parseJsonArray(prof.targetAudience));
+            setTherapyModality(parseJsonArray(prof.therapyModality));
+            setZones(parseJsonArray(prof.zones));
+            setOnlineAttention(prof.onlineAttention || false);
+            setPresentialAttention(prof.presentialAttention || false);
+            setHomeAttention(prof.homeAttention || false);
+            setCvFileName(prof.cvFileName || null);
+            setCvMimeType(prof.cvMimeType || null);
+            // En modo admin usamos el nombre del profesional objetivo, no el del admin logueado
+            if (prof.user?.name) setName(prof.user.name);
+            if (prof.user?.phone) setPhone(prof.user.phone || "");
+            // Cargar direcciones
+            fetch(`/api/professionals/${prof.id}/addresses`)
+              .then((r) => {
+                if (!r.ok) return [];
+                const text = r.text();
+                return text.then((t) => {
+                  if (!t || t.trim() === "") return [];
+                  try {
+                    const parsed = JSON.parse(t);
+                    return Array.isArray(parsed) ? parsed : [];
+                  } catch {
+                    return [];
+                  }
+                });
+              })
+              .then((addrs) => setAddresses(addrs))
+              .catch(() => setAddresses([]));
+          }
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+      return;
+    }
+
+    // === Modo self (comportamiento original) ===
     if (session?.user) {
       const userId = (session.user as { id: string }).id;
       fetch("/api/professionals?all=true&includeUnverified=true")
@@ -1555,7 +1618,7 @@ export function ProfessionalProfile() {
         })
         .catch(() => setLoading(false));
     }
-  }, [session]);
+  }, [session, propProfessionalId]);
 
   // === Agregar nueva dirección ===
   const handleAddAddress = async () => {
@@ -1953,35 +2016,43 @@ export function ProfessionalProfile() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-teal-900">Mi Perfil</h2>
-      <Card className="border-teal-100">
-        <CardHeader>
-          <CardTitle className="text-teal-900 flex items-center gap-2 text-base">
-            <UserCheck className="w-4 h-4" />
-            Datos Personales
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Nombre completo</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} className="border-teal-200" />
+      <h2 className="text-2xl font-bold text-teal-900">
+        {isAdminMode ? `Perfil Profesional` : "Mi Perfil"}
+      </h2>
+
+      {/* === En modo admin (vista desde Agenda Central) NO mostramos
+          "Datos Personales" porque el admin no debería editar nombre/email/teléfono
+          del profesional desde acá. Eso lo hace desde Admin > Profesionales. === */}
+      {!isAdminMode && (
+        <Card className="border-teal-100">
+          <CardHeader>
+            <CardTitle className="text-teal-900 flex items-center gap-2 text-base">
+              <UserCheck className="w-4 h-4" />
+              Datos Personales
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nombre completo</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} className="border-teal-200" />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input value={session?.user?.email || ""} disabled className="border-teal-200 bg-teal-50/50" />
+              </div>
+              <div className="space-y-2">
+                <Label>Teléfono</Label>
+                <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+54 11 xxxx-xxxx" className="border-teal-200" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input value={session?.user?.email || ""} disabled className="border-teal-200 bg-teal-50/50" />
-            </div>
-            <div className="space-y-2">
-              <Label>Teléfono</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+54 11 xxxx-xxxx" className="border-teal-200" />
-            </div>
-          </div>
-          <Button className="bg-teal-600 hover:bg-teal-700 text-white" disabled={saving} onClick={handleSaveProfile}>
-            <Save className="mr-2 w-4 h-4" />
-            {saving ? "Guardando..." : "Guardar Cambios"}
-          </Button>
-        </CardContent>
-      </Card>
+            <Button className="bg-teal-600 hover:bg-teal-700 text-white" disabled={saving} onClick={handleSaveProfile}>
+              <Save className="mr-2 w-4 h-4" />
+              {saving ? "Guardando..." : "Guardar Cambios"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
       {/* ============================================== */}
       {/* HUB DE CONTROL PROFESIONAL — Diseño moderno */}
       {/* ============================================== */}
@@ -2566,14 +2637,18 @@ export function ProfessionalProfile() {
         </CardContent>
       </Card>
 
-      <Card className="border-teal-100">
-        <CardHeader>
-          <CardTitle className="text-teal-900 flex items-center gap-2 text-base">
-            <Lock className="w-4 h-4" />
-            Cambiar Contraseña
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      {/* === En modo admin NO mostramos "Cambiar Contraseña" ===
+          No sería seguro que un admin cambie la contraseña de otro profesional
+          desde esta vista. Si lo necesita, lo hace desde Admin > Usuarios. */}
+      {!isAdminMode && (
+        <Card className="border-teal-100">
+          <CardHeader>
+            <CardTitle className="text-teal-900 flex items-center gap-2 text-base">
+              <Lock className="w-4 h-4" />
+              Cambiar Contraseña
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Contraseña actual</Label>
             <div className="relative">
@@ -2687,7 +2762,8 @@ export function ProfessionalProfile() {
             {changingPassword ? "Cambiando..." : "Cambiar Contraseña"}
           </Button>
         </CardContent>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
