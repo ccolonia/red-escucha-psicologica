@@ -18,10 +18,12 @@ import {
   Mail,
   MessageCircle,
   AlertCircle,
+  CalendarPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -359,19 +361,31 @@ export function ProfessionalWeeklyAgenda({
   // aparezca como LIBRE en la grilla y el profesional pueda activarlo
   // para otro paciente.
   //
+  // === FIX (tarea 2026-08-18): también excluimos 'rescheduled' de la grilla. ===
+  // Cuando un turno se marca como "Reprogramado" (pendiente de reagendar),
+  // el slot ORIGINAL debe quedar LIBRE en la grilla (no se renderiza como
+  // bloque ocupado). El turno sigue existiendo en la DB y se puede ver en:
+  //   - La pestaña "Lista" del dashboard (auditoría histórica)
+  //   - El panel Admin (con badge "+48h" para coordinación)
+  //   - El modal de Ficha (cuando se filtra por "Reprogramados")
+  //
   // El array completo `appointments` (sin filtrar) sigue usándose en:
   // - La pestaña "Lista" del dashboard (auditoría histórica de cancelaciones)
   // - Los handlers de cancelar/reprogramar (que comparan por ID)
   //
   // Pero para la grilla visual usamos `visibleAppointments` que excluye
-  // los cancelados por paciente. Así:
+  // los cancelados por paciente Y los rescheduled. Así:
   //   - Si un turno se cancela por paciente → el slot se libera (verde)
+  //   - Si un turno se marca como reprogramado → el slot se libera (verde)
   //   - Si después se asigna OTRO turno en ese horario → se muestra el nuevo
-  //   - El turno cancelado sigue siendo visible en la pestaña "Lista"
+  //   - El turno cancelado/reprogramado sigue siendo visible en la pestaña "Lista"
   const visibleAppointments = useMemo(
     () =>
       appointments.filter(
-        (a) => a.status !== "cancelled_by_patient" && a.status !== "cancelled"
+        (a) =>
+          a.status !== "cancelled_by_patient" &&
+          a.status !== "cancelled" &&
+          a.status !== "rescheduled"
       ),
     [appointments]
   );
@@ -400,6 +414,66 @@ export function ProfessionalWeeklyAgenda({
   const [rescheduleMode, setRescheduleMode] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [activatingSlot, setActivatingSlot] = useState(false);
+
+  // === Estados para el modo Reagendar con nueva fecha/hora ===
+  // Cuando el profesional abre un turno en estado "rescheduled" y quiere
+  // asignarle nueva fecha/hora, se activa este modo.
+  const [rescheduleNewDateMode, setRescheduleNewDateMode] = useState(false);
+  const [rescheduleNewDate, setRescheduleNewDate] = useState("");
+  const [rescheduleNewTime, setRescheduleNewTime] = useState("");
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+
+  // === Handler: confirmar reagendamiento con nueva fecha/hora ===
+  // Llama a PATCH /api/appointments/[id] con:
+  //   { status: "confirmed", newDate, newTime }
+  // El backend actualiza date/time del turno y dispara email al paciente.
+  const handleRescheduleNewDate = async () => {
+    if (!fichaAppointment) return;
+    setRescheduleError(null);
+    if (!rescheduleNewDate || !rescheduleNewTime) {
+      setRescheduleError("Debés seleccionar fecha y hora");
+      return;
+    }
+    setRescheduling(true);
+    try {
+      const res = await fetch(`/api/appointments/${fichaAppointment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "confirmed",
+          newDate: rescheduleNewDate,
+          newTime: rescheduleNewTime,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Turno reagendado con éxito. Email enviado al paciente.");
+        // Actualizar el appointment localmente con los nuevos datos
+        setAppointments((prev) =>
+          prev.map((a) =>
+            a.id === fichaAppointment.id
+              ? {
+                  ...a,
+                  status: "confirmed",
+                  date: rescheduleNewDate,
+                  time: rescheduleNewTime,
+                }
+              : a
+          )
+        );
+        setRescheduleNewDateMode(false);
+        setRescheduleNewDate("");
+        setRescheduleNewTime("");
+        setFichaDialogOpen(false);
+      } else {
+        setRescheduleError(data.error || "Error al reagendar el turno");
+      }
+    } catch {
+      setRescheduleError("Error de conexión al reagendar el turno");
+    } finally {
+      setRescheduling(false);
+    }
+  };
 
   const openFichaDialog = (apt: Appointment) => {
     setFichaAppointment(apt);
@@ -1779,7 +1853,7 @@ export function ProfessionalWeeklyAgenda({
                   )}
                 </div>
                 {/* === Modo Reprogramar: textarea para el motivo === */}
-                {rescheduleMode && fichaAppointment && (
+                {rescheduleMode && !rescheduleNewDateMode && fichaAppointment && (
                   <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-orange-600" />
@@ -1818,9 +1892,75 @@ export function ProfessionalWeeklyAgenda({
                     </div>
                   </div>
                 )}
+
+                {/* === Modo Reagendar con nueva fecha/hora (NUEVO) ===
+                    Solo se muestra cuando:
+                    - El turno ya está en estado "rescheduled" (pendiente de reagendar)
+                    - El profesional activó el modo Reagendar con el botón verde
+                    Permite asignar nueva fecha/hora y dispara email al paciente. */}
+                {rescheduleNewDateMode && fichaAppointment && (
+                  <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CalendarPlus className="w-4 h-4 text-emerald-600" />
+                      <p className="text-sm font-semibold text-emerald-800">Reagendar Turno — Asignar nueva fecha/hora</p>
+                    </div>
+                    <p className="text-xs text-emerald-700">
+                      Seleccioná la nueva fecha y hora para el turno. El paciente recibirá
+                      automáticamente un email con los datos actualizados.
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-emerald-700">Nueva fecha</Label>
+                        <Input
+                          type="date"
+                          value={rescheduleNewDate}
+                          onChange={(e) => setRescheduleNewDate(e.target.value)}
+                          min={new Date().toISOString().split("T")[0]}
+                          className="border-emerald-200 bg-white"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-emerald-700">Nueva hora</Label>
+                        <Input
+                          type="time"
+                          value={rescheduleNewTime}
+                          onChange={(e) => setRescheduleNewTime(e.target.value)}
+                          step={900}
+                          className="border-emerald-200 bg-white"
+                        />
+                      </div>
+                    </div>
+                    {rescheduleError && (
+                      <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded">
+                        {rescheduleError}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={rescheduling || !rescheduleNewDate || !rescheduleNewTime}
+                        onClick={handleRescheduleNewDate}
+                      >
+                        {rescheduling
+                          ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Confirmando...</>
+                          : <><CalendarPlus className="w-3 h-3 mr-1" /> Confirmar Reagendamiento</>}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-slate-300 text-slate-600 hover:bg-slate-50"
+                        onClick={() => { setRescheduleNewDateMode(false); setRescheduleError(null); }}
+                        disabled={rescheduling}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <DialogFooter className="flex justify-between gap-2 sm:justify-between flex-wrap">
-                  {/* === Botones de acción (solo si NO estamos en modo reprogramar) === */}
-                  {!rescheduleMode && (
+                  {/* === Botones de acción (solo si NO estamos en modo reprogramar/reagendar) === */}
+                  {!rescheduleMode && !rescheduleNewDateMode && (
                     <>
                       {/* === Botón Reprogramar ===
                           Solo aparece para turnos confirmed/pending que sean FUTUROS.
@@ -1837,6 +1977,29 @@ export function ProfessionalWeeklyAgenda({
                           className="text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
                         >
                           <RefreshCw className="w-3 h-3 mr-1" /> Reprogramar
+                        </Button>
+                      )}
+
+                      {/* === Botón Reagendar Turno (NUEVO) ===
+                          Solo aparece para turnos en estado "rescheduled" (pendientes
+                          de reagendar). Permite al profesional asignar nueva fecha/hora. */}
+                      {fichaAppointment
+                        && fichaAppointment.status === "rescheduled"
+                        && !isSlotInPast(fichaAppointment.date, fichaAppointment.time)
+                        && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => {
+                            setRescheduleNewDateMode(true);
+                            setRescheduleNewDate("");
+                            setRescheduleNewTime("");
+                            setRescheduleError(null);
+                          }}
+                          disabled={cancelling || rescheduling}
+                          className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          <CalendarPlus className="w-3 h-3 mr-1" /> 🗓️ Reagendar Turno
                         </Button>
                       )}
 
@@ -1882,6 +2045,11 @@ export function ProfessionalWeeklyAgenda({
                     setFichaDialogOpen(false);
                     setRescheduleMode(false);
                     setRescheduleReason("");
+                    // === Cleanup de estados del modo Reagendar ===
+                    setRescheduleNewDateMode(false);
+                    setRescheduleNewDate("");
+                    setRescheduleNewTime("");
+                    setRescheduleError(null);
                   }} className="border-teal-200 text-teal-600 hover:bg-teal-50">Cerrar</Button>
                 </DialogFooter>
               </>
