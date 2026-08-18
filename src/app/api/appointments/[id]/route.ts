@@ -66,12 +66,16 @@ export async function PATCH(
     }
 
     // === Validación de newDate/newTime (cuando se está reagendando) ===
-    // Si el nuevo status es "confirmed" y el turno actual está en "rescheduled",
-    // el caller debe enviar newDate y newTime para asignar la nueva fecha/hora.
-    const isRescheduleFlow =
-      status === "confirmed" &&
-      currentAppointment.status === "rescheduled" &&
-      (newDate || newTime);
+    // === FIX DEFINITIVO (tarea 2026-08-18): isRescheduleFlow NO debe ===
+    // === depender del estado origen del turno. Si el caller envía    ===
+    // === newDate o newTime, es un flujo de reagendamiento válido    ===
+    // === desde CUALQUIER estado activo (pending, confirmed, rescheduled).
+    //
+    // Antes requería `currentAppointment.status === "rescheduled"` lo cual
+    // bloqueaba el caso confirmed → confirmed con nueva fecha/hora.
+    //
+    // Ahora: si hay newDate o newTime en el body, es un reagendamiento.
+    const isRescheduleFlow = Boolean(newDate || newTime);
 
     if (isRescheduleFlow) {
       if (!newDate || !newTime) {
