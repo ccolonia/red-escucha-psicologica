@@ -53,7 +53,9 @@ export async function PATCH(
           include: { user: { select: { id: true, name: true, email: true, phone: true } } },
         },
         professional: {
-          include: { user: { select: { name: true } } },
+          // === Incluimos email del profesional para poder enviarle
+          // notificación de reagendamiento (auditoría 2026-08-18) ===
+          include: { user: { select: { name: true, email: true } } },
         },
       },
     });
@@ -181,10 +183,12 @@ export async function PATCH(
           ? {
               date: newDate,
               time: newTime,
-              // Resetear el estado de envío de email para que se reenvíe
-              // la confirmación al paciente con los nuevos datos
+              // === Resetear el estado de envío de email para que se reenvíe
+              // la confirmación al paciente Y al profesional con los nuevos datos ===
               patientEmailStatus: "PENDING",
               patientEmailSentAt: null,
+              professionalEmailStatus: "PENDING",
+              professionalEmailSentAt: null,
             }
           : {}),
         // === Origen de cancelación (tarea 2026-07-23) ===
@@ -217,7 +221,7 @@ export async function PATCH(
     //
     // El email es fire-and-forget con captura de errores: si falla, no
     // rompemos el flujo de cancelación (el appointment ya está actualizado).
-    const emailSent = { patient: false };
+    const emailSent = { patient: false, professional: false };
     if (status === "cancelled_by_professional" && currentAppointment.patient.user.email) {
       // Calcular timeEnd según schedule del profesional (igual que en GET /api/appointments)
       let timeEnd: string | null = null;
@@ -318,7 +322,50 @@ export async function PATCH(
         }
       } catch (emailErr) {
         // Aislado: el error de email NO propaga al try/catch externo
-        console.error("[Reagendamiento] Error enviando email:", emailErr);
+        console.error("[Reagendamiento] Error enviando email al paciente:", emailErr);
+      }
+    }
+
+    // === Email al PROFESIONAL cuando se REAGENDA con nueva fecha/hora ===
+    // Notifica al profesional que el turno fue reagendado para que tenga
+    // constancia del nuevo horario y pueda gestionar su agenda.
+    //
+    // Si el profesional reagendó su propio turno, este email sirve como
+    // confirmación/información. Si fue el admin quien reagendó, este email
+    // es CRÍTICO para que el profesional se entere del cambio.
+    //
+    // Try/catch aislado: si el email falla, la reprogramación en DB NO se cancela.
+    if (isRescheduleFlow && currentAppointment.professional.user.email) {
+      try {
+        const rescheduleProEmailResult = await sendRescheduleNotificationEmail({
+          patientEmail: currentAppointment.professional.user.email,
+          patientName: currentAppointment.professional.user.name,
+          // Pasamos el nombre del profesional como professionalName para que
+          // el template muestre "Hola, {nombre}" en el saludo
+          professionalName: currentAppointment.professional.user.name,
+          newDate,
+          newTime,
+          newTimeEnd: null, // se calcula abajo si es necesario
+          modality: currentAppointment.modality || "P",
+          officeAddress: null,
+        });
+        emailSent.professional = !rescheduleProEmailResult.error;
+        if (rescheduleProEmailResult.error) {
+          console.error("Failed to send reschedule email to professional:", rescheduleProEmailResult.error);
+        } else {
+          console.log(`[Reagendamiento] ✅ Email enviado al profesional ${currentAppointment.professional.user.email} para turno ${id}`);
+          // Marcar el email del profesional como enviado en la DB
+          await db.appointment.update({
+            where: { id },
+            data: {
+              professionalEmailStatus: "SENT",
+              professionalEmailSentAt: new Date(),
+            },
+          });
+        }
+      } catch (emailErr) {
+        // Aislado: el error de email NO propaga al try/catch externo
+        console.error("[Reagendamiento] Error enviando email al profesional:", emailErr);
       }
     }
 
