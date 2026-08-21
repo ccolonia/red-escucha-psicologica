@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { patientId, professionalId, date, time, modality, reason, status } = body;
+    const { patientId, professionalId, date, time, modality, reason, status, skipNotifications } = body;
 
     if (!patientId || !professionalId || !date || !time) {
       return NextResponse.json(
@@ -26,6 +26,42 @@ export async function POST(request: NextRequest) {
     let appointmentStatus = "pending"; // Default for patients
     if ((role === "professional" || role === "admin" || role === "super_admin") && status === "confirmed") {
       appointmentStatus = "confirmed";
+    }
+
+    // === Detección automática de turno pasado (tarea 2026-08-18) ===
+    // Si la fecha/hora del turno ya pasó, lo consideramos un registro retroactivo.
+    // En ese caso, silenciamos los emails para no confundir al paciente/profesional
+    // con "confirmaciones" de turnos que ya fueron atendidos.
+    //
+    // El flag skipNotifications también permite al admin forzar el silencio
+    // desde la UI (caso de carga retroactiva explícita).
+    //
+    // Comparamos con la fecha+hora del turno en zona horaria de Argentina
+    // para evitar problemas con UTC.
+    const ARG_TZ = "America/Argentina/Buenos_Aires";
+    const nowArg = new Date().toLocaleString("sv-SE", { timeZone: ARG_TZ });
+    // nowArg = "2026-08-21 14:30:45"
+    const todayArg = nowArg.split(" ")[0]; // "2026-08-21"
+    const nowTimeArg = nowArg.split(" ")[1].slice(0, 5); // "14:30"
+    const isPastAppointment =
+      date < todayArg ||
+      (date === todayArg && time <= nowTimeArg);
+
+    // skipNotifications explícito del body, o automático si la fecha ya pasó
+    const shouldSkipNotifications = Boolean(skipNotifications) || isPastAppointment;
+
+    // === Guardrail de seguridad: solo admin/super_admin puede crear turnos pasados ===
+    if (isPastAppointment && role !== "admin" && role !== "super_admin") {
+      return NextResponse.json(
+        { error: "Solo un administrador puede registrar turnos en fechas pasadas." },
+        { status: 403 }
+      );
+    }
+
+    // === Si la fecha es pasada y el admin no especificó status, asumir "completed" ===
+    // Los turnos retroactivos por defecto quedan como "completed" (ya fueron atendidos).
+    if (isPastAppointment && !status) {
+      appointmentStatus = "completed";
     }
 
     // Check for conflicting appointment
@@ -45,6 +81,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // === Estado inicial de los flags de email ===
+    // Si shouldSkipNotifications=true, marcamos como SKIPPED desde el inicio
+    // (no se enviarán emails). Si no, PENDING y se disparan abajo.
+    const initialEmailStatus = shouldSkipNotifications ? "SKIPPED" : "PENDING";
+
     const appointment = await db.appointment.create({
       data: {
         patientId,
@@ -54,8 +95,8 @@ export async function POST(request: NextRequest) {
         modality: modality || "P",
         reason: reason || null,
         status: appointmentStatus,
-        patientEmailStatus: "PENDING",
-        professionalEmailStatus: "PENDING",
+        patientEmailStatus: initialEmailStatus,
+        professionalEmailStatus: initialEmailStatus,
       },
       include: {
         patient: { include: { user: { select: { name: true, email: true, phone: true } } } },
@@ -66,57 +107,72 @@ export async function POST(request: NextRequest) {
     // === Envío automático de emails de confirmación ===
     // Fire-and-forget: no bloquea la respuesta al usuario.
     // Guarda el resultado (SENT/FAILED) en la DB para trazabilidad.
-    (async () => {
-      let patientEmailStatus = "SENT";
-      let professionalEmailStatus = "SENT";
+    //
+    // === GUARD: si shouldSkipNotifications=true, NO disparamos ningún email. ===
+    // Esto aplica a:
+    //   1. Turnos pasados (registro retroactivo): no tiene sentido mandar
+    //      confirmación de un turno que ya fue atendido.
+    //   2. skipNotifications=true explícito del body (admin puede forzarlo).
+    if (!shouldSkipNotifications) {
+      (async () => {
+        let patientEmailStatus = "SENT";
+        let professionalEmailStatus = "SENT";
 
-      // Mail al paciente
-      try {
-        await sendTriagePatientNotification({
-          patientEmail: appointment.patient.user.email,
-          patientName: appointment.patient.user.name,
-          professionalName: appointment.professional.user.name,
-          date: appointment.date,
-          time: appointment.time,
-          timeEnd: null,
-          modality: appointment.modality || "P",
+        // Mail al paciente
+        try {
+          await sendTriagePatientNotification({
+            patientEmail: appointment.patient.user.email,
+            patientName: appointment.patient.user.name,
+            professionalName: appointment.professional.user.name,
+            date: appointment.date,
+            time: appointment.time,
+            timeEnd: null,
+            modality: appointment.modality || "P",
+          });
+        } catch (err) {
+          console.error("Appointment creation - patient email error:", err);
+          patientEmailStatus = "FAILED";
+        }
+
+        // Mail al profesional
+        try {
+          await sendTriageProfessionalNotification({
+            professionalEmail: appointment.professional.user.email,
+            professionalName: appointment.professional.user.name,
+            patientName: appointment.patient.user.name,
+            patientPhone: appointment.patient.user.phone || null,
+            date: appointment.date,
+            time: appointment.time,
+            timeEnd: null,
+            reason: appointment.reason || "",
+            modality: appointment.modality || "P",
+          });
+        } catch (err) {
+          console.error("Appointment creation - professional email error:", err);
+          professionalEmailStatus = "FAILED";
+        }
+
+        // Actualizar estados en la DB
+        await db.appointment.update({
+          where: { id: appointment.id },
+          data: {
+            patientEmailStatus,
+            patientEmailSentAt: new Date(),
+            professionalEmailStatus,
+            professionalEmailSentAt: new Date(),
+          },
         });
-      } catch (err) {
-        console.error("Appointment creation - patient email error:", err);
-        patientEmailStatus = "FAILED";
-      }
+      })();
+    } else {
+      // Log informativo: turno creado en modo silencioso (sin emails)
+      console.log(`[Appointment] 🔇 Turno ${appointment.id} creado en modo silencioso (sin emails). Fecha: ${date} ${time}, status: ${appointmentStatus}, isPast: ${isPastAppointment}`);
+    }
 
-      // Mail al profesional
-      try {
-        await sendTriageProfessionalNotification({
-          professionalEmail: appointment.professional.user.email,
-          professionalName: appointment.professional.user.name,
-          patientName: appointment.patient.user.name,
-          patientPhone: appointment.patient.user.phone || null,
-          date: appointment.date,
-          time: appointment.time,
-          timeEnd: null,
-          reason: appointment.reason || "",
-          modality: appointment.modality || "P",
-        });
-      } catch (err) {
-        console.error("Appointment creation - professional email error:", err);
-        professionalEmailStatus = "FAILED";
-      }
-
-      // Actualizar estados en la DB
-      await db.appointment.update({
-        where: { id: appointment.id },
-        data: {
-          patientEmailStatus,
-          patientEmailSentAt: new Date(),
-          professionalEmailStatus,
-          professionalEmailSentAt: new Date(),
-        },
-      });
-    })();
-
-    return NextResponse.json(appointment, { status: 201 });
+    // Retornar con flag informativo para que el frontend sepa si se silenciaron emails
+    return NextResponse.json(
+      { ...appointment, emailsSkipped: shouldSkipNotifications, isPastAppointment },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Create appointment error:", error);
     return NextResponse.json(

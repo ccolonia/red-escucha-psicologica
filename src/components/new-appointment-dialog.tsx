@@ -535,8 +535,13 @@ export function NewAppointmentDialog({
 
               <div className="space-y-4">
                 {/* Date picker */}
+                {/* === Admin puede elegir fechas pasadas (registro retroactivo) ===
+                    Si isAdmin=true, no restringimos min. Si es paciente/profesional,
+                    mantenemos min=hoy para evitar turnos pasados por error. */}
                 <div className="space-y-2">
-                  <Label className="text-teal-700">Fecha</Label>
+                  <Label className="text-teal-700">
+                    Fecha {isAdmin && <span className="text-xs text-orange-600 ml-1">(podés elegir fechas pasadas para registro retroactivo)</span>}
+                  </Label>
                   <Input
                     type="date"
                     value={selectedDate}
@@ -545,8 +550,8 @@ export function NewAppointmentDialog({
                       setSelectedTime("");
                       setSelectedModality("");
                     }}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="border-teal-200"
+                    {...(!isAdmin ? { min: new Date().toISOString().split("T")[0] } : {})}
+                    className={`border-teal-200 ${isAdmin ? "bg-orange-50/30" : ""}`}
                   />
                 </div>
 
