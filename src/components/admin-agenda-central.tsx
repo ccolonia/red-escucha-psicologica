@@ -1689,7 +1689,21 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                       gridRow: `${rowStart} / span ${span}`,
                       gridColumn: colIndex,
                     }}
-                    onClick={(slot.type === "available" && slot.freeSlot && !past) ? () => onSlotClick(slot.freeSlot!, dayData!.date) : (slot.type === "booked" && slot.bookedSlot) ? () => onBookedSlotClick(slot.bookedSlot!) : undefined}
+                    // === Click handler con soporte para slots pasados (admin) ===
+                    // - slot.type === "available" Y NO pasado: click normal → onSlotClick
+                    // - slot.type === "booked": click → onBookedSlotClick (abre FichaDialog)
+                    // - slot.type === "past" Y freeSlot presente: click → onSlotClick
+                    //   (permite al admin registrar turno retroactivo en slot pasado)
+                    // - otros casos (schedule, past sin freeSlot): no clickable
+                    onClick={
+                      (slot.type === "available" && slot.freeSlot && !past)
+                        ? () => onSlotClick(slot.freeSlot!, dayData!.date)
+                        : (slot.type === "booked" && slot.bookedSlot)
+                          ? () => onBookedSlotClick(slot.bookedSlot!)
+                          : (slot.type === "past" && slot.freeSlot)
+                            ? () => onSlotClick(slot.freeSlot!, dayData!.date)
+                            : undefined
+                    }
                   >
                     {slot.type === "schedule" && (
                       <div

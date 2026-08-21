@@ -134,11 +134,21 @@ export async function POST(request: NextRequest) {
       date < todayArg ||
       (date === todayArg && time <= nowTimeArg);
 
+    // === Tarea 2026-08-21: Permitir asignación retroactiva para Admin ===
+    // Antes: rechazaba con 400 si la fecha era pasada.
+    // Ahora: PERMITE la asignación pero silencia los emails automáticamente
+    // (no tiene sentido mandar confirmación de un turno que ya fue atendido).
+    // El turno se guarda directamente como 'completed' (Realizado).
+    //
+    // Guardrail: el endpoint ya requiere autenticación admin/super_admin
+    // (check al principio del handler), así que pacientes y profesionales
+    // no pueden llegar acá.
+    const shouldSkipNotifications = isPast;
+    const retroactiveStatus = isPast ? "completed" : "confirmed";
+    const initialEmailStatus = shouldSkipNotifications ? "SKIPPED" : "PENDING";
+
     if (isPast) {
-      return NextResponse.json(
-        { error: "No es posible asignar turnos en fechas u horarios pasados." },
-        { status: 400 }
-      );
+      console.log(`[Quick-Assign] 🔇 Registro retroactivo: fecha ${date} ${time} (pasado). Status: completed, emails silenciados.`);
     }
 
     // === Transacción atómica ===
@@ -289,7 +299,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 5. Crear Appointment con status "confirmed"
+      // 5. Crear Appointment
+      // === Tarea 2026-08-21: Si es fecha pasada (registro retroactivo),
+      // el turno se guarda directamente como 'completed' (Realizado) y
+      // los emails se marcan como 'SKIPPED' (no se enviarán). ===
       const appointment = await tx.appointment.create({
         data: {
           patientId: patient.id,
@@ -297,11 +310,11 @@ export async function POST(request: NextRequest) {
           date,
           time,
           modality: appointmentModality,
-          status: "confirmed",
+          status: retroactiveStatus,
           reason: null,
           notes: trimmedNotes,
-          patientEmailStatus: "PENDING",
-          professionalEmailStatus: "PENDING",
+          patientEmailStatus: initialEmailStatus,
+          professionalEmailStatus: initialEmailStatus,
         },
         include: {
           patient: { include: { user: { select: { name: true, email: true, phone: true } } } },
@@ -355,7 +368,15 @@ export async function POST(request: NextRequest) {
 
     // === Notificación automática dual (paciente + profesional) ===
     // try/catch aislado: si los emails fallan, la cita NO se revierte.
-    const emailSent = { patient: false, professional: false };
+    //
+    // === Tarea 2026-08-21: Si shouldSkipNotifications=true (fecha pasada),
+    // NO disparamos ningún email. El turno ya quedó guardado como 'completed'
+    // con emailStatus='SKIPPED' en la transacción. ===
+    const emailSent = { patient: !shouldSkipNotifications, professional: !shouldSkipNotifications };
+    if (shouldSkipNotifications) {
+      // Modo silencioso: turno retroactivo, no enviar emails
+      console.log(`[Quick-Assign] 🔇 Turno ${result.appointment.id} creado en modo silencioso (sin emails). Fecha: ${date} ${time}`);
+    } else {
     try {
       const professionalName = result.appointment.professional?.user?.name || "Profesional";
       // Calcular timeEnd + officeAddress según schedule del profesional
@@ -462,8 +483,13 @@ export async function POST(request: NextRequest) {
     } catch (emailErr) {
       console.error("Quick-assign notification outer exception:", emailErr);
     }
+    } // fin del else (shouldSkipNotifications=false)
 
     // === Actualizar estados de email en la DB ===
+    // === Solo si NO fue silenciado (turno futuro normal) ===
+    // Si fue silenciado, los estados ya quedaron como 'SKIPPED' desde la
+    // transacción, así que NO los sobreescribimos acá.
+    if (!shouldSkipNotifications) {
     try {
       await db.appointment.update({
         where: { id: result.appointment.id },
@@ -477,6 +503,7 @@ export async function POST(request: NextRequest) {
     } catch (updateErr) {
       console.error("Failed to update email status:", updateErr);
     }
+    } // fin del if (!shouldSkipNotifications)
 
     return NextResponse.json({
       success: true,
