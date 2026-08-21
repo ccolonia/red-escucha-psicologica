@@ -526,6 +526,45 @@ export function AdminAgendaCentral() {
     setAssignDialog({ open: true, professional, slot, date });
   };
 
+  // === Tarea 2026-08-21: Abrir AssignDialog para slot pasado NO configurado ===
+  // Cuando el admin hace click en un slot "schedule" pasado (no disponible
+  // porque el profesional no activó la disponibilidad), fabricamos un slot
+  // sintético con la hora clickada para que el AssignDialog pueda abrirse
+  // y el admin pueda registrar el turno retroactivo.
+  //
+  // El slot sintético:
+  // - time: la hora clickada
+  // - endTime: calculada sumando 45 min (default slotDuration)
+  // - modality: "ambas" (luego el admin puede cambiarlo en el form)
+  // - duration: 45 min (default)
+  // - direccionId: null (sin dirección específica)
+  const openAssignDialogForEmptyPast = (professional: ProfessionalResult, time: string, date: string) => {
+    // Calcular endTime sumando 45 min (default)
+    const [h, m] = time.split(":").map(Number);
+    const totalMin = h * 60 + m + 45;
+    const endTime = `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
+
+    const syntheticSlot: AvailableSlot = {
+      time,
+      endTime,
+      modality: "ambas",
+      duration: 45,
+      direccionId: null,
+    };
+
+    setAssignForm({
+      patientName: "",
+      patientPhone: "",
+      patientEmail: "",
+      notes: "",
+      modality: "P", // default presencial, el admin puede cambiar
+      isLead: false,
+      leadId: null,
+    });
+    setAssignDialog({ open: true, professional, slot: syntheticSlot, date });
+    toast.info(`Carga retroactiva — ${professional.name} el ${date} a las ${time} hs. El turno se guardará como completado sin enviar emails.`);
+  };
+
   const openFichaDialog = (professional: ProfessionalResult, slot: BookedSlot) => {
     setFichaDialog({ open: true, professional, slot });
   };
@@ -1031,6 +1070,7 @@ export function AdminAgendaCentral() {
                   weekDates={searchResults?.weekDates || []}
                   onSlotClick={(slot, date) => openAssignDialog(activeProfessional, slot, date)}
                   onBookedSlotClick={(slot) => openFichaDialog(activeProfessional, slot)}
+                  onEmptyPastSlotClick={(time, date) => openAssignDialogForEmptyPast(activeProfessional, time, date)}
                 />
               </CardContent>
             </>
@@ -1344,9 +1384,14 @@ interface ExcelMatrixProps {
   weekDates: string[];
   onSlotClick: (slot: AvailableSlot, date: string) => void;
   onBookedSlotClick: (slot: BookedSlot) => void;
+  // === Tarea 2026-08-21: Carga retroactiva en slots NO configurados ===
+  // Cuando el admin hace click en un slot "schedule" pasado (no configurado
+  // como disponible pero dentro de la franja horaria del profesional),
+  // dispara este handler para abrir el AssignDialog con un slot sintético.
+  onEmptyPastSlotClick?: (time: string, date: string) => void;
 }
 
-function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }: ExcelMatrixProps) {
+function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, onEmptyPastSlotClick }: ExcelMatrixProps) {
   // === REPLICA EXACTA de la grilla del profesional ===
   // El usuario pidió que la Agenda Central del admin se vea IGUAL que la
   // agenda del profesional. Por eso este componente ahora usa el mismo
@@ -1694,7 +1739,9 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                     // - slot.type === "booked": click → onBookedSlotClick (abre FichaDialog)
                     // - slot.type === "past" Y freeSlot presente: click → onSlotClick
                     //   (permite al admin registrar turno retroactivo en slot pasado)
-                    // - otros casos (schedule, past sin freeSlot): no clickable
+                    // - slot.type === "schedule" Y pasado Y onEmptyPastSlotClick:
+                    //   click → onEmptyPastSlotClick (carga retroactiva en slot NO configurado)
+                    // - otros casos: no clickable
                     onClick={
                       (slot.type === "available" && slot.freeSlot && !past)
                         ? () => onSlotClick(slot.freeSlot!, dayData!.date)
@@ -1702,7 +1749,9 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick }
                           ? () => onBookedSlotClick(slot.bookedSlot!)
                           : (slot.type === "past" && slot.freeSlot)
                             ? () => onSlotClick(slot.freeSlot!, dayData!.date)
-                            : undefined
+                            : (slot.type === "schedule" && past && onEmptyPastSlotClick && dayData)
+                              ? () => onEmptyPastSlotClick(slot.time, dayData.date)
+                              : undefined
                     }
                   >
                     {slot.type === "schedule" && (
