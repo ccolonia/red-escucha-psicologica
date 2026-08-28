@@ -23,8 +23,14 @@ export function AuthLogin() {
     setLoading(true);
     setError("");
 
+    // === Sanitización de email (tarea 2026-08-21) ===
+    // Trim espacios y lowercase antes de enviar a NextAuth.
+    // Esto previene fallos de login por espacios accidentales o
+    // mayúsculas/minúsculas inconsistentes.
+    const sanitizedEmail = email.trim().toLowerCase();
+
     const result = await signIn("credentials", {
-      email,
+      email: sanitizedEmail,
       password,
       redirect: false,
     });

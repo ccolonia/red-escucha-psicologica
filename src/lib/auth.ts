@@ -21,59 +21,84 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Contraseña", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        // === Sanitización de inputs (tarea 2026-08-21) ===
+        // Antes de hacer cualquier cosa, sanitizamos el email para evitar
+        // problemas de espacios accidentales o mayúsculas/minúsculas.
+        const rawEmail = credentials?.email?.trim().toLowerCase() || "";
+        const rawPassword = credentials?.password || "";
+
+        if (!rawEmail || !rawPassword) {
+          console.log("[auth] Login fallido: email o password vacíos");
           return null;
         }
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email },
-        });
+        try {
+          const user = await db.user.findUnique({
+            where: { email: rawEmail },
+          });
 
-        if (!user || !user.active) {
-          return null;
-        }
+          if (!user) {
+            console.log(`[auth] Login fallido: usuario NO encontrado - email="${rawEmail}"`);
+            return null;
+          }
 
-        // Secure password comparison using bcrypt
-        // Supports both hashed and plaintext passwords for migration period
-        let isValid = false;
-        if (isHashed(user.password)) {
-          isValid = await comparePassword(credentials.password, user.password);
-        } else {
-          // Legacy plaintext comparison (will be removed after migration)
-          isValid = user.password === credentials.password;
-          // Auto-upgrade plaintext to bcrypt on successful login
-          if (isValid) {
-            const hashedPassword = await hashPassword(credentials.password);
-            await db.user.update({
+          if (!user.active) {
+            console.log(`[auth] Login fallido: usuario INACTIVO - email="${rawEmail}", role="${user.role}", active=${user.active}`);
+            return null;
+          }
+
+          // Secure password comparison using bcrypt
+          // Supports both hashed and plaintext passwords for migration period
+          let isValid = false;
+          if (isHashed(user.password)) {
+            isValid = await comparePassword(rawPassword, user.password);
+          } else {
+            // Legacy plaintext comparison (will be removed after migration)
+            isValid = user.password === rawPassword;
+            // Auto-upgrade plaintext to bcrypt on successful login
+            if (isValid) {
+              const hashedPassword = await hashPassword(rawPassword);
+              await db.user.update({
+                where: { id: user.id },
+                data: { password: hashedPassword },
+              });
+            }
+          }
+
+          if (!isValid) {
+            console.log(`[auth] Login fallido: contraseña incorrecta - email="${rawEmail}", role="${user.role}"`);
+            return null;
+          }
+
+          console.log(`[auth] ✅ Login exitoso - email="${rawEmail}", role="${user.role}", id="${user.id}"`);
+
+          // === Marcar primer acceso al panel ===
+          // hasAccessedPanel se setea en true en el primer login exitoso.
+          // Lo hacemos SIN await (fire-and-forget) para no demorar el login.
+          // Si falla (DB caída, etc.), el usuario igual entra — el flag se
+          // actualizará en el próximo login exitoso.
+          if (!user.hasAccessedPanel) {
+            db.user.update({
               where: { id: user.id },
-              data: { password: hashedPassword },
+              data: { hasAccessedPanel: true },
+            }).catch((err) => {
+              console.error("[auth] Error marcando hasAccessedPanel:", err);
             });
           }
-        }
-        if (!isValid) {
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (dbError) {
+          // === Catch de errores de DB (tarea 2026-08-21) ===
+          // Si la DB cae o hay error de conexión, logueamos el error real
+          // para poder diagnosticar desde Vercel Logs.
+          console.error("[auth] EXCEPCIÓN en authorize (DB error?):", dbError);
           return null;
         }
-
-        // === Marcar primer acceso al panel ===
-        // hasAccessedPanel se setea en true en el primer login exitoso.
-        // Lo hacemos SIN await (fire-and-forget) para no demorar el login.
-        // Si falla (DB caída, etc.), el usuario igual entra — el flag se
-        // actualizará en el próximo login exitoso.
-        if (!user.hasAccessedPanel) {
-          db.user.update({
-            where: { id: user.id },
-            data: { hasAccessedPanel: true },
-          }).catch((err) => {
-            console.error("[auth] Error marcando hasAccessedPanel:", err);
-          });
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       },
     }),
   ],
