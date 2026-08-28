@@ -72,6 +72,13 @@ function isPublicApiRoute(pathname: string, method: string): boolean {
     return true;
   }
 
+  // === ENDPOINT TEMPORAL DE DIAGNÓSTICO DE LOGIN (tarea 2026-08-21) ===
+  // No requiere auth porque SI el login está caído no podemos autenticarnos
+  // para diagnosticar. Se debe ELIMINAR después de resolver el problema.
+  if (pathname === "/api/debug/login-status") {
+    return true;
+  }
+
   // Push notifications: rutas públicas (VAPID public key + subscribe/unsubscribe)
   // El endpoint /subscribe puede recibir un conversationId (paciente anónimo) o
   // vincularse a userId si hay sesión. /vapid-public-key devuelve solo la clave pública.
