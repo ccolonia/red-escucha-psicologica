@@ -51,7 +51,7 @@ import { es } from "date-fns/locale";
 import { ProfessionalScheduleConfig } from "@/components/professional-schedule-config";
 import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
 import { ProfessionalProfile } from "@/components/professional-dashboard";
-import { Settings2, X, Eye, Wrench, FileText, BadgeCheck, ShieldCheck, Download, CalendarPlus } from "lucide-react";
+import { Settings2, X, Eye, Wrench, FileText, BadgeCheck, ShieldCheck, Download, CalendarPlus, UserX } from "lucide-react";
 
 // ====================================================================
 // CONSTANTES
@@ -137,6 +137,10 @@ interface BookedSlot {
   patientEmailSentAt?: string | null;
   professionalEmailStatus?: string | null;
   professionalEmailSentAt?: string | null;
+  // === Recurrencia (tarea 2026-08-21) ===
+  seriesId?: string | null;
+  isOverride?: boolean;
+  originalDate?: string | null;
 }
 
 // === Status labels para mostrar en el card del BookedSlot ===
@@ -1865,7 +1869,7 @@ function BookedSlotCard({ slot, past }: { slot: BookedSlot; past: boolean }) {
       <div className="text-[9px] opacity-70 mt-0.5 font-mono font-bold">
         {timeDisplay}
       </div>
-      {/* Línea 3: badges de status + modality */}
+      {/* Línea 3: badges de status + modality + recurrencia */}
       <div className="flex items-center gap-1 mt-0.5 flex-wrap">
         <span
           className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${colors.badge} border`}
@@ -1877,6 +1881,31 @@ function BookedSlotCard({ slot, past }: { slot: BookedSlot; past: boolean }) {
             className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium border ${modalityInfo.color}`}
           >
             {modalityInfo.label}
+          </span>
+        )}
+        {/* === Badges de Recurrencia (tarea 2026-08-21) === */}
+        {slot.seriesId && (
+          <span
+            className="inline-flex items-center px-1 py-0 rounded text-[9px] font-medium border bg-purple-50 text-purple-700 border-purple-200"
+            title="Este turno pertenece a una serie recurrente (paciente fijo)"
+          >
+            🔄 Serie
+          </span>
+        )}
+        {slot.status === "skipped_holiday" && (
+          <span
+            className="inline-flex items-center px-1 py-0 rounded text-[9px] font-medium border bg-gray-100 text-gray-500 border-gray-300 opacity-60"
+            title="Turno saltado por feriado"
+          >
+            Feriado
+          </span>
+        )}
+        {slot.isOverride && (
+          <span
+            className="inline-flex items-center px-1 py-0 rounded text-[9px] font-medium border bg-amber-50 text-amber-600 border-amber-200"
+            title="Sobreturno fuera de grilla normal"
+          >
+            Sobreturno
           </span>
         )}
       </div>
@@ -2223,6 +2252,74 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
   const [rescheduleNewDate, setRescheduleNewDate] = useState("");
   const [rescheduleNewTime, setRescheduleNewTime] = useState("");
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+
+  // === Handler: Reprogramar SOLO esta fecha de una serie recurrente ===
+  // Llama a PATCH /api/appointments/reschedule con:
+  //   { appointmentId, newDate, newTimeSlot }
+  // Mantiene intacta la serie general para los días siguientes.
+  // Solo actualiza el appointment individual.
+  const handleRescheduleSingleFromSeries = async () => {
+    if (!slot) return;
+    setRescheduleError(null);
+    if (!rescheduleNewDate || !rescheduleNewTime) {
+      setRescheduleError("Debés seleccionar fecha y hora");
+      setRescheduleNewDateMode(true);
+      return;
+    }
+    setRescheduling(true);
+    try {
+      const res = await fetch("/api/appointments/reschedule", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appointmentId: slot.id,
+          newDate: rescheduleNewDate,
+          newTimeSlot: rescheduleNewTime,
+          isOverride: false,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Turno reprogramado a ${rescheduleNewDate} ${rescheduleNewTime}. La serie general NO se afecta.`);
+        setRescheduleNewDateMode(false);
+        setRescheduleNewDate("");
+        setRescheduleNewTime("");
+        setRescheduleError(null);
+        if (onOpenChange) onOpenChange(false);
+      } else {
+        setRescheduleError(data.error || "Error al reprogramar el turno");
+      }
+    } catch {
+      setRescheduleError("Error de conexión al reprogramar");
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
+  // === Handler: Dar de baja una serie recurrente completa ===
+  // Llama a PATCH /api/appointments/recurring/[id]/cancel
+  // Setea active=false en la serie y cancela los turnos futuros.
+  const handleCancelSeries = async () => {
+    if (!slot?.seriesId) return;
+    if (!confirm("¿Dar de baja la serie recurrente completa? Se cancelarán todos los turnos futuros. Los turnos ya atendidos se mantienen para auditoría.")) return;
+    setRescheduling(true);
+    try {
+      const res = await fetch(`/api/appointments/recurring/${slot.seriesId}/cancel`, {
+        method: "PATCH",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Serie cancelada. ${data.cancelledAppointments || 0} turnos futuros cancelados, ${data.keptAppointments || 0} históricos mantenidos.`);
+        if (onOpenChange) onOpenChange(false);
+      } else {
+        toast.error(data.error || "Error al cancelar la serie");
+      }
+    } catch {
+      toast.error("Error de conexión al cancelar la serie");
+    } finally {
+      setRescheduling(false);
+    }
+  };
 
   // === Handler: confirmar reagendamiento con nueva fecha/hora ===
   // Llama a PATCH /api/appointments/[id] con:
@@ -2601,6 +2698,39 @@ function FichaDialog({ open, onOpenChange, professional, slot, onCancel, cancell
                   {cancelling ? <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Cancelando...</> : <><XCircle className="w-3 h-3 mr-1" /> Cancelar Turno</>}
                 </Button>
               )}
+
+              {/* === Botones de Serie Recurrente (tarea 2026-08-21) ===
+                  Solo se muestran si el turno pertenece a una serie recurrente.
+                  - "Reprogramar solo esta fecha": abre el modal de reprogramación
+                    puntual (PATCH /api/appointments/reschedule). Mantiene la serie
+                    intacta para los días siguientes.
+                  - "Baja de Serie Completa": cancela la serie a futuro
+                    (PATCH /api/appointments/recurring/[id]/cancel). */}
+              {slot.seriesId && ["scheduled", "confirmed", "pending"].includes(slot.status) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRescheduleSingleFromSeries()}
+                  disabled={cancelling || rescheduling || resending}
+                  className="text-xs border-purple-300 text-purple-600 hover:bg-purple-50"
+                  title="Reprogramar SOLO esta fecha. La serie general no se afecta."
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" /> Reprogramar solo esta fecha
+                </Button>
+              )}
+              {slot.seriesId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleCancelSeries()}
+                  disabled={cancelling || rescheduling || resending}
+                  className="text-xs border-red-300 text-red-600 hover:bg-red-50"
+                  title="Dar de baja la serie completa. Se cancelan los turnos futuros."
+                >
+                  <UserX className="w-3 h-3 mr-1" /> Baja de Serie Completa
+                </Button>
+              )}
+
               {/* === Mensaje informativo para turnos NO cancelables === */}
               {onCancel && ["completed", "absent", "cancelled", "cancelled_by_professional", "blocked"].includes(slot.status) && (
                 <div className="flex items-center gap-1.5 text-xs text-slate-500 italic">

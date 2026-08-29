@@ -435,7 +435,7 @@ export async function GET(request: NextRequest) {
         appointments: {
           where: {
             date: { in: weekDateStrings },
-            status: { in: ["pending", "confirmed", "rescheduled", "cancelled_by_professional", "completed", "absent"] },
+            status: { in: ["pending", "confirmed", "rescheduled", "cancelled_by_professional", "completed", "absent", "scheduled", "skipped_holiday"] },
           },
           select: {
             id: true,
@@ -448,6 +448,10 @@ export async function GET(request: NextRequest) {
             patientEmailSentAt: true,
             professionalEmailStatus: true,
             professionalEmailSentAt: true,
+            // === Recurrencia (tarea 2026-08-21) ===
+            seriesId: true,
+            isOverride: true,
+            originalDate: true,
             patient: { select: { user: { select: { name: true, email: true, phone: true } } } },
           },
         },
@@ -540,6 +544,10 @@ export async function GET(request: NextRequest) {
             patientEmailSentAt: a.patientEmailSentAt || null,
             professionalEmailStatus: a.professionalEmailStatus || null,
             professionalEmailSentAt: a.professionalEmailSentAt || null,
+            // === Recurrencia (tarea 2026-08-21) ===
+            seriesId: a.seriesId || null,
+            isOverride: a.isOverride || false,
+            originalDate: a.originalDate || null,
           };
         });
 
