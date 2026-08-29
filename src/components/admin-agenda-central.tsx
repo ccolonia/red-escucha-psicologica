@@ -272,6 +272,10 @@ interface AssignFormData {
   isLead: boolean;
   leadId: string | null;
   leadSource?: string | null; // "patient_request" | "contact_request"
+  // === Recurrencia (tarea 2026-08-21) ===
+  makeRecurring?: boolean;      // switch "Convertir en Turno Fijo Recurrente"
+  recurrenceFrequency?: string; // "WEEKLY" | "BIWEEKLY" | "MONTHLY"
+  recurrenceEndDate?: string;   // ISO "YYYY-MM-DD" opcional
 }
 
 // ====================================================================
@@ -574,6 +578,8 @@ export function AdminAgendaCentral() {
   };
 
   // === Confirmar asignación ===
+  // Si assignForm.makeRecurring es true → llama a POST /api/appointments/recurring
+  // Si es false → llama a POST /api/admin/quick-assign (comportamiento original)
   const handleConfirmAssign = async () => {
     if (!assignDialog.professional || !assignDialog.slot) return;
     if (!assignForm.patientName.trim() || !assignForm.patientEmail.trim() || !assignForm.patientPhone.trim()) {
@@ -582,6 +588,84 @@ export function AdminAgendaCentral() {
     }
     setAssigning(true);
     try {
+      // === FLUJO DE SERIE RECURRENTE ===
+      if (assignForm.makeRecurring) {
+        // Calcular dayOfWeek a partir de la fecha del slot
+        const slotDate = new Date(assignDialog.date + "T12:00:00");
+        const jsDay = slotDate.getDay();
+        const dayOfWeek = jsDay === 0 ? 7 : jsDay; // 1=Lunes ... 7=Domingo
+
+        // Buscar el patientId: si es un paciente existente seleccionado del
+        // autocompletado, usar su ID. Si no, primero crear el paciente via
+        // quick-assign con un turno inicial, y luego crear la serie.
+        //
+        // Estrategia simple: primero hacer quick-assign para crear el paciente
+        // Y el primer turno, luego crear la serie recurrente con el patientId
+        // retornado. Esto evita tener que duplicar la lógica de upsert de
+        // pacientes en el endpoint de recurrencia.
+        const quickRes = await fetch("/api/admin/quick-assign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            professionalId: assignDialog.professional.id,
+            date: assignDialog.date,
+            time: assignDialog.slot.time,
+            modality: assignForm.modality,
+            patientName: assignForm.patientName.trim(),
+            patientPhone: assignForm.patientPhone.trim(),
+            patientEmail: assignForm.patientEmail.trim(),
+            notes: assignForm.notes.trim() || null,
+            isLead: assignForm.isLead,
+            leadId: assignForm.leadId,
+            leadSource: assignForm.leadSource,
+          }),
+        });
+        const quickData = await quickRes.json();
+        if (!quickRes.ok) {
+          toast.error(quickData.error || "Error al asignar el primer turno");
+          return;
+        }
+
+        // Ahora crear la serie recurrente con el patientId retornado
+        const recurringRes = await fetch("/api/appointments/recurring", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            patientId: quickData.patient.id,
+            professionalId: assignDialog.professional.id,
+            dayOfWeek,
+            timeSlot: assignDialog.slot.time,
+            modality: assignForm.modality,
+            slotDuration: assignDialog.slot.duration || 45,
+            frequency: assignForm.recurrenceFrequency || "WEEKLY",
+            startDate: assignDialog.date,
+            endDate: assignForm.recurrenceEndDate || null,
+          }),
+        });
+        const recurringData = await recurringRes.json();
+        if (!recurringRes.ok) {
+          toast.error(recurringData.error || "Error al crear la serie recurrente");
+          return;
+        }
+
+        // Toast con desglose de la proyección
+        const p = recurringData.projection || {};
+        toast.success(
+          `Serie recurrente creada para ${quickData.patient.name}. ` +
+          `Se proyectaron ${p.scheduled || 0} sesiones, ` +
+          `${p.skippedHoliday || 0} saltadas por feriado, ` +
+          `${p.cancelledByAbsence || 0} por ausencia. ` +
+          `${assignDialog.professional.name} — ${assignDialog.date} ${assignDialog.slot.time} hs.`
+        );
+
+        setAssignDialog((prev) => ({ ...prev, open: false }));
+        // Reset form de recurrencia
+        setAssignForm((prev) => ({ ...prev, makeRecurring: false, recurrenceFrequency: "WEEKLY", recurrenceEndDate: "" }));
+        handleSearch();
+        return;
+      }
+
+      // === FLUJO NORMAL (turno individual) ===
       const res = await fetch("/api/admin/quick-assign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2114,6 +2198,59 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
           )}
 
           <div className="space-y-1"><Label className="text-xs text-teal-700 font-medium">Notas (opcional)</Label><Textarea value={form.notes} onChange={(e) => onFormChange({ ...form, notes: e.target.value })} placeholder="Motivo de consulta, observaciones..." className="text-sm border-teal-200 min-h-[50px]" rows={2} /></div>
+
+          {/* === Switch: Convertir en Turno Fijo Recurrente (tarea 2026-08-21) === */}
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.makeRecurring || false}
+                onChange={(e) => onFormChange({
+                  ...form,
+                  makeRecurring: e.target.checked,
+                  recurrenceFrequency: e.target.checked ? (form.recurrenceFrequency || "WEEKLY") : undefined,
+                  recurrenceEndDate: e.target.checked ? (form.recurrenceEndDate || "") : undefined,
+                })}
+                className="w-4 h-4 rounded border-purple-300 text-purple-600 focus:ring-purple-300"
+              />
+              <span className="text-xs text-purple-800 font-medium">🔄 Convertir en Turno Fijo Recurrente</span>
+            </label>
+
+            {/* === Campos adicionales cuando el switch está activo === */}
+            {form.makeRecurring && (
+              <div className="space-y-2 pl-6">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-purple-700">Frecuencia</Label>
+                  <Select
+                    value={form.recurrenceFrequency || "WEEKLY"}
+                    onValueChange={(v) => onFormChange({ ...form, recurrenceFrequency: v })}
+                  >
+                    <SelectTrigger className="h-7 text-xs border-purple-200"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="WEEKLY">Semanal (todas las semanas)</SelectItem>
+                      <SelectItem value="BIWEEKLY">Quincenal (cada 2 semanas)</SelectItem>
+                      <SelectItem value="MONTHLY">Mensual (cada 4 semanas)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-purple-700">Fecha de fin (opcional)</Label>
+                  <Input
+                    type="date"
+                    value={form.recurrenceEndDate || ""}
+                    onChange={(e) => onFormChange({ ...form, recurrenceEndDate: e.target.value })}
+                    min={date}
+                    className="h-7 text-xs border-purple-200"
+                    placeholder="Sin fecha de fin = 30 días"
+                  />
+                </div>
+                {/* === Preview dinámica === */}
+                <div className="text-[10px] text-purple-600 bg-purple-100 rounded p-2">
+                  ℹ️ Se proyectarán aproximadamente <strong>{form.recurrenceFrequency === "BIWEEKLY" ? "2" : form.recurrenceFrequency === "MONTHLY" ? "1" : "4"}</strong> sesiones para los próximos 30 días a partir del <strong>{date}</strong> a las <strong>{slot.time} hs</strong>.
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter>
