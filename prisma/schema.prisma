@@ -9,13 +9,13 @@ datasource db {
 }
 
 model User {
-  id           String      @id @default(cuid())
-  email        String      @unique
-  password     String
-  name         String
-  phone        String?
-  role         String      @default("patient") // "admin", "super_admin", "professional", "patient"
-  active       Boolean     @default(true)
+  id               String          @id @default(cuid())
+  email            String          @unique
+  password         String
+  name             String
+  phone            String?
+  role             String          @default("patient") // "admin", "super_admin", "professional", "patient"
+  active           Boolean         @default(true)
   // === Control de aprobación y onboarding del profesional ===
   // isApproved: true cuando el admin aprueba al profesional desde el panel.
   //   Antes de la aprobación, el profesional no puede recibir el email de
@@ -27,31 +27,31 @@ model User {
   //   Permite al admin detectar profesionales aprobados que todavía no
   //   ingresaron al sistema (caso típico: email olvidado en spam, link
   //   expirado, etc.).
-  isApproved        Boolean @default(false)
-  passwordSet       Boolean @default(false)
-  hasAccessedPanel  Boolean @default(false)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  professional   Professional?
-  patient        Patient?
-  passwordTokens PasswordToken[]
+  isApproved       Boolean         @default(false)
+  passwordSet      Boolean         @default(false)
+  hasAccessedPanel Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  professional     Professional?
+  patient          Patient?
+  passwordTokens   PasswordToken[]
 }
 
 model Professional {
-  id                  String        @id @default(cuid())
-  userId              String        @unique
-  license             String        @unique
-  licenseVerified     Boolean       @default(false) // Matrícula verificada por admin
-  specialty           String
-  bio                 String?
-  available           Boolean       @default(true)
-  title               String?       // "Lic.", "Dr.", "Dra.", "Ninguno"
-  profession          String?       // "Psicólogo", "Psiquiatra", etc.
-  cuil                String?
-  gender              String?       // "Femenino", "Masculino", "Otro"
-  therapyTypes        String?       // JSON array string
-  targetAudience      String?       // JSON array string
-  therapyModality     String?       // JSON array string
+  id                           String                    @id @default(cuid())
+  userId                       String                    @unique
+  license                      String                    @unique
+  licenseVerified              Boolean                   @default(false) // Matrícula verificada por admin
+  specialty                    String
+  bio                          String?
+  available                    Boolean                   @default(true)
+  title                        String? // "Lic.", "Dr.", "Dra.", "Ninguno"
+  profession                   String? // "Psicólogo", "Psiquiatra", etc.
+  cuil                         String?
+  gender                       String? // "Femenino", "Masculino", "Otro"
+  therapyTypes                 String? // JSON array string
+  targetAudience               String? // JSON array string
+  therapyModality              String? // JSON array string
   // === Detalle de "Otras terapias" ===
   // Cuando el profesional selecciona "Otras terapias" en therapyTypes,
   // este campo guarda el texto libre con el enfoque específico que
@@ -59,43 +59,48 @@ model Professional {
   // tags y aislar el texto libre (no se puede meter en el array porque
   // después el frontend del admin no sabría cuál es el detalle vs un
   // item más del array).
-  otherTherapyDetails String?       // Texto libre si therapyTypes incluye "Otras terapias"
-  onlineAttention     Boolean       @default(false)
-  presentialAttention Boolean       @default(false)
-  homeAttention       Boolean       @default(false)
-  zones               String?       // JSON array string
-  officeAddress       String?       // Dirección del consultorio presencial
-  cvData              String?       // Base64-encoded CV file content
-  cvFileName          String?       // Original CV file name
-  cvMimeType          String?       // CV file MIME type
-  internalNotes       String?       // Observaciones internas del administrador
-  evaluationStatus    String?       // Estado de evaluación: ✓, CV, ?, u observaciones de legajo
+  otherTherapyDetails          String? // Texto libre si therapyTypes incluye "Otras terapias"
+  onlineAttention              Boolean                   @default(false)
+  presentialAttention          Boolean                   @default(false)
+  homeAttention                Boolean                   @default(false)
+  zones                        String? // JSON array string
+  officeAddress                String? // Dirección del consultorio presencial
+  cvData                       String? // Base64-encoded CV file content
+  cvFileName                   String? // Original CV file name
+  cvMimeType                   String? // CV file MIME type
+  internalNotes                String? // Observaciones internas del administrador
+  evaluationStatus             String? // Estado de evaluación: ✓, CV, ?, u observaciones de legajo
   // === Auditoría y Verificación de Documentación (solo admin) ===
   // Estos 6 booleanos son accedidos y mutados EXCLUSIVAMENTE por
   // admin/super_admin. Los endpoints públicos (/api/professionals) los
   // omiten del select para que no viajen por la red hacia el frontend
   // del usuario común. Ver PATCH /api/professionals para el guard.
-  dniVerified                     Boolean @default(false) // DNI (copia de documento de identidad)
-  degreeVerified                  Boolean @default(false) // Título universitario habilitante
+  dniVerified                  Boolean                   @default(false) // DNI (copia de documento de identidad)
+  degreeVerified               Boolean                   @default(false) // Título universitario habilitante
   // licenseVerified ya existe arriba (matrícula) — se reutiliza
-  malpracticeInsuranceVerified    Boolean @default(false) // Seguro de mala praxis (póliza vigente)
-  taxRegistrationVerified         Boolean @default(false) // Constancia de monotributo (inscripción fiscal)
-  nationalRegistryVerified        Boolean @default(false) // Registro Nacional de Prestadores (RNP)
+  malpracticeInsuranceVerified Boolean                   @default(false) // Seguro de mala praxis (póliza vigente)
+  taxRegistrationVerified      Boolean                   @default(false) // Constancia de monotributo (inscripción fiscal)
+  nationalRegistryVerified     Boolean                   @default(false) // Registro Nacional de Prestadores (RNP)
   // === Comisión REP dinámica por profesional ===
   // Por defecto 0.30 (30%) para psicólogos. Para psiquiatras se setea en 0.20 (20%)
   // al crear el profesional o desde el panel admin. Si es null, se infiere
   // desde el campo 'profession' (Psiquiatra → 0.20, resto → 0.30).
-  commissionRate       Float?      // 0.30, 0.20, 0.10 — null = usar default por profesión
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  appointments        Appointment[]
-  attendanceSheets    AttendanceSheet[]
-  schedules           ProfessionalSchedule[]
-  scheduleOverrides   ScheduleOverride[]
-  patientRequests     PatientRequest[]
-  addresses           ProfessionalAddress[]
-  patientNotes        ProfessionalPatientNote[]
+  commissionRate               Float? // 0.30, 0.20, 0.10 — null = usar default por profesión
+  createdAt                    DateTime                  @default(now())
+  updatedAt                    DateTime                  @updatedAt
+  user                         User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments                 Appointment[]
+  attendanceSheets             AttendanceSheet[]
+  schedules                    ProfessionalSchedule[]
+  scheduleOverrides            ScheduleOverride[]
+  patientRequests              PatientRequest[]
+  addresses                    ProfessionalAddress[]
+  patientNotes                 ProfessionalPatientNote[]
+  // === Recurrencia (tarea 2026-08-21) ===
+  // Series recurrentes creadas por este profesional (pacientes fijos)
+  recurringSeries              RecurringSeries[]
+  // Ausencias programadas del profesional (vacaciones, descanso, etc.)
+  absences                     ProfessionalAbsence[]
 }
 
 // === Direcciones de atención presencial del profesional ===
@@ -105,34 +110,37 @@ model Professional {
 // a los pacientes como dirección de atención actual). El profesional
 // puede activar/desactivar instantáneamente desde su perfil.
 model ProfessionalAddress {
-  id            String     @id @default(cuid())
+  id             String       @id @default(cuid())
   professionalId String
-  label         String     // Etiqueta corta: "Consultorio Principal", "Sala Belgrano", etc.
-  address       String     // Dirección completa: "Av. Cabildo 1234, Piso 3, Belgrano, CABA"
-  isActive      Boolean    @default(false) // Solo una puede estar activa a la vez
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  professional  Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  label          String // Etiqueta corta: "Consultorio Principal", "Sala Belgrano", etc.
+  address        String // Dirección completa: "Av. Cabildo 1234, Piso 3, Belgrano, CABA"
+  isActive       Boolean      @default(false) // Solo una puede estar activa a la vez
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
 
   @@index([professionalId])
 }
 
 model Patient {
-  id               String        @id @default(cuid())
-  userId           String        @unique
+  id                String                    @id @default(cuid())
+  userId            String                    @unique
   // === DNI (Documento Nacional de Identidad) ===
   // Formato: 7-8 dígitos numéricos (sin puntos ni guiones).
   // Ej: 12345678, 34567890. Validado con regex /^\d{7,8}$/.
   // Null si el paciente todavía no cargó su DNI.
-  dni              String?
-  dateOfBirth      String?
-  emergencyContact String?
-  notes            String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  appointments     Appointment[]
+  dni               String?
+  dateOfBirth       String?
+  emergencyContact  String?
+  notes             String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments      Appointment[]
   professionalNotes ProfessionalPatientNote[]
+  // === Recurrencia (tarea 2026-08-21) ===
+  // Series recurrentes donde este paciente tiene turnos fijos semanales
+  recurringSeries   RecurringSeries[]
 }
 
 // === Notas privadas del profesional sobre un paciente ===
@@ -141,29 +149,35 @@ model Patient {
 // y NUNCA es visible para el paciente ni para el administrador — es el cuaderno
 // de trabajo clínico privado del profesional dentro de la plataforma.
 model ProfessionalPatientNote {
-  id            String   @id @default(cuid())
+  id             String   @id @default(cuid())
   professionalId String
-  patientId     String
-  content       String   @default("")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  patientId      String
+  content        String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  professional  Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
-  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  patient      Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@unique([professionalId, patientId])
 }
 
 model Appointment {
-  id                  String       @id @default(cuid())
-  patientId           String
-  professionalId      String
-  date                String // ISO date string
-  time                String // "09:00", "10:00", etc.
-  modality            String?      @default("P") // "P" presencial, "OL" online
-  status              String       @default("pending") // "pending", "confirmed", "completed", "cancelled", "cancelled_by_professional", "cancelled_by_patient", "absent", "rescheduled"
-  reason              String?
-  notes               String?
+  id                      String           @id @default(cuid())
+  patientId               String
+  professionalId          String
+  date                    String // ISO date string
+  time                    String // "09:00", "10:00", etc.
+  modality                String?          @default("P") // "P" presencial, "OL" online
+  // === Estados de turno (tarea 2026-08-21: recurrencia) ===
+  // Estados existentes: pending, confirmed, completed, cancelled, cancelled_by_professional,
+  //                     cancelled_by_patient, absent, rescheduled
+  // Nuevos estados para recurrencia:
+  //   "skipped_holiday"   → turno de serie recurrente que cayó en feriado y se skipó automáticamente
+  //   "scheduled"         → turno generado por serie recurrente, pendiente de confirmar (alias de confirmed para series)
+  status                  String           @default("pending")
+  reason                  String?
+  notes                   String?
   // === Origen de cancelación (tarea 2026-07-23) ===
   // Guarda quién solicitó la cancelación y por qué, para reporting y
   // para mostrar etiquetas visuales distintas en la agenda.
@@ -172,29 +186,42 @@ model Appointment {
   //   "professional"  → cancelado por el profesional (status: cancelled_by_professional)
   // cancellationReason es un texto libre o un valor predefinido
   // (ej: "Motivos personales", "Reprogramación", "Incapacidad de asistencia").
-  cancellationSource  String?
-  cancellationReason  String?
+  cancellationSource      String?
+  cancellationReason      String?
   // === Trazabilidad de envíos de email (notificaciones de turno) ===
   // Registra el estado del envío de confirmación para paciente y profesional.
   // Permite al admin ver si los mails salieron y reenviarlos si fallaron.
-  // Valores: "SENT" | "FAILED" | "PENDING" | null (null = no se intentó enviar)
-  patientEmailStatus       String?  @default("PENDING")
-  patientEmailSentAt       DateTime?
-  professionalEmailStatus  String?  @default("PENDING")
-  professionalEmailSentAt  DateTime?
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
-  patientRequest PatientRequest?
+  // Valores: "SENT" | "FAILED" | "PENDING" | "SKIPPED" | null (null = no se intentó enviar)
+  patientEmailStatus      String?          @default("PENDING")
+  patientEmailSentAt      DateTime?
+  professionalEmailStatus String?          @default("PENDING")
+  professionalEmailSentAt DateTime?
+  // === Recurrencia (tarea 2026-08-21) ===
+  // seriesId: si el turno pertenece a una serie recurrente, FK a RecurringSeries.
+  //           Null para turnos puntuales (manuales o por asignación directa).
+  // isOverride: true si el turno fue creado manualmente como sobreturno
+  //             (ej: admin carga sesión retroactiva en un slot NO configurado).
+  //             Permite distinguir turnos de serie vs sobreturnos puntuales.
+  // originalDate: si el turno fue reprogramado, guarda la fecha original
+  //               para trazabilidad. Null si nunca se reprogramó.
+  seriesId                String? // FK opcional hacia RecurringSeries
+  isOverride              Boolean          @default(false)
+  originalDate            String? // ISO date string de la fecha original (pre-reprogramación)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  patient                 Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  professional            Professional     @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  patientRequest          PatientRequest?
+  // === Relación con serie recurrente (opcional) ===
+  series                  RecurringSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
 }
 
 model ProfessionalSchedule {
   id             String       @id @default(cuid())
   professionalId String
-  dayOfWeek      Int          // 1=Lunes, 2=Martes, 3=Miercoles, 4=Jueves, 5=Viernes, 6=Sabado
-  startTime      String       // "09:00"
-  endTime        String       // "18:00"
+  dayOfWeek      Int // 1=Lunes, 2=Martes, 3=Miercoles, 4=Jueves, 5=Viernes, 6=Sabado
+  startTime      String // "09:00"
+  endTime        String // "18:00"
   slotDuration   Int          @default(45) // Duracion del turno en minutos (40, 45, 60)
   modality       String       @default("ambas") // "P" presencial, "OL" online, "ambas"
   // === direccionId: enlace a ProfessionalAddress ===
@@ -214,47 +241,47 @@ model ProfessionalSchedule {
 model ScheduleOverride {
   id             String       @id @default(cuid())
   professionalId String
-  date           String       // ISO date string "2026-06-15"
-  type           String       // "block" = no atiende, "extra" = horario adicional
-  startTime      String?      // Requerido para "extra"
-  endTime        String?      // Requerido para "extra"
-  slotDuration   Int?         // Para "extra", duracion de sesion
-  modality       String?      // Para "extra"
+  date           String // ISO date string "2026-06-15"
+  type           String // "block" = no atiende, "extra" = horario adicional
+  startTime      String? // Requerido para "extra"
+  endTime        String? // Requerido para "extra"
+  slotDuration   Int? // Para "extra", duracion de sesion
+  modality       String? // Para "extra"
   // === direccionId: enlace a ProfessionalAddress (para overrides "extra") ===
   // Si el profesional agrega un horario adicional presencial en una dirección
   // específica, puede setear este campo. El backend lo usa para inyectar la
   // dirección en el email al paciente.
   direccionId    String?
-  reason         String?      // "Vacaciones", "Feriado", "Guardia", etc.
+  reason         String? // "Vacaciones", "Feriado", "Guardia", etc.
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
 }
 
 model PatientRequest {
-  id             String    @id @default(cuid())
-  name           String
-  email          String
-  phone          String?
-  modality       String    @default("presencial") // "online", "presencial", "híbrida"
-  reason         String    @default("consulta_general") // "Ansiedad", "Vínculos", "Depresión", etc.
-  notes          String?   // Notas adicionales del paciente
+  id            String        @id @default(cuid())
+  name          String
+  email         String
+  phone         String?
+  modality      String        @default("presencial") // "online", "presencial", "híbrida"
+  reason        String        @default("consulta_general") // "Ansiedad", "Vínculos", "Depresión", etc.
+  notes         String? // Notas adicionales del paciente
   // === Edad y Protocolo de Minoridad ===
   // patientAge se exige cuando la solicitud viene del form público con
   // reason principal = "solicitar_turno". La validación se hace en el
   // backend (POST /api/patient-requests). Es opcional en el schema para
   // no romper PatientRequests creados por otros flujos.
-  patientAge     Int?
+  patientAge    Int?
   // guardianName es obligatorio si patientAge < 18 (validación backend).
   // Para pacientes adultos queda null.
-  guardianName   String?
-  status         String    @default("pending") // "pending", "assigned", "contacted", "rejected"
-  assignedToId   String?   // Professional ID when assigned (multiple requests can point to same professional)
-  appointmentId  String?   @unique // Appointment ID after assignment creates one
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  assignedTo     Professional? @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
-  appointment    Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  guardianName  String?
+  status        String        @default("pending") // "pending", "assigned", "contacted", "rejected"
+  assignedToId  String? // Professional ID when assigned (multiple requests can point to same professional)
+  appointmentId String?       @unique // Appointment ID after assignment creates one
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  assignedTo    Professional? @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 }
 
 model ContactRequest {
@@ -290,7 +317,7 @@ model CmsHeroSlide {
   title        String
   description  String
   cta          String   @default("Contactanos")
-  secondaryCta String  @default("Conocer Especialidades")
+  secondaryCta String   @default("Conocer Especialidades")
   imageUrl     String
   order        Int      @default(0)
   active       Boolean  @default(true)
@@ -299,13 +326,13 @@ model CmsHeroSlide {
 }
 
 model CmsSpecialtyTab {
-  id        String          @id @default(cuid())
-  label     String
-  order     Int             @default(0)
-  active    Boolean         @default(true)
+  id          String         @id @default(cuid())
+  label       String
+  order       Int            @default(0)
+  active      Boolean        @default(true)
   specialties CmsSpecialty[]
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 }
 
 model CmsSpecialty {
@@ -373,42 +400,41 @@ model CmsSiteConfig {
   updatedAt DateTime @updatedAt
 }
 
-
 model AttendanceSheet {
-  id             String       @id @default(cuid())
+  id             String              @id @default(cuid())
   professionalId String
-  month          Int          // 1-12
-  year           Int          // e.g. 2026
-  repCommission  Float        @default(0.30) // 0.30, 0.20, 0.10 based on year
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  month          Int // 1-12
+  year           Int // e.g. 2026
+  repCommission  Float               @default(0.30) // 0.30, 0.20, 0.10 based on year
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  professional   Professional        @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   sessions       AttendanceSession[]
 
   @@unique([professionalId, month, year])
 }
 
 model AttendanceSession {
-  id                   String          @id @default(cuid())
-  sheetId              String
-  date                 String          // ISO date string
-  patientName          String
-  mode                 String          // "P" or "OL"
-  treatmentStartDate   String?         // ISO date string
-  frequency            String?         // "1 vez x sem", "c/15 dias", etc.
-  patientFee           Int             @default(0) // Honorario cobrado al paciente
-  professionalFee      Int             @default(0) // Calculado automáticamente
-  repFee               Int             @default(0) // Calculado automáticamente
-  absentWithNotice     Boolean         @default(false) // CA - con aviso
-  absentWithoutNotice  Boolean         @default(false) // SA - sin aviso
-  absentReason         String?         // Motivo de inasistencia
-  supervised           Boolean         @default(false) // Supervisión: Sí/No
-  suspendedTreatment   Boolean         @default(false) // Suspendió tratamiento
-  suspensionReason     String?         // Motivo de la suspensión del tratamiento
-  weekNumber           Int             @default(1) // 1-5
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
-  sheet                AttendanceSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  id                  String          @id @default(cuid())
+  sheetId             String
+  date                String // ISO date string
+  patientName         String
+  mode                String // "P" or "OL"
+  treatmentStartDate  String? // ISO date string
+  frequency           String? // "1 vez x sem", "c/15 dias", etc.
+  patientFee          Int             @default(0) // Honorario cobrado al paciente
+  professionalFee     Int             @default(0) // Calculado automáticamente
+  repFee              Int             @default(0) // Calculado automáticamente
+  absentWithNotice    Boolean         @default(false) // CA - con aviso
+  absentWithoutNotice Boolean         @default(false) // SA - sin aviso
+  absentReason        String? // Motivo de inasistencia
+  supervised          Boolean         @default(false) // Supervisión: Sí/No
+  suspendedTreatment  Boolean         @default(false) // Suspendió tratamiento
+  suspensionReason    String? // Motivo de la suspensión del tratamiento
+  weekNumber          Int             @default(1) // 1-5
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  sheet               AttendanceSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
 }
 
 // === LeadFinder: CRM de Reclutamiento de Profesionales ===
@@ -422,20 +448,20 @@ model ProfessionalProspect {
   phone       String
   role        String   @default("PSYCHOLOGIST") // PSYCHOLOGIST | PSYCHIATRIST
   region      String   @default("CABA") // CABA | ZONA_SUR | ZONA_OESTE | ZONA_NORTE
-  location    String   // Barrio o Partido
+  location    String // Barrio o Partido
   address     String?
   status      String   @default("NUEVO") // NUEVO | CONTACTADO | CV_RECIBIDO | ENTREVISTADO | APROBADO | DESCARTADO
   notes       String?  @db.Text
   source      String   @default("MANUAL_ENTRY") // MAPS_RADAR | DIRECT_POSTULATION | MANUAL_ENTRY
   // === Campos Google Places API (Radar de Mapas) ===
-  placeId     String?  @unique  // Google Place ID (para deduplicar)
+  placeId     String?  @unique // Google Place ID (para deduplicar)
   lat         Float?
   lng         Float?
-  rating      Float?   // Calificación Google (0-5 estrellas)
-  userRatings Int?     // Cantidad total de reseñas
-  website     String?  @db.Text  // Sitio web del profesional/consultorio
-  specialty   String?  // Especialidad detectada (ej: "Psicología Clínica", "Psiquiatría")
-  zone        String?  // Zona geográfica normalizada (ej: "Merlo", "Morón", "CABA")
+  rating      Float? // Calificación Google (0-5 estrellas)
+  userRatings Int? // Cantidad total de reseñas
+  website     String?  @db.Text // Sitio web del profesional/consultorio
+  specialty   String? // Especialidad detectada (ej: "Psicología Clínica", "Psiquiatría")
+  zone        String? // Zona geográfica normalizada (ej: "Merlo", "Morón", "CABA")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -453,7 +479,7 @@ model ChatConversation {
   patientEmail String?
   patientPhone String
   status       String        @default("ACTIVE") // ACTIVE | CLOSED
-  unreadAdmin  Boolean       @default(true)  // Hay mensajes nuevos del paciente sin leer por admin
+  unreadAdmin  Boolean       @default(true) // Hay mensajes nuevos del paciente sin leer por admin
   unreadUser   Boolean       @default(false) // Hay mensajes nuevos del admin sin leer por paciente
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -464,7 +490,7 @@ model ChatMessage {
   id             String           @id @default(cuid())
   conversationId String
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         String           // "PATIENT" | "ADMIN"
+  sender         String // "PATIENT" | "ADMIN"
   text           String           @db.Text
   createdAt      DateTime         @default(now())
 
@@ -475,13 +501,125 @@ model ChatMessage {
 // Suscripciones de navegadores para recibir notificaciones push nativas.
 // Una PushSubscription puede estar vinculada a una conversación de chat
 // (paciente anónimo) o a un userId (usuario autenticado).
+
+// ====================================================================
+// RECURRENCIA — Series de turnos recurrentes (pacientes fijos)
+// Tarea 2026-08-21
+// ====================================================================
+
+// === Serie Recurrente ===
+// Define una serie de turnos que se repiten semanalmente para un paciente
+// fijo con un profesional. Ej: "María tiene turno todos los martes a las 16:00
+// con la Lic. Quiroga, desde el 1 de septiembre hasta fin de año".
+//
+// El sistema puede generar automáticamente los Appointments individuales
+// a partir de esta serie, saltando feriados (modelo Holiday) y ausencias
+// del profesional (modelo ProfessionalAbsence).
+model RecurringSeries {
+  id             String    @id @default(cuid())
+  patientId      String
+  professionalId String
+  // dayOfWeek: 1=Lunes, 2=Martes, ..., 6=Sábado, 7=Domingo
+  // (consistente con ProfessionalSchedule.dayOfWeek que usa 1-6)
+  dayOfWeek      Int
+  // timeSlot: hora del turno en formato "HH:MM" (ej: "16:00")
+  timeSlot       String
+  // frequency: frecuencia de recurrencia
+  //   "WEEKLY"   → cada semana (default)
+  //   "BIWEEKLY" → cada dos semanas
+  //   "MONTHLY"  → cada mes (mismo día de la semana)
+  frequency      String    @default("WEEKLY")
+  // startDate: fecha de inicio de la serie (primer turno generado)
+  startDate      DateTime
+  // endDate: fecha de fin de la serie (opcional, null = indefinida)
+  endDate        DateTime?
+  // active: false cuando la serie se desactiva (paciente dejó tratamiento)
+  active         Boolean   @default(true)
+  // modality: modalidad de atención de los turnos generados
+  //   "P"  → presencial
+  //   "OL" → online (videollamada)
+  modality       String    @default("P")
+  // slotDuration: duración de cada turno en minutos (default 45)
+  slotDuration   Int       @default(45)
+  // direccionId: si la modalidad es presencial, enlace a ProfessionalAddress
+  direccionId    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // === Relaciones ===
+  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  professional Professional  @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  // Turnos individuales generados a partir de esta serie
+  appointments Appointment[]
+
+  // === Índices para queries frecuentes ===
+  // Buscar series activas de un profesional
+  @@index([professionalId, active])
+  // Buscar series activas de un paciente
+  @@index([patientId, active])
+  // Generar turnos: buscar series por día de la semana
+  @@index([dayOfWeek, active])
+}
+
+// === Feriados ===
+// Días no laborables que afectan a TODOS los profesionales.
+// Cuando el sistema genera turnos recurrentes, automáticamente salta
+// los feriados (los marca como status="skipped_holiday" en lugar de
+// crear un appointment real).
+//
+// Esto reemplaza el uso manual de ScheduleOverride type="block" para
+// feriados, centralizando todos los feriados en una tabla única.
+model Holiday {
+  id          String   @id @default(cuid())
+  // date: fecha del feriado (sin hora, solo día)
+  // @unique: no puede haber dos feriados en la misma fecha
+  date        DateTime @unique
+  // description: nombre del feriado (ej: "Día de la Independencia")
+  description String
+  // isRecurring: true si es un feriado que se repite cada año en la misma
+  // fecha (ej: 25 de Mayo, 9 de Julio). El sistema puede auto-generar
+  // los feriados del año siguiente automáticamente.
+  isRecurring Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// === Ausencias del Profesional ===
+// Períodos en los que un profesional no atiende (vacaciones, descanso
+// prolongado, licencia médica, etc.). A diferencia de ScheduleOverride
+// type="block" (que es por día específico), esto maneja rangos
+// continuos de múltiples días.
+//
+// Cuando el sistema genera turnos recurrentes, automáticamente salta
+// los días que caen dentro de un rango de ausencia del profesional.
+model ProfessionalAbsence {
+  id             String   @id @default(cuid())
+  professionalId String
+  // startDate / endDate: rango de ausencia (inclusivo en ambos extremos)
+  // Para ausencias de un solo día, startDate = endDate
+  startDate      DateTime
+  endDate        DateTime
+  // reason: motivo de la ausencia (ej: "Vacaciones", "Licencia médica",
+  // "Capacitación", "Descanso")
+  reason         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // === Relaciones ===
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  // === Índices para queries frecuentes ===
+  // Buscar ausencias activas de un profesional en un rango de fechas
+  @@index([professionalId, startDate, endDate])
+}
+
 model PushSubscription {
   id             String   @id @default(cuid())
-  conversationId String?  // Si la suscripción es de un paciente anónimo en una conversación
-  userId         String?  // Si la suscripción es de un usuario autenticado (admin, profesional, paciente)
-  endpoint       String   @db.Text  // URL del push service del navegador (FCM para Chrome, APNs para Safari)
-  keys           Json     // { p256dh: string, auth: string } - claves de cifrado ECDH
-  userAgent      String?  // Para identificar el dispositivo/navegador (debug)
+  conversationId String? // Si la suscripción es de un paciente anónimo en una conversación
+  userId         String? // Si la suscripción es de un usuario autenticado (admin, profesional, paciente)
+  endpoint       String   @db.Text // URL del push service del navegador (FCM para Chrome, APNs para Safari)
+  keys           Json // { p256dh: string, auth: string } - claves de cifrado ECDH
+  userAgent      String? // Para identificar el dispositivo/navegador (debug)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
