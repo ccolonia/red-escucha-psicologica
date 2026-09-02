@@ -33,8 +33,12 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const user = await db.user.findUnique({
-            where: { email: rawEmail },
+          // === Búsqueda case-insensitive del usuario ===
+          // El email en la DB puede tener mayúsculas (caso Silvina Pugliese).
+          // findUnique hace match exacto (case-sensitive en Postgres), así que
+          // usamos findFirst con mode: "insensitive" para que funcione siempre.
+          const user = await db.user.findFirst({
+            where: { email: { equals: rawEmail, mode: "insensitive" } },
           });
 
           if (!user) {

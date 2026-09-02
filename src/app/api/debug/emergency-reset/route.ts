@@ -90,6 +90,8 @@ export async function POST(request: NextRequest) {
           isApproved: true,
           passwordSet: true,
           hasAccessedPanel: true,
+          // === Normalizar email a minúsculas ===
+          email: user.email.toLowerCase(),
         },
       });
 
@@ -153,6 +155,11 @@ export async function GET(request: NextRequest) {
           isApproved: true,
           passwordSet: true,
           hasAccessedPanel: true,
+          // === Normalizar email a minúsculas ===
+          // Esto previene el bug de login case-sensitive. Si el email
+          // estaba con mayúsculas (ej: Silvinapugliese@...), lo pasamos a
+          // minúsculas (silvinapugliese@...).
+          email: user.email.toLowerCase(),
         },
       });
 
