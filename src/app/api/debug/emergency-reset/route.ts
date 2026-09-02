@@ -67,8 +67,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const user = await db.user.findUnique({
-        where: { email },
+      // Búsqueda case-insensitive (el email en DB puede tener mayúsculas)
+      const user = await db.user.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
         select: { id: true, email: true, name: true, role: true, active: true, isApproved: true },
       });
 
@@ -130,8 +131,9 @@ export async function GET(request: NextRequest) {
 
     // === Si se pasa ?reset=email&pass=password → reset directo ===
     if (resetEmail && tempPass) {
-      const user = await db.user.findUnique({
-        where: { email: resetEmail },
+      // Búsqueda case-insensitive (el email en DB puede tener mayúsculas)
+      const user = await db.user.findFirst({
+        where: { email: { equals: resetEmail, mode: "insensitive" } },
         select: { id: true, email: true, name: true, role: true, active: true, isApproved: true },
       });
 
