@@ -1144,6 +1144,23 @@ export function AdminAgendaCentral() {
                     >
                       <Settings2 className="w-3.5 h-3.5 mr-1" /> Config. Agenda
                     </Button>
+                    {/* === Botón Cargar Sesión Retroactiva (solo admin) ===
+                        Permite al admin cargar una sesión en una fecha pasada
+                        sin depender de la grilla ni de la configuración previa
+                        del profesional. Abre el AssignDialog con slot sintético. */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[11px] border-orange-300 text-orange-700 hover:bg-orange-50"
+                      onClick={() => openAssignDialogForEmptyPast(
+                        activeProfessional,
+                        "09:00", // hora default, el admin puede cambiar
+                        new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" })
+                      )}
+                      title="Cargar una sesión en una fecha pasada (carga histórica)"
+                    >
+                      <CalendarPlus className="w-3.5 h-3.5 mr-1" /> ➕ Carga Retroactiva
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -1704,7 +1721,9 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
               gridAutoRows: "28px",
             }}
           >
-            {/* === CAPA 1: Celdas de fondo (todas las filas × columnas) === */}
+            {/* === CAPA 1: Celdas de fondo (todas las filas × columnas) ===
+                Para admin en fechas pasadas, TODAS las celdas son clickeables
+                (incluso si el profesional no tiene schedule configurado ese día). */}
             {timeSlots.map((time, rowIdx) => (
               <React.Fragment key={`bg-${time}`}>
                 {/* Time label (columna 1) */}
@@ -1719,11 +1738,23 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
                   const dayData = professional.weeklySlots[day.dayOfWeek];
                   const dateStr = dayData?.date || "";
                   const isToday = dateStr === new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
+                  // === Verificar si la celda es pasada ===
+                  const cellIsPast = dateStr ? isSlotInPast(dateStr, time) : false;
                   return (
                     <div
                       key={`bg-${day.dayOfWeek}-${time}`}
-                      className={`border-l border-b border-teal-50/50 ${isToday ? "bg-teal-50/20" : ""}`}
+                      className={`border-l border-b border-teal-50/50 ${isToday ? "bg-teal-50/20" : ""} ${
+                        cellIsPast ? "cursor-pointer hover:bg-orange-50/40" : ""
+                      }`}
                       style={{ gridRow: rowIdx + 1, gridColumn: day.dayOfWeek + 1 }}
+                      // === Admin puede clickear CUALQUIER celda pasada ===
+                      // incluso si el profesional no tiene schedule configurado.
+                      // Esto resuelve el caso de carga retroactiva en días/horarios
+                      // sin agenda configurada.
+                      onClick={cellIsPast && onEmptyPastSlotClick && dateStr
+                        ? () => onEmptyPastSlotClick(time, dateStr)
+                        : undefined
+                      }
                     />
                   );
                 })}
