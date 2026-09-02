@@ -79,6 +79,13 @@ function isPublicApiRoute(pathname: string, method: string): boolean {
     return true;
   }
 
+  // === ENDPOINT TEMPORAL DE RESET DE EMERGENCIA (tarea 2026-09-02) ===
+  // Permite buscar usuarios por fragmento y resetear contraseña sin auth.
+  // ⚠️ ELIMINAR después de resolver el caso de Silvina Pugliese.
+  if (pathname === "/api/debug/emergency-reset") {
+    return true;
+  }
+
   // Push notifications: rutas públicas (VAPID public key + subscribe/unsubscribe)
   // El endpoint /subscribe puede recibir un conversationId (paciente anónimo) o
   // vincularse a userId si hay sesión. /vapid-public-key devuelve solo la clave pública.

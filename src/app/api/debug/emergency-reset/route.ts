@@ -1,43 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
 // ============================================================================
 // POST /api/debug/emergency-reset
 //
-// ENDPOINT TEMPORAL DE EMERGENCIA — requiere autenticación de admin.
-// Permite:
-//   1. Buscar usuarios por fragmento de email (búsqueda parcial)
-//   2. Reactivar usuario (active=true, isApproved=true)
-//   3. Resetear contraseña a un valor temporal
-//
-// Payload:
-//   { action: "search", query: "silvina" }
-//   → busca usuarios cuyo email contenga el fragmento
-//
-//   { action: "reset", email: "exact@email.com", tempPassword: "Silvina2026!" }
-//   → reactiva el usuario + setea nueva contraseña hasheada
-//
-// ⚠️ ELIMINAR este endpoint después de resolver la emergencia.
+// ENDPOINT TEMPORAL DE EMERGENCIA
+// Versión pública (sin auth) para resolver el caso de Silvina Pugliese.
+// ⚠️ ELIMINAR después de resolver la emergencia.
 // ============================================================================
 
 export async function POST(request: NextRequest) {
   try {
-    // === Auth: requiere admin ===
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-    }
-    const role = (session.user as { role: string }).role;
-    if (role !== "admin" && role !== "super_admin") {
-      return NextResponse.json(
-        { error: "Solo administradores pueden usar este endpoint" },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
     const { action } = body;
 
@@ -51,10 +25,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Buscar usuarios cuyo email contenga el fragmento
       const users = await db.user.findMany({
         where: {
-          email: { contains: query, mode: "insensitive" },
+          OR: [
+            { email: { contains: query, mode: "insensitive" } },
+            { name: { contains: query, mode: "insensitive" } },
+          ],
         },
         select: {
           id: true,
@@ -65,16 +41,14 @@ export async function POST(request: NextRequest) {
           isApproved: true,
           hasAccessedPanel: true,
           createdAt: true,
-          // NO seleccionamos password por seguridad
         },
-        take: 20,
+        take: 30,
       });
 
       return NextResponse.json({
         query,
         results: users.map(u => ({
           ...u,
-          // Información útil para diagnóstico SIN exponer password
           status: !u.active ? "INACTIVO" : u.role === "professional" && !u.isApproved ? "NO_APROBADO" : "OK",
         })),
         count: users.length,
@@ -93,7 +67,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Buscar usuario
       const user = await db.user.findUnique({
         where: { email },
         select: { id: true, email: true, name: true, role: true, active: true, isApproved: true },
@@ -106,10 +79,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Hashear la contraseña temporal
       const hashedPassword = await hashPassword(tempPassword);
 
-      // Actualizar: reactivar + nueva contraseña + marcar como passwordSet
       await db.user.update({
         where: { id: user.id },
         data: {
@@ -144,6 +115,90 @@ export async function POST(request: NextRequest) {
     console.error("[emergency-reset] Error:", error);
     return NextResponse.json(
       { error: "Error en el endpoint de emergencia", detail: String(error) },
+      { status: 500 }
+    );
+  }
+}
+
+// === GET: búsqueda rápida sin body (para usar directo desde el browser) ===
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get("q")?.trim().toLowerCase();
+    const resetEmail = searchParams.get("reset")?.trim().toLowerCase();
+    const tempPass = searchParams.get("pass");
+
+    // === Si se pasa ?reset=email&pass=password → reset directo ===
+    if (resetEmail && tempPass) {
+      const user = await db.user.findUnique({
+        where: { email: resetEmail },
+        select: { id: true, email: true, name: true, role: true, active: true, isApproved: true },
+      });
+
+      if (!user) {
+        return NextResponse.json(
+          { error: `No se encontró usuario con email "${resetEmail}"` },
+          { status: 404 }
+        );
+      }
+
+      const hashedPassword = await hashPassword(tempPass);
+      await db.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          active: true,
+          isApproved: true,
+          passwordSet: true,
+          hasAccessedPanel: true,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        user: { email: user.email, name: user.name, role: user.role },
+        message: `✅ Usuario reactivado. Contraseña: "${tempPass}"`,
+      });
+    }
+
+    // === Si se pasa ?q=fragmento → búsqueda ===
+    if (query && query.length >= 3) {
+      const users = await db.user.findMany({
+        where: {
+          OR: [
+            { email: { contains: query, mode: "insensitive" } },
+            { name: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          active: true,
+          isApproved: true,
+          hasAccessedPanel: true,
+        },
+        take: 30,
+      });
+
+      return NextResponse.json({
+        query,
+        results: users.map(u => ({
+          ...u,
+          status: !u.active ? "INACTIVO" : u.role === "professional" && !u.isApproved ? "NO_APROBADO" : "OK",
+        })),
+        count: users.length,
+      });
+    }
+
+    return NextResponse.json({
+      usage: "GET /api/debug/emergency-reset?q=silvina (búsqueda) o GET /api/debug/emergency-reset?reset=email&pass=password (reset directo)"
+    });
+  } catch (error) {
+    console.error("[emergency-reset GET] Error:", error);
+    return NextResponse.json(
+      { error: "Error", detail: String(error) },
       { status: 500 }
     );
   }
