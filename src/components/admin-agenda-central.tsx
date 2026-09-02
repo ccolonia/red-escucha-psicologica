@@ -1144,23 +1144,6 @@ export function AdminAgendaCentral() {
                     >
                       <Settings2 className="w-3.5 h-3.5 mr-1" /> Config. Agenda
                     </Button>
-                    {/* === Botón Cargar Sesión Retroactiva (solo admin) ===
-                        Permite al admin cargar una sesión en una fecha pasada
-                        sin depender de la grilla ni de la configuración previa
-                        del profesional. Abre el AssignDialog con slot sintético. */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-[11px] border-orange-300 text-orange-700 hover:bg-orange-50"
-                      onClick={() => openAssignDialogForEmptyPast(
-                        activeProfessional,
-                        "09:00", // hora default, el admin puede cambiar
-                        new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" })
-                      )}
-                      title="Cargar una sesión en una fecha pasada (carga histórica)"
-                    >
-                      <CalendarPlus className="w-3.5 h-3.5 mr-1" /> ➕ Carga Retroactiva
-                    </Button>
                   </div>
                 </div>
               </CardHeader>

@@ -119,6 +119,11 @@ const TIME_OPTIONS = (() => {
 
 export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { propProfessionalId?: string; onSaved?: () => void }) {
   const { data: session } = useSession();
+  // === Detectar si el usuario es admin (tarea 2026-09-02) ===
+  // Cuando es admin, permitir edición de fechas pasadas en el calendario
+  // de excepciones (overrides). Los profesionales no pueden editar pasado.
+  const isAdmin = (session?.user as { role?: string })?.role === "admin" ||
+                   (session?.user as { role?: string })?.role === "super_admin";
   const [professionalId, setProfessionalId] = useState<string>(propProfessionalId || "");
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
   const [overrides, setOverrides] = useState<OverrideEntry[]>([]);
@@ -890,7 +895,11 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                             setOverrideDate(date);
                             setOverrideDatePickerOpen(false);
                           }}
-                          disabled={(date) => date < new Date()}
+                          // === Admin puede seleccionar fechas pasadas (tarea 2026-09-02) ===
+                          // Los profesionales NO pueden (disabled date < today).
+                          // Los admins SÍ pueden (para habilitar slots en semanas pasadas
+                          // y poder cargar sesiones retroactivas).
+                          disabled={isAdmin ? undefined : (date) => date < new Date()}
                           locale={es}
                         />
                       </PopoverContent>
