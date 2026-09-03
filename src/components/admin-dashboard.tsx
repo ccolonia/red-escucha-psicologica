@@ -1616,7 +1616,7 @@ ${prof.internalNotes ? `<div class="section"><h2>Notas Internas (Admin)</h2><div
                               })}
                             </span>
                           </div>
-                        </div>
+                          {/* === Botones de acción === */}
                           <div className="flex items-center gap-2 flex-wrap">
                             {/* === Badge de estado de aprobación === */}
                             {/* Si está aprobado, mostrar badge verde. Si no, botón Aprobar. */}
