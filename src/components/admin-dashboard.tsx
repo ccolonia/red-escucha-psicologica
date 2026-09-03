@@ -953,6 +953,110 @@ export function AdminProfessionals() {
     }
   };
 
+  // === Exportar ficha del profesional a PDF (tarea 2026-09-03) ===
+  // Usa window.print() con una ventana nueva que contiene solo la ficha
+  // del profesional formateada para impresión/PDF.
+  const handleExportProfPDF = (prof: Professional) => {
+    const formatDate = (dateStr: string) => {
+      try {
+        return new Date(dateStr).toLocaleDateString("es-AR", {
+          day: "2-digit", month: "2-digit", year: "numeric",
+        });
+      } catch { return dateStr; }
+    };
+
+    const parseArr = (val: string | null | undefined): string[] => {
+      if (!val) return [];
+      try { const p = JSON.parse(val); return Array.isArray(p) ? p : []; } catch { return []; }
+    };
+
+    const therapyTypes = parseArr(prof.therapyTypes);
+    const targetAudience = parseArr(prof.targetAudience);
+    const therapyModality = parseArr(prof.therapyModality);
+    const zones = parseArr(prof.zones);
+
+    const commissionRate = prof.commissionRate != null
+      ? `${Math.round(prof.commissionRate * 100)}%`
+      : prof.profession && prof.profession.toLowerCase().includes("psiquiatr") ? "20% (auto)" : "30% (auto)";
+
+    const isActive = prof.user.active;
+
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Ficha de ${prof.user.name} - REP</title>
+<style>*{box-sizing:border-box}body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#2d3b2d;margin:40px}
+.header{display:flex;align-items:center;gap:20px;margin-bottom:30px;border-bottom:3px solid #14b8a6;padding-bottom:20px}
+.header img{width:60px;height:60px}.header h1{font-size:22px;color:#2d3b2d;margin:0}
+.header p{color:#6a8a6a;margin:4px 0 0;font-size:14px}
+.section{margin-bottom:25px}.section h2{font-size:14px;color:#14b8a6;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #e0e0e0;padding-bottom:5px;margin-bottom:10px}
+.data-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 30px}
+.data-item{font-size:13px}.data-item .label{color:#8a7a6a;text-transform:uppercase;font-size:10px;letter-spacing:0.5px;margin-bottom:2px}
+.data-item .value{color:#2d3b2d;font-weight:500}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;border:1px solid}
+.badge-teal{background:#f0fdfa;border-color:#99f6e4;color:#0f766e}
+.badge-blue{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+.badge-amber{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.badge-sage{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+.bio{background:#f5f0e8;padding:12px;border-radius:8px;font-size:13px;line-height:1.6;color:#4a5a4a}
+.footer{margin-top:40px;padding-top:15px;border-top:1px solid #e0e0e0;text-align:center;font-size:11px;color:#8a7a6a}
+.audit{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px}
+.audit-item{display:flex;align-items:center;gap:6px}
+.audit-yes{color:#166534}.audit-no{color:#dc2626}
+@media print{body{margin:20px}}</style></head><body>
+<div class="header"><img src="https://www.redescuchapsicologica.com/images/logo.png" alt="REP" onerror="this.style.display='none'">
+<div><h1>Ficha Profesional — ${prof.user.name}</h1><p>Red Escucha Psicológica · ${prof.specialty}</p>
+<p>Generado el ${new Date().toLocaleDateString("es-AR",{day:"2-digit",month:"long",year:"numeric"})}</p></div></div>
+<div class="section"><h2>Datos Personales</h2><div class="data-grid">
+<div class="data-item"><div class="label">Nombre</div><div class="value">${prof.user.name}</div></div>
+<div class="data-item"><div class="label">Email</div><div class="value">${prof.user.email}</div></div>
+<div class="data-item"><div class="label">Teléfono</div><div class="value">${prof.user.phone || "No informado"}</div></div>
+<div class="data-item"><div class="label">Fecha de registro</div><div class="value">${formatDate(prof.user.createdAt)}</div></div>
+<div class="data-item"><div class="label">Estado</div><div class="value">${isActive ? "Activo" : "Inactivo"}</div></div>
+<div class="data-item"><div class="label">Disponibilidad</div><div class="value">${prof.available ? "Disponible" : "No disponible"}</div></div>
+</div></div>
+<div class="section"><h2>Datos Profesionales</h2><div class="data-grid">
+<div class="data-item"><div class="label">Título</div><div class="value">${prof.title || "No informado"}</div></div>
+<div class="data-item"><div class="label">Profesión</div><div class="value">${prof.profession || "No informada"}</div></div>
+<div class="data-item"><div class="label">Matrícula</div><div class="value">${prof.license}${prof.licenseVerified ? " ✓ Verificada" : " ⚠ Sin verificar"}</div></div>
+<div class="data-item"><div class="label">Especialidad</div><div class="value">${prof.specialty}</div></div>
+<div class="data-item"><div class="label">CUIT/CUIL</div><div class="value">${prof.cuil || "No informado"}</div></div>
+<div class="data-item"><div class="label">Sexo</div><div class="value">${prof.gender || "No informado"}</div></div>
+<div class="data-item"><div class="label">Comisión REP</div><div class="value">${commissionRate}</div></div>
+<div class="data-item"><div class="label">Estado evaluación</div><div class="value">${prof.evaluationStatus || "No informado"}</div></div>
+</div></div>
+<div class="section"><h2>Modalidades de Atención</h2><div class="badges">
+${prof.onlineAttention ? '<span class="badge badge-blue">Online</span>' : ''}
+${prof.presentialAttention ? '<span class="badge badge-teal">Presencial</span>' : ''}
+${prof.homeAttention ? '<span class="badge badge-amber">Domicilio</span>' : ''}
+${!prof.onlineAttention && !prof.presentialAttention && !prof.homeAttention ? '<span style="font-size:12px;color:#8a7a6a;">No informada</span>' : ''}
+</div></div>
+${therapyTypes.length > 0 ? `<div class="section"><h2>Tipos de Terapia</h2><div class="badges">${therapyTypes.map((t:string)=>`<span class="badge badge-teal">${t}</span>`).join("")}</div></div>` : ""}
+${targetAudience.length > 0 ? `<div class="section"><h2>Dirigido a</h2><div class="badges">${targetAudience.map((t:string)=>`<span class="badge badge-sage">${t}</span>`).join("")}</div></div>` : ""}
+${therapyModality.length > 0 ? `<div class="section"><h2>Modalidad de Terapia</h2><div class="badges">${therapyModality.map((m:string)=>`<span class="badge badge-teal">${m}</span>`).join("")}</div></div>` : ""}
+${zones.length > 0 ? `<div class="section"><h2>Zonas de Atención</h2><div class="badges">${zones.map((z:string)=>`<span class="badge badge-amber">${z}</span>`).join("")}</div></div>` : ""}
+${prof.bio ? `<div class="section"><h2>Sobre su Práctica</h2><div class="bio">${prof.bio}</div></div>` : ""}
+${prof.otherTherapyDetails ? `<div class="section"><h2>Detalle de Otras Terapias</h2><div class="bio">${prof.otherTherapyDetails}</div></div>` : ""}
+${prof.internalNotes ? `<div class="section"><h2>Notas Internas (Admin)</h2><div class="bio" style="background:#fffbeb;border:1px solid #fde68a;">${prof.internalNotes}</div></div>` : ""}
+<div class="section"><h2>Auditoría de Documentación</h2><div class="audit">
+<div class="audit-item"><span class="${prof.dniVerified ? "audit-yes" : "audit-no"}">${prof.dniVerified ? "✓" : "✗"}</span> DNI</div>
+<div class="audit-item"><span class="${prof.degreeVerified ? "audit-yes" : "audit-no"}">${prof.degreeVerified ? "✓" : "✗"}</span> Título universitario</div>
+<div class="audit-item"><span class="${prof.licenseVerified ? "audit-yes" : "audit-no"}">${prof.licenseVerified ? "✓" : "✗"}</span> Matrícula</div>
+<div class="audit-item"><span class="${prof.malpracticeInsuranceVerified ? "audit-yes" : "audit-no"}">${prof.malpracticeInsuranceVerified ? "✓" : "✗"}</span> Seguro mala praxis</div>
+<div class="audit-item"><span class="${prof.taxRegistrationVerified ? "audit-yes" : "audit-no"}">${prof.taxRegistrationVerified ? "✓" : "✗"}</span> Monotributo</div>
+<div class="audit-item"><span class="${prof.nationalRegistryVerified ? "audit-yes" : "audit-no"}">${prof.nationalRegistryVerified ? "✓" : "✗"}</span> Registro Nacional</div>
+</div></div>
+<div class="footer">Red Escucha Psicológica · contacto@redescuchapsicologica.com · www.redescuchapsicologica.com<br>Documento generado el ${new Date().toLocaleString("es-AR")}</div>
+</body></html>`;
+
+    const printWindow = window.open("", "_blank", "width=800,height=900");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      setTimeout(() => { printWindow.print(); }, 500);
+    } else {
+      toast.error("El navegador bloqueó la ventana emergente. Permití popups para exportar el PDF.");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de que querés eliminar este profesional?")) return;
     try {
@@ -1501,6 +1605,18 @@ export function AdminProfessionals() {
                               <p className="text-sm text-teal-500">{prof.user.email}</p>
                             </div>
                           </div>
+                          {/* === Fecha de registro (esquina superior derecha) === */}
+                          <div className="text-right flex-shrink-0">
+                            <span className="text-[10px] text-teal-400 uppercase tracking-wide block">Fecha de registro</span>
+                            <span className="text-sm text-teal-700 font-medium">
+                              {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              })}
+                            </span>
+                          </div>
+                        </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             {/* === Badge de estado de aprobación === */}
                             {/* Si está aprobado, mostrar badge verde. Si no, botón Aprobar. */}
@@ -1589,6 +1705,18 @@ export function AdminProfessionals() {
                               onClick={() => setExpandedId(isExpanded ? null : prof.id)}
                             >
                               <FileText className="w-3.5 h-3.5" />
+                            </Button>
+                            {/* === Botón Exportar PDF ===
+                                Usa window.print() con un layout optimizado para
+                                imprimir solo la ficha del profesional. */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 border-purple-200 text-purple-600 hover:text-purple-800 hover:bg-purple-50"
+                              onClick={() => handleExportProfPDF(prof)}
+                              title="Exportar ficha del profesional a PDF"
+                            >
+                              <Download className="w-3.5 h-3.5" />
                             </Button>
                             {isActive && (
                               <Button
@@ -1883,8 +2011,6 @@ export function AdminProfessionals() {
                               <span>Cuenta: {isActive ? "Activada" : "Pendiente"}</span>
                               <span>•</span>
                               <span>Disponibilidad: {prof.available ? "Disponible" : "No disponible"}</span>
-                              <span>•</span>
-                              <span>Registrado: {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR")}</span>
                             </div>
 
                             {/* === Sección de Auditoría y Verificación de Documentación === */}
