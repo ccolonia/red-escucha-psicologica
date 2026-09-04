@@ -1774,8 +1774,6 @@ ${prof.internalNotes ? `<div class="section"><h2>Notas Internas (Admin)</h2><div
                               );
                             })()}
                           </div>
-                        </div>
-                        </>
 
                         {/* Expanded details */}
                         {isExpanded && (
