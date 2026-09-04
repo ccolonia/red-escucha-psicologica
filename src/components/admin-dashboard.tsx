@@ -984,7 +984,7 @@ export function AdminProfessionals() {
     const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Ficha de ${prof.user.name} - REP</title>
 <style>*{box-sizing:border-box}body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#2d3b2d;margin:40px}
 .header{display:flex;align-items:center;gap:20px;margin-bottom:30px;border-bottom:3px solid #14b8a6;padding-bottom:20px}
-.header img{width:60px;height:60px}.header h1{font-size:22px;color:#2d3b2d;margin:0}
+.header img{height:48px;width:auto;max-width:200px;object-fit:contain;flex-shrink:0}.header h1{font-size:22px;color:#2d3b2d;margin:0}
 .header p{color:#6a8a6a;margin:4px 0 0;font-size:14px}
 .section{margin-bottom:25px}.section h2{font-size:14px;color:#14b8a6;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #e0e0e0;padding-bottom:5px;margin-bottom:10px}
 .data-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 30px}
