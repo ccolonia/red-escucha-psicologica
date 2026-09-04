@@ -1582,6 +1582,14 @@ ${prof.internalNotes ? `<div class="section"><h2>Notas Internas (Admin)</h2><div
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-medium text-teal-900">{prof.user.name}</p>
+                                {/* === Fecha de registro (a la derecha del nombre) === */}
+                                <span className="text-[10px] text-teal-400 ml-auto" title="Fecha de registro">
+                                  {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  })}
+                                </span>
                                 {!isActive && (
                                   <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">
                                     Pendiente de aprobación
