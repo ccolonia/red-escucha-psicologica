@@ -1566,10 +1566,11 @@ ${prof.internalNotes ? `<div class="section"><h2>Notas Internas (Admin)</h2><div
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
+                        {/* === FILA 1: Avatar + Nombre + Fecha de registro === */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
                             <div
-                              className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                                 isActive ? "bg-teal-100" : "bg-amber-100"
                               }`}
                             >
@@ -1579,17 +1580,9 @@ ${prof.internalNotes ? `<div class="section"><h2>Notas Internas (Admin)</h2><div
                                 }`}
                               />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-medium text-teal-900">{prof.user.name}</p>
-                                {/* === Fecha de registro (a la derecha del nombre) === */}
-                                <span className="text-[10px] text-teal-400 ml-auto" title="Fecha de registro">
-                                  {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                  })}
-                                </span>
                                 {!isActive && (
                                   <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">
                                     Pendiente de aprobación
@@ -1614,18 +1607,15 @@ ${prof.internalNotes ? `<div class="section"><h2>Notas Internas (Admin)</h2><div
                             </div>
                           </div>
                           {/* === Fecha de registro (esquina superior derecha) === */}
-                          <div className="text-right flex-shrink-0">
-                            <span className="text-[10px] text-teal-400 uppercase tracking-wide block">Fecha de registro</span>
-                            <span className="text-sm text-teal-700 font-medium">
-                              {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR", {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              })}
-                            </span>
-                          </div>
-                          {/* === Botones de acción === */}
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-slate-500 font-medium flex-shrink-0 whitespace-nowrap" title="Fecha de registro">
+                            Reg: {new Date(prof.user.createdAt || "").toLocaleDateString("es-AR", {
+                              day: "2-digit", month: "2-digit", year: "numeric",
+                            })}
+                          </span>
+                        </div>
+
+                        {/* === FILA 2: Botones de acción === */}
+                        <div className="flex items-center gap-2 flex-wrap mt-2">
                             {/* === Badge de estado de aprobación === */}
                             {/* Si está aprobado, mostrar badge verde. Si no, botón Aprobar. */}
                             {prof.user.isApproved ? (
@@ -1785,6 +1775,7 @@ ${prof.internalNotes ? `<div class="section"><h2>Notas Internas (Admin)</h2><div
                             })()}
                           </div>
                         </div>
+                        </>
 
                         {/* Expanded details */}
                         {isExpanded && (
