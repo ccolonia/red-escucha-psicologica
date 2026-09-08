@@ -39,6 +39,7 @@ import {
   UserX,
   LogOut,
   Send,
+  KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -609,6 +610,32 @@ export function AdminProfessionals() {
   });
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // === Reenviar email de acceso (set-password) ===
+  // Estado que guarda el ID del profesional al que se le está reenviando
+  // el email, para mostrar spinner en ese botón específico.
+  const [resendAccessLoading, setResendAccessLoading] = useState<string | null>(null);
+
+  const handleResendAccessEmail = async (professionalId: string, email: string) => {
+    setResendAccessLoading(professionalId);
+    try {
+      const res = await fetch("/api/admin/professionals/resend-access-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ professionalId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Correo de acceso reenviado a ${email}`);
+      } else {
+        toast.error(data.error || "Error al reenviar el correo de acceso");
+      }
+    } catch {
+      toast.error("Error de conexión al reenviar el correo");
+    } finally {
+      setResendAccessLoading(null);
+    }
+  };
 
   // === Baja Institucional de Profesional ===
   // Modal de confirmación con vista previa del email institucional
@@ -1756,6 +1783,21 @@ ${prof.internalNotes ? `<div class="section"><h2>Notas Internas (Admin)</h2><div
                               onClick={() => handleDelete(prof.id)}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                            {/* === Botón Reenviar Acceso (email de set-password) ===
+                                Genera nuevo token de 48hs y reenvía el email
+                                oficial para que el profesional establezca su contraseña. */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 border-blue-200 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              onClick={() => handleResendAccessEmail(prof.id, prof.user.email)}
+                              disabled={resendAccessLoading === prof.id}
+                              title="Reenviar correo para establecer contraseña (válido por 48hs)"
+                            >
+                              {resendAccessLoading === prof.id
+                                ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                : <KeyRound className="w-3.5 h-3.5" />}
                             </Button>
                             {/* === Botón WhatsApp (acceso rápido sin expandir ficha) === */}
                             {prof.user.phone && (() => {
