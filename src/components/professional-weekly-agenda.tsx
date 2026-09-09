@@ -1304,7 +1304,6 @@ export function ProfessionalWeeklyAgenda({
 
               // === LOGS DE DIAGNÓSTICO ===
               if (daySchedules.length > 0) {
-                console.log(`[AGENDA DEBUG] ${dateStr} (dayIdx=${dayIdx}, dayOfWeek=${dayOfWeek})`, {
                   schedulesCount: daySchedules.length,
                   schedules: daySchedules.map(s => ({ startTime: s.startTime, endTime: s.endTime, slotDuration: s.slotDuration, modality: s.modality })),
                   generatedSlots: scheduleSlots,
@@ -1312,7 +1311,6 @@ export function ProfessionalWeeklyAgenda({
                   blockOverridesForDay: overrides.filter(o => o.date === dateStr && o.type === "block"),
                 });
               } else {
-                console.warn(`[AGENDA DEBUG] ${dateStr} (dayOfWeek=${dayOfWeek}) — NO schedule found for this day.`);
                 console.table(schedules.map(s => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime, slotDuration: s.slotDuration })));
               }
 
@@ -1393,7 +1391,6 @@ export function ProfessionalWeeklyAgenda({
 
                 // === LOG DE RENDERIZADO ===
                 if (slot.time === "15:30") {
-                  console.log(`[RENDER DEBUG] Slot 15:30 → gridRow: ${rowStart} / span ${span}, gridColumn: ${colIndex}, type: ${slot.type}, gridStartMinutes: ${gridStartMinutes}, totalRows: ${timeSlots.length}`);
                 }
                 const slotEnd = (() => {
                   const [h, m] = slot.time.split(":").map(Number);

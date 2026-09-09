@@ -133,8 +133,6 @@ export async function sendAppointmentAlert(data: {
   // Si WHATSAPP_PAUSED=true, no enviamos nada pero seguimos guardando en DB.
   // El pedido igual se registra normalmente (la pausa solo afecta WhatsApp).
   if (process.env.WHATSAPP_PAUSED === "true") {
-    console.log("[WhatsApp Alert] ⏸️  PAUSADO por WHATSAPP_PAUSED=true — no se envía a los administradores. Datos del paciente igual se guardaron en DB.");
-    console.log("[WhatsApp Alert] Paciente:", data.patientName, "| Email:", data.patientEmail, "| Motivo:", data.reason);
     return;
   }
 
@@ -186,7 +184,6 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
 
   if (metaToken && metaPhoneId) {
     const destinos = getAdminRecipients();
-    console.log(`[WhatsApp Alert] Enviando a ${destinos.length} destinatario(s):`, destinos.join(", "));
 
     // Enviar en paralelo a todos los destinatarios, aplicando rate limit por cada uno
     const resultados = await Promise.allSettled(
@@ -194,7 +191,6 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
         // === Rate limit check ===
         const rl = checkRateLimit(to);
         if (!rl.allowed) {
-          console.warn(`[WhatsApp Alert] ⚠️ ${rl.reason} — saltando envío`);
           return { to, ok: false, status: 429, rateLimited: true };
         }
 
@@ -215,7 +211,6 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
           // 📝 Notas: {{7}}
           // 👉 Contactar: {{8}}
 
-          console.log(`[WhatsApp Alert] POST a Meta API para ${to} (phoneId=${metaPhoneId})`);
 
           const res = await fetch(`https://graph.facebook.com/v25.0/${metaPhoneId}/messages`, {
             method: "POST",
@@ -251,14 +246,11 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
 
           // === DEBUG: log completo de la respuesta de Meta ===
           const respBody = await res.text();
-          console.log(`[WhatsApp Alert] Meta API response para ${to}: HTTP ${res.status}`);
-          console.log(`[WhatsApp Alert] Meta API body:`, respBody);
 
           if (!res.ok) {
             console.error(`[WhatsApp Alert] Meta API error para ${to}:`, res.status, respBody);
             return { to, ok: false, status: res.status, error: respBody };
           }
-          console.log(`[WhatsApp Alert] ✅ Enviado a:`, to);
           return { to, ok: true, status: 200, response: respBody };
         } catch (err) {
           console.error(`[WhatsApp Alert] Meta API exception para ${to}:`, err);
@@ -269,7 +261,6 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
 
     const exitosos = resultados.filter((r) => r.status === "fulfilled" && r.value.ok).length;
     const rateLimited = resultados.filter((r) => r.status === "fulfilled" && (r.value as { rateLimited?: boolean }).rateLimited).length;
-    console.log(`[WhatsApp Alert] Resumen: ${exitosos}/${destinos.length} enviados OK${rateLimited > 0 ? ` | ${rateLimited} rate-limited` : ""}`);
     return;
   }
 
@@ -281,13 +272,11 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
     const destinosAllowed = destinos.filter((to) => {
       const rl = checkRateLimit(to);
       if (!rl.allowed) {
-        console.warn(`[WhatsApp Alert] ⚠️ ${rl.reason} — saltando webhook`);
         return false;
       }
       return true;
     });
     if (destinosAllowed.length === 0) {
-      console.log("[WhatsApp Alert] Todos los destinatarios rate-limited");
       return;
     }
     try {
@@ -304,7 +293,6 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
       if (!res.ok) {
         console.error("[WhatsApp Alert] Webhook error:", res.status);
       } else {
-        console.log("[WhatsApp Alert] ✅ Enviado vía webhook a", destinosAllowed.length, "destinatario(s)");
       }
     } catch (err) {
       console.error("[WhatsApp Alert] Webhook exception:", err);
@@ -313,7 +301,5 @@ ${data.notes ? `📝 Notas: ${data.notes}` : ""}
   }
 
   // === Estrategia 3: Sin configuración — solo log ===
-  console.log("[WhatsApp Alert] ⚠️ No hay META_WHATSAPP_TOKEN ni WHATSAPP_WEBHOOK_URL configurado.");
-  console.log("[WhatsApp Alert] Mensaje que se enviaría:");
   console.log(message);
 }
