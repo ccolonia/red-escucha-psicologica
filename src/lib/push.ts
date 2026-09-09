@@ -66,8 +66,8 @@ export async function sendPushToConversation(
     url: payload.url || "/",
     conversationId: payload.conversationId || conversationId,
     tag: payload.tag || "rep-chat",
-    icon: payload.icon || "/icon-192x192.png",
-    badge: "/icon-192x192.png",
+    icon: payload.icon || "/icon-192.png",
+    badge: "/icon-192.png",
     requireInteraction: payload.requireInteraction ?? false,
   });
 
@@ -121,8 +121,8 @@ export async function sendPushToUser(
     url: payload.url || "/",
     conversationId: payload.conversationId,
     tag: payload.tag || "rep-notification",
-    icon: payload.icon || "/icon-192x192.png",
-    badge: "/icon-192x512.png",
+    icon: payload.icon || "/icon-192.png",
+    badge: "/icon-192.png",
     requireInteraction: payload.requireInteraction ?? false,
   });
 

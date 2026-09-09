@@ -22,8 +22,8 @@ const PRECACHE_URLS = [
   "/favicon-32x32.png",
   "/favicon-16x16.png",
   "/apple-touch-icon.png",
-  "/icon-192x192.png",
-  "/icon-512x512.png",
+  "/icon-192.png",
+  "/icon-512.png",
 ];
 
 // === INSTALL: precachear assets esenciales ===
@@ -110,8 +110,8 @@ self.addEventListener("push", (event) => {
   const title = payload.title || "Red Escucha Psicológica";
   const options = {
     body: payload.body || "Tenés un nuevo mensaje",
-    icon: payload.icon || "/icon-192x192.png",
-    badge: payload.badge || "/icon-192x192.png",
+    icon: payload.icon || "/icon-192.png",
+    badge: payload.badge || "/icon-192.png",
     tag: payload.tag || "rep-chat",
     renotify: true,
     data: {
