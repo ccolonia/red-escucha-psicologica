@@ -20,7 +20,7 @@ import {
   Calendar,
   DollarSign,
   CalendarIcon,
-  BuildingBank,
+  Landmark,
   Copy,
   Check,
 } from "lucide-react";
@@ -641,14 +641,14 @@ export function ProfessionalPlanilla() {
                     className="border-teal-200 text-teal-700 hover:bg-teal-50"
                     title="Ver datos bancarios de REP para transferencias"
                   >
-                    <BuildingBank className="w-3.5 h-3.5 mr-1" />
+                    <Landmark className="w-3.5 h-3.5 mr-1" />
                     Cuenta REP
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-sm">
                   <DialogHeader>
                     <DialogTitle className="text-teal-900 flex items-center gap-2">
-                      <BuildingBank className="w-5 h-5 text-teal-600" />
+                      <Landmark className="w-5 h-5 text-teal-600" />
                       Datos Bancarios REP
                     </DialogTitle>
                     <DialogDescription className="text-teal-600">
