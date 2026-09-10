@@ -702,7 +702,7 @@ export function ProfessionalPlanilla() {
                     </div>
                   </div>
                   <p className="text-xs text-teal-400 text-center">
-                    Banco: Banco Nación · Titular: Red Escucha Psicológica
+                    Escuchar · Acompañar · Transformar
                   </p>
                 </DialogContent>
               </Dialog>
