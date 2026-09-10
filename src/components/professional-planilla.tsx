@@ -20,12 +20,23 @@ import {
   Calendar,
   DollarSign,
   CalendarIcon,
+  BuildingBank,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -182,13 +193,26 @@ export function ProfessionalPlanilla() {
   const [professionalId, setProfessionalId] = useState<string | null>(null);
   const [professionalJoinedYear, setProfessionalJoinedYear] = useState<number>(new Date().getFullYear());
   // === Comisión dinámica por profesional ===
-  // profession: "Psicólogo", "Psiquiatra", etc. — para inferir tasa si commissionRate es null
-  // commissionRate: override explícito (0.30, 0.20, etc.) — null = usar default por profesión
   const [professionalProfession, setProfessionalProfession] = useState<string | null>(null);
   const [professionalCommissionRate, setProfessionalCommissionRate] = useState<number | null>(null);
   const [sheets, setSheets] = useState<SheetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // === Modal Cuenta REP (datos bancarios) ===
+  const [bankDialogOpen, setBankDialogOpen] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopy = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      toast.success(`${field} copiado al portapapeles`);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      toast.error("No se pudo copiar al portapapeles");
+    }
+  };
 
   // Current selection
   const now = new Date();
@@ -602,19 +626,96 @@ export function ProfessionalPlanilla() {
       {/* Sessions Table */}
       <Card className="border-teal-100">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-teal-900 text-base flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               {selectedWeek ? `Semana ${selectedWeek}` : "Todas las semanas"} — {MONTHS[selectedMonth - 1]} {selectedYear}
             </CardTitle>
-            <Button
-              size="sm"
-              className="bg-teal-600 hover:bg-teal-700 text-white"
-              onClick={addSession}
-            >
-              <Plus className="mr-1 w-4 h-4" />
-              Agregar Sesión
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* === Botón Cuenta REP (datos bancarios) === */}
+              <Dialog open={bankDialogOpen} onOpenChange={setBankDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-teal-200 text-teal-700 hover:bg-teal-50"
+                    title="Ver datos bancarios de REP para transferencias"
+                  >
+                    <BuildingBank className="w-3.5 h-3.5 mr-1" />
+                    Cuenta REP
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle className="text-teal-900 flex items-center gap-2">
+                      <BuildingBank className="w-5 h-5 text-teal-600" />
+                      Datos Bancarios REP
+                    </DialogTitle>
+                    <DialogDescription className="text-teal-600">
+                      Datos para depositar la comisión REP correspondiente
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3 py-2">
+                    {/* Cuenta */}
+                    <div className="flex items-center justify-between gap-2 bg-teal-50 rounded-lg p-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-teal-500 uppercase tracking-wide font-medium">Cuenta</p>
+                        <p className="text-sm text-teal-900 font-medium font-mono">CA$ 295-295440642-000</p>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 flex-shrink-0"
+                        onClick={() => handleCopy("CA$ 295-295440642-000", "Cuenta")}>
+                        {copiedField === "Cuenta" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-teal-400" />}
+                      </Button>
+                    </div>
+                    {/* Alias */}
+                    <div className="flex items-center justify-between gap-2 bg-teal-50 rounded-lg p-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-teal-500 uppercase tracking-wide font-medium">Alias</p>
+                        <p className="text-sm text-teal-900 font-medium font-mono">ESCUCHAPSICOLOGICA</p>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 flex-shrink-0"
+                        onClick={() => handleCopy("ESCUCHAPSICOLOGICA", "Alias")}>
+                        {copiedField === "Alias" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-teal-400" />}
+                      </Button>
+                    </div>
+                    {/* CBU */}
+                    <div className="flex items-center justify-between gap-2 bg-teal-50 rounded-lg p-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-teal-500 uppercase tracking-wide font-medium">CBU</p>
+                        <p className="text-sm text-teal-900 font-medium font-mono break-all">0340295708295440642008</p>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 flex-shrink-0"
+                        onClick={() => handleCopy("0340295708295440642008", "CBU")}>
+                        {copiedField === "CBU" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-teal-400" />}
+                      </Button>
+                    </div>
+                    {/* CUIL */}
+                    <div className="flex items-center justify-between gap-2 bg-teal-50 rounded-lg p-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-teal-500 uppercase tracking-wide font-medium">CUIL</p>
+                        <p className="text-sm text-teal-900 font-medium font-mono">23-93774275-4</p>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 flex-shrink-0"
+                        onClick={() => handleCopy("23-93774275-4", "CUIL")}>
+                        {copiedField === "CUIL" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-teal-400" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-teal-400 text-center">
+                    Banco: Banco Nación · Titular: Red Escucha Psicológica
+                  </p>
+                </DialogContent>
+              </Dialog>
+              {/* === Botón Agregar Sesión === */}
+              <Button
+                size="sm"
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+                onClick={addSession}
+              >
+                <Plus className="mr-1 w-4 h-4" />
+                Agregar Sesión
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
