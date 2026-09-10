@@ -1302,17 +1302,7 @@ export function ProfessionalWeeklyAgenda({
                 }
               }
 
-              // === LOGS DE DIAGNÓSTICO ===
-              if (daySchedules.length > 0) {
-                  schedulesCount: daySchedules.length,
-                  schedules: daySchedules.map(s => ({ startTime: s.startTime, endTime: s.endTime, slotDuration: s.slotDuration, modality: s.modality })),
-                  generatedSlots: scheduleSlots,
-                  overridesForDay: overrides.filter(o => o.date === dateStr).length,
-                  blockOverridesForDay: overrides.filter(o => o.date === dateStr && o.type === "block"),
-                });
-              } else {
-                console.table(schedules.map(s => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime, slotDuration: s.slotDuration })));
-              }
+              // === LOGS DE DIAGNÓSTICO (limpiados en producción) ===
 
               // 2. Generar slots de overrides type="extra" (disponibilidad activada)
               const extraOverrides = overrides.filter((o) => {
