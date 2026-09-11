@@ -92,6 +92,13 @@ export const THERAPY_TYPES = [
   "Trastorno obsesivo compulsivo",
   "Trastornos alimentarios",
   "Trastornos Específicos del Aprendizaje (TEA)",
+  // === Tipos de terapia para Psicopedagogía Clínica ===
+  "Terapia Psicopedagógica Integral",
+  "Terapia de Modificación de Conducta",
+  "Rehabilitación / Estimulación Neurocognitiva",
+  "Terapia de Integración Sensorial",
+  "Terapia Basada en el Juego (Ludoterapia)",
+  "Entrenamiento en Habilidades Sociales",
 ];
 
 // === Público Objetivo (checkboxes) ===
