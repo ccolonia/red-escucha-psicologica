@@ -90,11 +90,57 @@ function computeAvailableSlots(
   todayStr: string,
   targetDayOfWeek: number
 ): { time: string; endTime: string; modality: string; duration: number; direccionId: string | null }[] {
-  // === SOLO procesar extraOverrides (slots activados por el profesional) ===
+  // === FIX: Auto-activación de slots ===
+  // ANTES: solo procesaba extraOverrides (slots activados manualmente por el profesional).
+  // Si el profesional no hacía click en cada slot para activarlos, availableSlots era []
+  // y la Agenda Central mostraba "0 libres, 0 ocupados".
+  //
+  // AHORA: también genera slots a partir de los schedules recurrentes (ProfessionalSchedule).
+  // Si el profesional tiene configurado "Jueves 10:00-14:00 Online", todos los slots
+  // de esa franja se generan automáticamente como availableSlots.
+  //
+  // Los extraOverrides siguen funcionando y se mergean con los del schedule.
   const extraOverrides = overrides.filter((o) => o.type === "extra");
+  const blockOverrides = overrides.filter((o) => o.type === "block");
+
+  // Verificar si hay un bloqueo de día completo
+  const fullDayBlock = blockOverrides.some((o) => !o.startTime && !o.endTime);
+  if (fullDayBlock) return [];
 
   const allSlots: { time: string; endTime: string; modality: string; duration: number; direccionId: string | null }[] = [];
 
+  // === 1. Generar slots a partir de los schedules recurrentes ===
+  const daySchedules = schedules.filter((s) => s.dayOfWeek === targetDayOfWeek);
+  for (const schedule of daySchedules) {
+    const slots = generateSlots(schedule.startTime, schedule.endTime, schedule.slotDuration);
+    for (const time of slots) {
+      const slotStartMin = timeToMinutes(time);
+      const slotEndMin = slotStartMin + schedule.slotDuration;
+      const endMin = timeToMinutes(schedule.endTime);
+      if (slotStartMin >= endMin || slotEndMin > endMin) continue;
+
+      // Verificar si el slot está bloqueado por un override type="block"
+      const isBlocked = blockOverrides.some((block) => {
+        if (!block.startTime || !block.endTime) return false;
+        const blockStart = timeToMinutes(block.startTime);
+        const blockEnd = timeToMinutes(block.endTime);
+        return slotStartMin >= blockStart && slotEndMin <= blockEnd;
+      });
+      if (isBlocked) continue;
+
+      if (!allSlots.find((s) => s.time === time)) {
+        allSlots.push({
+          time,
+          endTime: minutesToTime(slotEndMin),
+          modality: schedule.modality || "ambas",
+          duration: schedule.slotDuration,
+          direccionId: schedule.direccionId || null,
+        });
+      }
+    }
+  }
+
+  // === 2. Agregar slots de extraOverrides (activaciones manuales adicionales) ===
   for (const extra of extraOverrides) {
     if (extra.startTime && extra.endTime) {
       const duration = extra.slotDuration || 45;
