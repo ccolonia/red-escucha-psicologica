@@ -1805,8 +1805,16 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
                   slotItems.push({ time: slotTime, duration: slotDuration, type: "available", freeSlot });
                 } else if (freeSlot && slotIsPast) {
                   slotItems.push({ time: slotTime, duration: slotDuration, type: "past", freeSlot });
-                } else {
+                } else if (slotIsPast) {
+                  // Slot pasado sin freeSlot → sigue como "schedule" para carga retroactiva
                   slotItems.push({ time: slotTime, duration: slotDuration, type: "schedule" });
+                } else {
+                  // === FIX: Auto-activación de slots ===
+                  // Si el slot está dentro de la franja horaria configurada pero no tiene
+                  // freeSlot (override type="extra"), lo marcamos como "available" (verde)
+                  // automáticamente. Antes era "schedule" (amarillo) y requería activación
+                  // manual celda por celda.
+                  slotItems.push({ time: slotTime, duration: slotDuration, type: "available" });
                 }
               }
 

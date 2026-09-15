@@ -1351,8 +1351,12 @@ export function ProfessionalWeeklyAgenda({
                     const modality = getModalityForCell(dateStr, dayOfWeek, slotTime);
                     slotItems.push({ time: slotTime, duration: slotDuration, type: "available", modality });
                   } else {
+                    // === FIX: Auto-activación de slots ===
+                    // Los slots dentro de la franja horaria configurada nacen como
+                    // "available" (verde) automáticamente. Antes eran "schedule"
+                    // (amarillo) y requerían activación manual celda por celda.
                     const modality = getModalityForCell(dateStr, dayOfWeek, slotTime);
-                    slotItems.push({ time: slotTime, duration: slotDuration, type: "schedule", modality });
+                    slotItems.push({ time: slotTime, duration: slotDuration, type: "available", modality });
                   }
                 }
               }
