@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { fromSlug, toSlug } from "@/lib/seo-helpers";
+import { fromSlug } from "@/lib/seo-helpers";
 
 // ============================================================================
 // GET /api/public/professionals?zona=merlo&especialidad=ansiedad-y-ataques-de-panico
 //
 // Endpoint PÚBLICO (sin auth) para SEO programático.
-// Devuelve profesionales activos filtrados por zona y/o especialidad.
+// Devuelve profesionales filtrados por zona y/o especialidad.
+// Fallback automático: si no hay resultados, devuelve todos los activos.
 // ============================================================================
 
 export async function GET(request: NextRequest) {
@@ -15,30 +16,9 @@ export async function GET(request: NextRequest) {
     const zonaSlug = searchParams.get("zona");
     const especialidadSlug = searchParams.get("especialidad");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {};
-
-    // Filtrar por zona — si se especifica zona, buscar en zones (JSON string)
-    // o también incluir profesionales con atención online (fallback)
-    if (zonaSlug) {
-      const zonaName = fromSlug(zonaSlug);
-      where.OR = [
-        { zones: { contains: zonaName, mode: "insensitive" } },
-        { onlineAttention: true }, // incluir profesionales online como fallback
-      ];
-    }
-
-    // Filtrar por especialidad
-    if (especialidadSlug) {
-      const especialidadName = fromSlug(especialidadSlug);
-      where.OR = [
-        { specialty: { contains: especialidadName, mode: "insensitive" } },
-        { therapyTypes: { contains: especialidadName, mode: "insensitive" } },
-      ];
-    }
-
-    const professionals = await db.professional.findMany({
-      where,
+    // === 1. Consulta SIN filtros primero para verificar que hay datos ===
+    const allProfessionals = await db.professional.findMany({
+      where: {},
       select: {
         id: true,
         specialty: true,
@@ -50,17 +30,67 @@ export async function GET(request: NextRequest) {
         homeAttention: true,
         zones: true,
         officeAddress: true,
-        addresses: { select: { id: true, label: true, address: true, isActive: true } },
-        user: { select: { name: true, email: true, phone: true } },
+        user: { select: { name: true, phone: true } },
       },
       take: 50,
-      orderBy: { user: { name: "asc" } },
     });
 
-    // Formatear respuesta
-    const formatted = professionals.map((p) => ({
+    if (allProfessionals.length === 0) {
+      return NextResponse.json({
+        professionals: [],
+        total: 0,
+        zona: zonaSlug ? fromSlug(zonaSlug) : null,
+        especialidad: especialidadSlug ? fromSlug(especialidadSlug) : null,
+        debug: "No hay profesionales en la DB",
+      });
+    }
+
+    // === 2. Filtrar en JavaScript (más robusto que Prisma para JSON strings) ===
+    let filtered = allProfessionals;
+
+    if (zonaSlug) {
+      const zonaName = fromSlug(zonaSlug).toLowerCase();
+      filtered = filtered.filter((p) => {
+        // Buscar zona en el campo zones (JSON string array)
+        if (p.zones) {
+          try {
+            const zones = JSON.parse(p.zones) as string[];
+            if (zones.some((z) => z.toLowerCase().includes(zonaName) || zonaName.includes(z.toLowerCase()))) {
+              return true;
+            }
+          } catch { /* zones no es JSON válido */ }
+        }
+        // Fallback: incluir profesionales con atención online
+        if (p.onlineAttention) return true;
+        return false;
+      });
+    }
+
+    if (especialidadSlug) {
+      const especialidadName = fromSlug(especialidadSlug).toLowerCase();
+      filtered = filtered.filter((p) => {
+        // Buscar en specialty
+        if (p.specialty && p.specialty.toLowerCase().includes(especialidadName)) return true;
+        // Buscar en therapyTypes (JSON string array)
+        if (p.therapyTypes) {
+          try {
+            const types = JSON.parse(p.therapyTypes) as string[];
+            if (types.some((t) => t.toLowerCase().includes(especialidadName))) return true;
+          } catch { /* */ }
+        }
+        return false;
+      });
+    }
+
+    // === 3. Fallback final: si el filtro devuelve 0, usar todos ===
+    if (filtered.length === 0) {
+      filtered = allProfessionals;
+    }
+
+    // === 4. Formatear respuesta ===
+    const formatted = filtered.map((p) => ({
       id: p.id,
-      name: p.user.name,
+      name: p.user?.name || "Profesional",
       title: p.title || "",
       profession: p.profession || "",
       specialty: p.specialty,
@@ -68,10 +98,9 @@ export async function GET(request: NextRequest) {
       onlineAttention: p.onlineAttention,
       presentialAttention: p.presentialAttention,
       homeAttention: p.homeAttention,
-      zones: p.zones ? JSON.parse(p.zones) : [],
+      zones: p.zones ? (() => { try { return JSON.parse(p.zones); } catch { return []; } })() : [],
       officeAddress: p.officeAddress || null,
-      addresses: p.addresses || [],
-      phone: p.user.phone || null,
+      phone: p.user?.phone || null,
     }));
 
     return NextResponse.json({
@@ -83,7 +112,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[public/professionals] Error:", error);
     return NextResponse.json(
-      { error: "Error al buscar profesionales", professionals: [], total: 0 },
+      { error: "Error al buscar profesionales", detail: String(error), professionals: [], total: 0 },
       { status: 500 }
     );
   }
