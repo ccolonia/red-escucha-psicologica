@@ -16,10 +16,7 @@ export async function GET(request: NextRequest) {
     const especialidadSlug = searchParams.get("especialidad");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {
-      available: true,
-      user: { active: true },
-    };
+    const where: any = {};
 
     // Filtrar por zona — si se especifica zona, buscar en zones (JSON string)
     // o también incluir profesionales con atención online (fallback)
