@@ -5,9 +5,16 @@ import { fromSlug } from "@/lib/seo-helpers";
 // ============================================================================
 // GET /api/public/professionals?zona=merlo&especialidad=ansiedad-y-ataques-de-panico
 //
-// Endpoint PÚBLICO (sin auth) para SEO programático.
+// Endpoint PÚBLICO (sin auth) para SEO programático y Triage Wizard.
 // Devuelve profesionales filtrados por zona y/o especialidad.
 // Fallback automático: si no hay resultados, devuelve todos los activos.
+//
+// ⚠️ SEGURIDAD CRÍTICA (2026-09-22):
+//   Solo se devuelven profesionales cuyo User asociado tiene:
+//     - isApproved = true   (aprobado por admin desde panel)
+//     - active     = true   (no dado de baja)
+//   Profesionales pendientes, rechazados o inactivos quedan EXCLUIDOS.
+//   Este filtro es OBLIGATORIO y no tiene bypass.
 // ============================================================================
 
 export async function GET(request: NextRequest) {
@@ -16,9 +23,18 @@ export async function GET(request: NextRequest) {
     const zonaSlug = searchParams.get("zona");
     const especialidadSlug = searchParams.get("especialidad");
 
-    // === 1. Consulta SIN filtros primero para verificar que hay datos ===
+    // === 1. Consulta con FILTRO ESTRICTO de aprobación ===
+    //    Solo profesionales aprobados por el admin (User.isApproved === true)
+    //    y con cuenta activa (User.active === true).
+    //    Esto evita que profesionales pendientes (ej: Gabriela Botella)
+    //    aparezcan en búsquedas públicas, landings SEO o Triage Wizard.
     const allProfessionals = await db.professional.findMany({
-      where: {},
+      where: {
+        user: {
+          isApproved: true,
+          active: true,
+        },
+      },
       select: {
         id: true,
         specialty: true,
@@ -30,9 +46,10 @@ export async function GET(request: NextRequest) {
         homeAttention: true,
         zones: true,
         officeAddress: true,
+        therapyTypes: true, // Necesario para el filtro por especialidad
         user: { select: { name: true, phone: true } },
       },
-      take: 50,
+      take: 100, // Suficiente margen para los 45 profesionales aprobados actuales
     });
 
     if (allProfessionals.length === 0) {
@@ -82,7 +99,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // === 3. Fallback final: si el filtro devuelve 0, usar todos ===
+    // === 3. Fallback final: si el filtro devuelve 0, usar todos los APROBADOS ===
+    //    (NUNCA incluye pendientes: allProfessionals ya está filtrado por isApproved)
     if (filtered.length === 0) {
       filtered = allProfessionals;
     }
