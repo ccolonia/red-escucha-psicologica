@@ -19,6 +19,7 @@ import {
   MessageCircle,
   Calendar,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,22 @@ const MODALIDADES = [
   { id: "ambas", label: "Indistinto", icon: Monitor, color: "text-purple-600 bg-purple-50 border-purple-200" },
 ];
 
+// === Sanitizar nombre del profesional: evitar "Lic. Lic. Nombre" ===
+// Si el name ya incluye el título (Lic., Dr., Dra., etc.), no anteponerlo.
+function formatDisplayName(title: string | undefined, name: string): string {
+  if (!title || title === "Ninguno") return name;
+  const nameLower = name.toLowerCase().trim();
+  const titleLower = title.toLowerCase().trim();
+  // Si el nombre ya empieza con el título, no duplicar
+  if (nameLower.startsWith(titleLower) ||
+      (titleLower === "lic." && (nameLower.startsWith("lic ") || nameLower.startsWith("lic."))) ||
+      (titleLower === "dr." && (nameLower.startsWith("dr ") || nameLower.startsWith("dr."))) ||
+      (titleLower === "dra." && (nameLower.startsWith("dra ") || nameLower.startsWith("dra.")))) {
+    return name;
+  }
+  return `${title} ${name}`;
+}
+
 export function TriageWizard() {
   const [step, setStep] = useState(0); // 0=motivo, 1=modalidad, 2=zona, 3=resultados
   const [motivo, setMotivo] = useState<string | null>(null);
@@ -74,16 +91,22 @@ export function TriageWizard() {
   const [zonaSelected, setZonaSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<TriageResult[]>([]);
+  const [fallbackMode, setFallbackMode] = useState(false);
 
   const showZonaStep = modalidad === "P" || modalidad === "ambas";
 
+  // === Filtro de zonas con normalización (insensible a mayúsculas/acentos/espacios) ===
+  const normalizeText = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
   const filteredZonas = zonaQuery.length >= 2
-    ? ALL_ZONES.filter((z) => z.toLowerCase().includes(zonaQuery.toLowerCase())).slice(0, 8)
+    ? ALL_ZONES.filter((z) => normalizeText(z).includes(normalizeText(zonaQuery))).slice(0, 8)
     : [];
 
   const handleSearch = async () => {
     setLoading(true);
     setStep(3);
+    setFallbackMode(false);
     try {
       let url = "/api/public/professionals";
       const params: string[] = [];
@@ -106,16 +129,43 @@ export function TriageWizard() {
         });
       }
 
+      // === Filtrar por zona seleccionada (con normalización) ===
+      if (zonaSelected) {
+        const zonaNorm = normalizeText(zonaSelected);
+        const zoneFiltered = profs.filter((p) => {
+          return (p.zones || []).some((z) => normalizeText(z).includes(zonaNorm));
+        });
+        // Si hay resultados en la zona exacta, usarlos
+        if (zoneFiltered.length > 0) {
+          profs = zoneFiltered;
+        } else {
+          // Fallback: no hay en la zona → priorizar Online
+          setFallbackMode(true);
+          profs = profs.filter((p) => p.onlineAttention);
+          // Si tampoco hay online, usar todos
+          if (profs.length === 0) {
+            profs = data.professionals || [];
+          }
+        }
+      }
+
       // Filtrar por modalidad
       if (modalidad === "OL") {
         profs = profs.filter((p) => p.onlineAttention);
       } else if (modalidad === "P") {
-        profs = profs.filter((p) => p.presentialAttention);
+        // Si es presencial y no hay fallback, filtrar por presentialAttention
+        if (!fallbackMode) {
+          profs = profs.filter((p) => p.presentialAttention);
+        }
       }
 
-      // Fallback: si no hay resultados, usar todos
+      // Fallback final: si no hay resultados, usar todos priorizando Online
       if (profs.length === 0) {
-        profs = data.professionals || [];
+        setFallbackMode(true);
+        profs = (data.professionals || []).filter((p) => p.onlineAttention);
+        if (profs.length === 0) {
+          profs = data.professionals || [];
+        }
       }
 
       // Tomar los primeros 6
@@ -135,6 +185,7 @@ export function TriageWizard() {
     setZonaQuery("");
     setZonaSelected(null);
     setResults([]);
+    setFallbackMode(false);
   };
 
   const canProceed = () => {
@@ -318,9 +369,28 @@ export function TriageWizard() {
             ) : results.length > 0 ? (
               <>
                 <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold text-teal-900">Encontramos {results.length} {results.length === 1 ? "profesional" : "profesionales"} para vos</h3>
-                  <p className="text-teal-500 text-sm">Estos son los que mejor se adaptan a tu búsqueda</p>
+                  <h3 className="text-lg font-semibold text-teal-900">
+                    {fallbackMode && zonaSelected
+                      ? "No encontramos profesionales presenciales en " + zonaSelected
+                      : `Encontramos ${results.length} ${results.length === 1 ? "profesional" : "profesionales"} para vos`}
+                  </h3>
+                  {fallbackMode && zonaSelected ? (
+                    <p className="text-teal-500 text-sm mt-1">
+                      Te recomendamos estos especialistas con atención <strong>Online</strong>
+                    </p>
+                  ) : (
+                    <p className="text-teal-500 text-sm">Estos son los que mejor se adaptan a tu búsqueda</p>
+                  )}
                 </div>
+                {fallbackMode && zonaSelected && (
+                  <div className="flex items-center justify-center gap-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <p className="text-xs text-amber-700">
+                      No hay profesionales con atención presencial en <strong>{zonaSelected}</strong>.
+                      Mostramos especialistas disponibles para sesiones <strong>Online</strong> desde cualquier ubicación.
+                    </p>
+                  </div>
+                )}
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {results.map((prof) => {
                     return (
@@ -330,7 +400,7 @@ export function TriageWizard() {
                             <span className="text-teal-600 font-bold">{prof.name.charAt(0).toUpperCase()}</span>
                           </div>
                           <div className="min-w-0">
-                            <h4 className="font-semibold text-teal-900 text-sm leading-tight">{prof.title ? `${prof.title} ` : ""}{prof.name}</h4>
+                            <h4 className="font-semibold text-teal-900 text-sm leading-tight">{formatDisplayName(prof.title, prof.name)}</h4>
                             <p className="text-xs text-teal-600">{prof.specialty}</p>
                           </div>
                         </div>
