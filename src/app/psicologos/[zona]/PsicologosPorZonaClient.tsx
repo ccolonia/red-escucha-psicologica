@@ -28,12 +28,22 @@ export default function PsicologosPorZonaClient({ zona, zonaName, especialidad }
     if (especialidad) url += `&especialidad=${especialidad}`;
     fetch(url)
       .then((r) => r.json())
-      .then((data) => {
+      .then(async (data) => {
         if (data.professionals && data.professionals.length > 0) {
+          // Hay profesionales presenciales en la zona → mostrarlos
           setProfessionals(data.professionals);
         } else {
-          // Si no hay en la zona, buscar online
-          setOnlineProfessionals(data.professionals || []);
+          // No hay en la zona → cargar profesionales online como fallback
+          try {
+            const allRes = await fetch("/api/public/professionals");
+            const allData = await allRes.json();
+            const online = (allData.professionals || []).filter(
+              (p: { onlineAttention?: boolean }) => p.onlineAttention === true
+            );
+            setOnlineProfessionals(online);
+          } catch {
+            setOnlineProfessionals([]);
+          }
         }
         setLoading(false);
       })
