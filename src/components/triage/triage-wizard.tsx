@@ -323,8 +323,6 @@ export function TriageWizard() {
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {results.map((prof) => {
-                    const cleanPhone = prof.phone ? prof.phone.replace(/[^0-9]/g, "") : "";
-                    const waLink = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Hola ${prof.name}, te contacto desde Red Escucha Psicológica`)}` : "";
                     return (
                       <div key={prof.id} className="bg-white rounded-xl border border-teal-100 p-4 shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex items-start gap-3 mb-3">
@@ -359,20 +357,20 @@ export function TriageWizard() {
                         <div className="flex gap-2">
                           <a
                             href="/#contacto"
-                            className="flex-1 text-center text-xs font-medium px-2 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
+                            className="flex-1 text-center text-xs font-medium px-3 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
                           >
-                            <Calendar className="w-3 h-3 inline mr-1" /> Reservar
+                            <Calendar className="w-3.5 h-3.5 inline mr-1" /> Reservar Turno
                           </a>
-                          {waLink && (
-                            <a
-                              href={waLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center px-2 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg transition-colors"
-                            >
-                              <MessageCircle className="w-3.5 h-3.5" />
-                            </a>
-                          )}
+                          {/* === WhatsApp Central de REP (no del profesional) === */}
+                          <a
+                            href={`https://wa.me/541168667898?text=${encodeURIComponent(`Hola, estuve usando el buscador de REP y quiero consultar por un turno con ${prof.name}`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center px-3 py-2.5 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg transition-colors"
+                            title="Consultar por WhatsApp a la coordinación de REP"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </a>
                         </div>
                       </div>
                     );
