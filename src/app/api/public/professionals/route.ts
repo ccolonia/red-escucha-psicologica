@@ -17,17 +17,18 @@ export async function GET(request: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
-      active: true,
       available: true,
       user: { active: true, isApproved: true },
     };
 
-    // Filtrar por zona
+    // Filtrar por zona — si se especifica zona, buscar en zones (JSON string)
+    // o también incluir profesionales con atención online (fallback)
     if (zonaSlug) {
       const zonaName = fromSlug(zonaSlug);
-      // zones está guardado como JSON string array en la DB
-      // Usamos contains para buscar el nombre de la zona dentro del array
-      where.zones = { contains: zonaName, mode: "insensitive" };
+      where.OR = [
+        { zones: { contains: zonaName, mode: "insensitive" } },
+        { onlineAttention: true }, // incluir profesionales online como fallback
+      ];
     }
 
     // Filtrar por especialidad
