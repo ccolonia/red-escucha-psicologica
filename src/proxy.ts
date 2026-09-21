@@ -64,6 +64,7 @@ function isPublicApiRoute(pathname: string, method: string): boolean {
     pathname === "/api/contact" ||
     pathname === "/api/cms/content" ||
     pathname === "/api/public/register-patient" ||
+    pathname === "/api/public/professionals" ||
     pathname === "/api/whatsapp/process" ||  // Bot de WhatsApp: se autentica con x-api-secret, no JWT
     pathname === "/api/chat"  // Chat Web en Vivo: el handler decide auth por acción
                                 // (action=start/send son públicos; admin-send/close/reopen
