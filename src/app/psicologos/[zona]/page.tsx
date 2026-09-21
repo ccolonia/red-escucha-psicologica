@@ -1,19 +1,17 @@
 import { Metadata } from "next";
 import { db } from "@/lib/db";
-import { fromSlug, toSlug, ALL_ZONES, INDEXABLE_SPECIALTIES } from "@/lib/seo-helpers";
+import { fromSlug, toSlug, INDEXABLE_SPECIALTIES } from "@/lib/seo-helpers";
 import { ProfessionalSeoCard } from "@/components/professional-seo-card";
 import { generateJsonLd } from "@/lib/seo-jsonld";
 
 const BASE_URL = "https://www.redescuchapsicologica.com";
 
 // === generateStaticParams: pre-generar páginas para todas las zonas ===
-export async function generateStaticParams() {
-  return ALL_ZONES.map((zona) => ({
-    zona: toSlug(zona),
-  }));
-}
+// NOTA: Se usa dynamic rendering en lugar de SSG para evitar timeout en build
+// (2200+ páginas estáticas puede agotar memoria en Vercel).
+// Next.js generará las páginas on-demand en el primer request y las cacheará.
+export const dynamic = "force-dynamic";
 
-// === generateMetadata: SEO dinámico por zona ===
 export async function generateMetadata({
   params,
 }: {

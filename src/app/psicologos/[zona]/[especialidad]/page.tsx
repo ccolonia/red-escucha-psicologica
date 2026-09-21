@@ -1,20 +1,12 @@
 import { Metadata } from "next";
 import { db } from "@/lib/db";
-import { fromSlug, toSlug, ALL_ZONES, INDEXABLE_SPECIALTIES } from "@/lib/seo-helpers";
+import { fromSlug } from "@/lib/seo-helpers";
 import { ProfessionalSeoCard } from "@/components/professional-seo-card";
 import { generateJsonLd } from "@/lib/seo-jsonld";
 
 const BASE_URL = "https://www.redescuchapsicologica.com";
 
-export async function generateStaticParams() {
-  const params: { zona: string; especialidad: string }[] = [];
-  for (const zona of ALL_ZONES) {
-    for (const esp of INDEXABLE_SPECIALTIES) {
-      params.push({ zona: toSlug(zona), especialidad: toSlug(esp) });
-    }
-  }
-  return params;
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
