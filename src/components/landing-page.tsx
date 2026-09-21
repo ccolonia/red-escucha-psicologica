@@ -1647,7 +1647,7 @@ export function LandingPage() {
                 style={{ fontFamily: "Montserrat, sans-serif" }}
               />
 
-              {/* Botones: Buscar + Micrófono */}
+              {/* Botón Buscar */}
               <div className="flex sm:flex-col gap-2">
                 <button
                   onClick={handleAssistantSearch}
@@ -1658,30 +1658,6 @@ export function LandingPage() {
                 >
                   <Search className="w-4 h-4" />
                   Buscar
-                </button>
-                {/* Placeholder de micrófono para futura búsqueda por voz */}
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center w-12 h-12 sm:w-full sm:h-10 bg-beige-100 hover:bg-beige-200 text-forest-500 rounded-xl transition-colors"
-                  aria-label="Búsqueda por voz (próximamente)"
-                  title="Búsqueda por voz (próximamente)"
-                  onClick={() => {}}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-5 h-5"
-                  >
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                    <line x1="8" y1="23" x2="16" y2="23" />
-                  </svg>
                 </button>
               </div>
             </div>
