@@ -117,39 +117,68 @@ export function TriageWizard() {
       const data = await res.json();
       let profs: TriageResult[] = data.professionals || [];
 
-      // Filtrar por motivo en JS
-      if (motivo && MOTIVO_SEARCH[motivo]?.length > 0) {
-        const searchTerms = MOTIVO_SEARCH[motivo];
-        profs = profs.filter((p) => {
-          const specialtyLower = (p.specialty || "").toLowerCase();
-          const zonesLower = (p.zones || []).join(" ").toLowerCase();
-          return searchTerms.some((term) =>
-            specialtyLower.includes(term) || zonesLower.includes(term)
-          );
-        });
-      }
+      // === ORDEN DE FILTROS CORRECTO ===
+      // 1. ZONA primero (con normalización robusta)
+      // 2. MOTIVO después (sobre los que ya pasaron el filtro de zona)
+      // 3. MODALIDAD al final
+      // Esto evita que el filtro por motivo elimine profesionales que
+      // sí atienden en la zona seleccionada pero no tienen el motivo en
+      // su campo specialty (porque su specialty es "Psicología Clínica").
 
-      // === Filtrar por zona seleccionada (con normalización) ===
+      // === 1. Filtrar por zona seleccionada (con normalización) ===
       if (zonaSelected) {
         const zonaNorm = normalizeText(zonaSelected);
         const zoneFiltered = profs.filter((p) => {
-          return (p.zones || []).some((z) => normalizeText(z).includes(zonaNorm));
+          const zones = (p.zones || []);
+          return zones.some((z) => {
+            const zNorm = normalizeText(z);
+            return zNorm.includes(zonaNorm) || zonaNorm.includes(zNorm);
+          });
         });
-        // Si hay resultados en la zona exacta, usarlos
+
         if (zoneFiltered.length > 0) {
+          // Hay matches exactos de zona → usarlos, NO activar fallback
           profs = zoneFiltered;
         } else {
-          // Fallback: no hay en la zona → priorizar Online
+          // No hay matches exactos de zona → activar fallback Online
           setFallbackMode(true);
-          profs = profs.filter((p) => p.onlineAttention);
-          // Si tampoco hay online, usar todos
+          // Recargar la lista completa (sin filtro de zona) para priorizar online
+          const allRes = await fetch("/api/public/professionals");
+          const allData = await allRes.json();
+          profs = (allData.professionals || []).filter((p) => p.onlineAttention);
           if (profs.length === 0) {
-            profs = data.professionals || [];
+            profs = allData.professionals || [];
           }
         }
       }
 
-      // Filtrar por modalidad
+      // === 2. Filtrar por motivo en JS (sobre los que ya pasaron zona) ===
+      if (motivo && MOTIVO_SEARCH[motivo]?.length > 0) {
+        const searchTerms = MOTIVO_SEARCH[motivo].map((t) => normalizeText(t));
+        profs = profs.filter((p) => {
+          const specialtyNorm = normalizeText(p.specialty || "");
+          const zonesNorm = normalizeText((p.zones || []).join(" "));
+          const bioNorm = normalizeText(p.bio || "");
+          return searchTerms.some((term) =>
+            specialtyNorm.includes(term) ||
+            zonesNorm.includes(term) ||
+            bioNorm.includes(term)
+          );
+        });
+        // Si el filtro por motivo eliminó a todos, no mostrar lista vacía:
+        // el usuario ya pasó la barrera de zona, así que mostramos todos los
+        // de la zona (sin filtrar por motivo) para que tenga opciones.
+        if (profs.length === 0 && !fallbackMode) {
+          // Re-hacer fetch solo de zona (sin filtro motivo)
+          let zoneUrl = "/api/public/professionals";
+          if (zonaSelected) zoneUrl += `?zona=${toSlug(zonaSelected)}`;
+          const zoneRes = await fetch(zoneUrl);
+          const zoneData = await zoneRes.json();
+          profs = zoneData.professionals || [];
+        }
+      }
+
+      // === 3. Filtrar por modalidad ===
       if (modalidad === "OL") {
         profs = profs.filter((p) => p.onlineAttention);
       } else if (modalidad === "P") {
@@ -159,12 +188,14 @@ export function TriageWizard() {
         }
       }
 
-      // Fallback final: si no hay resultados, usar todos priorizando Online
+      // === Fallback final: si después de todo no hay resultados ===
       if (profs.length === 0) {
         setFallbackMode(true);
-        profs = (data.professionals || []).filter((p) => p.onlineAttention);
+        const allRes = await fetch("/api/public/professionals");
+        const allData = await allRes.json();
+        profs = (allData.professionals || []).filter((p) => p.onlineAttention);
         if (profs.length === 0) {
-          profs = data.professionals || [];
+          profs = allData.professionals || [];
         }
       }
 

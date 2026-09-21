@@ -3,6 +3,50 @@ import { db } from "@/lib/db";
 import { fromSlug } from "@/lib/seo-helpers";
 
 // ============================================================================
+// Helpers de normalización y parsing robusto
+// ============================================================================
+
+// Normaliza texto para comparación insensible a:
+//  - Mayúsculas/minúsculas
+//  - Acentos/diacríticos (á→a, ñ→n, ü→u, etc.)
+//  - Espacios al inicio/final
+//  - Espacios múltiples internos (colapsados a uno)
+function normalizeText(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // quita diacríticos
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+// Parsea el campo `zones` (o `therapyTypes`) que puede venir en cualquiera
+// de los siguientes formatos desde Prisma:
+//   1. String JSON válido:   '["Caballito", "Belgrano"]'
+//   2. Array de strings:     ["Caballito", "Belgrano"]  (caso raro, fallback)
+//   3. String separado por comas: "Caballito, Belgrano"
+//   4. null/undefined/vacío: []
+function parseZones(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter((x): x is string => typeof x === "string");
+  if (typeof raw !== "string") return [];
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  // Intentar JSON.parse
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((x): x is string => typeof x === "string");
+    }
+  } catch { /* no es JSON */ }
+  // Fallback: split por coma
+  return trimmed
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+// ============================================================================
 // GET /api/public/professionals?zona=merlo&especialidad=ansiedad-y-ataques-de-panico
 //
 // Endpoint PÚBLICO (sin auth) para SEO programático y Triage Wizard.
@@ -63,47 +107,42 @@ export async function GET(request: NextRequest) {
     }
 
     // === 2. Filtrar en JavaScript (más robusto que Prisma para JSON strings) ===
+    //    IMPORTANTE: el filtrado por zona DEBE ser estricto. La conmutación
+    //    al modo "fallback online" la maneja el cliente (TriageWizard) cuando
+    //    exactZoneMatches.length === 0. Acá NO incluimos online como fallback
+    //    automático de zona, porque eso rompe la lógica de fallback del cliente.
     let filtered = allProfessionals;
 
     if (zonaSlug) {
-      const zonaName = fromSlug(zonaSlug).toLowerCase();
+      const zonaName = normalizeText(fromSlug(zonaSlug));
       filtered = filtered.filter((p) => {
-        // Buscar zona en el campo zones (JSON string array)
-        if (p.zones) {
-          try {
-            const zones = JSON.parse(p.zones) as string[];
-            if (zones.some((z) => z.toLowerCase().includes(zonaName) || zonaName.includes(z.toLowerCase()))) {
-              return true;
-            }
-          } catch { /* zones no es JSON válido */ }
-        }
-        // Fallback: incluir profesionales con atención online
-        if (p.onlineAttention) return true;
-        return false;
+        const zones = parseZones(p.zones);
+        if (zones.length === 0) return false;
+        return zones.some((z) => {
+          const zNorm = normalizeText(z);
+          return zNorm.includes(zonaName) || zonaName.includes(zNorm);
+        });
       });
+      // NOTA: si filtered.length === 0 después de este filtro, NO hacemos
+      // fallback acá. Devolvemos array vacío y el TriageWizard decidirá
+      // si muestra el cartel amarillo + listado online.
     }
 
     if (especialidadSlug) {
-      const especialidadName = fromSlug(especialidadSlug).toLowerCase();
+      const especialidadName = normalizeText(fromSlug(especialidadSlug));
       filtered = filtered.filter((p) => {
         // Buscar en specialty
-        if (p.specialty && p.specialty.toLowerCase().includes(especialidadName)) return true;
+        if (p.specialty && normalizeText(p.specialty).includes(especialidadName)) return true;
         // Buscar en therapyTypes (JSON string array)
-        if (p.therapyTypes) {
-          try {
-            const types = JSON.parse(p.therapyTypes) as string[];
-            if (types.some((t) => t.toLowerCase().includes(especialidadName))) return true;
-          } catch { /* */ }
-        }
-        return false;
+        const types = parseZones(p.therapyTypes);
+        return types.some((t) => normalizeText(t).includes(especialidadName));
       });
     }
 
-    // === 3. Fallback final: si el filtro devuelve 0, usar todos los APROBADOS ===
-    //    (NUNCA incluye pendientes: allProfessionals ya está filtrado por isApproved)
-    if (filtered.length === 0) {
-      filtered = allProfessionals;
-    }
+    // === 3. Sin fallback final en la API ===
+    //    Antes: si el filtro devolvía 0, usábamos todos los aprobados.
+    //    Ahora: devolvemos array vacío y dejamos que el cliente decida.
+    //    El TriageWizard implementa el fallback online con mensaje explícito.
 
     // === 4. Formatear respuesta ===
     const formatted = filtered.map((p) => ({
@@ -116,7 +155,7 @@ export async function GET(request: NextRequest) {
       onlineAttention: p.onlineAttention,
       presentialAttention: p.presentialAttention,
       homeAttention: p.homeAttention,
-      zones: p.zones ? (() => { try { return JSON.parse(p.zones); } catch { return []; } })() : [],
+      zones: parseZones(p.zones), // usar helper robusto
       officeAddress: p.officeAddress || null,
       phone: p.user?.phone || null,
     }));
