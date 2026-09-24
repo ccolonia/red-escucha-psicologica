@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import { hashPassword } from "@/lib/password";
+import { sendApprovalEmail } from "@/lib/email";
 
 // ============================================================================
-// TEMPORARY DIAGNOSTIC ENDPOINT — DELETE AFTER USE
+// TEMPORARY DIAGNOSTIC + FIX ENDPOINT — DELETE AFTER USE
 // ============================================================================
-// This endpoint is protected by a one-time secret key.
-// It is ONLY for diagnosing login failures for a specific user.
+// Protected by a one-time secret.
 //
-// It does NOT bypass the DB auth — it just queries the user state and tests
-// password comparison, returning what's happening so we can diagnose.
+// Modes:
+//   1. Diagnose (default): query user state, return what's blocking login.
+//   2. Fix (fix=true): activate user, mark approved, invalidate password,
+//      generate new PasswordToken, send approval email.
 //
 // Usage:
-//   GET /api/public/debug-login-diagnostic?email=...&secret=...
-//   POST /api/public/debug-login-diagnostic
-//     body: { email, testPassword, secret }
+//   GET ?email=...&secret=...
+//   GET ?email=...&secret=...&fix=true
+//   POST { email, secret, fix?: true, testPassword?: string }
 // ============================================================================
 
 const EXPECTED_SECRET = "rep_diag_2026_09_24_k7m2p9";
@@ -27,22 +31,29 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email") || "";
   const secret = searchParams.get("secret") || "";
+  const fix = searchParams.get("fix") === "true";
 
   if (secret !== EXPECTED_SECRET) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  if (fix) {
+    return fixUser(email);
+  }
   return diagnoseUser(email);
 }
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
-  const { email, testPassword, secret } = body as { email?: string; testPassword?: string; secret?: string };
+  const { email, testPassword, secret, fix } = body as { email?: string; testPassword?: string; secret?: string; fix?: boolean };
 
   if (secret !== EXPECTED_SECRET) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  if (fix) {
+    return fixUser(email || "");
+  }
   return diagnoseUser(email || "", testPassword);
 }
 
@@ -208,3 +219,114 @@ async function diagnoseUser(rawEmail: string, testPassword?: string) {
     }, { status: 500 });
   }
 }
+
+// ============================================================================
+// FIX MODE — activates user, marks approved, sends approval email
+// ============================================================================
+async function fixUser(rawEmail: string) {
+  if (!rawEmail) {
+    return NextResponse.json({ error: "Email is required" }, { status: 400 });
+  }
+
+  const normalizedEmail = sanitize(rawEmail);
+
+  try {
+    const user = await db.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        active: true,
+        isApproved: true,
+        passwordSet: true,
+        hasAccessedPanel: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({
+        fixStatus: "FAILED",
+        error: "USER_NOT_FOUND",
+        message: `No se encontró usuario con email "${normalizedEmail}".`,
+      }, { status: 404 });
+    }
+
+    if (user.role !== "professional") {
+      return NextResponse.json({
+        fixStatus: "FAILED",
+        error: "NOT_A_PROFESSIONAL",
+        message: `El usuario con ese email tiene rol "${user.role}", no "professional". El fix solo aplica a profesionales.`,
+      }, { status: 400 });
+    }
+
+    // === Invalidate any previous unused password tokens ===
+    await db.passwordToken.updateMany({
+      where: {
+        userId: user.id,
+        used: false,
+      },
+      data: { used: true },
+    });
+
+    // === Generate random password (mirrors /api/admin/professionals/approve) ===
+    const randomPassword = crypto.randomUUID() + crypto.randomUUID();
+    const hashedRandomPassword = await hashPassword(randomPassword);
+
+    // === Update user: activate + approve + invalidate password ===
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        active: true,
+        isApproved: true,
+        password: hashedRandomPassword,
+      },
+    });
+
+    // === Send approval email (generates new PasswordToken + sends email) ===
+    let emailSent = false;
+    let emailError: string | null = null;
+    try {
+      await sendApprovalEmail({
+        userEmail: user.email,
+        userName: user.name,
+        userId: user.id,
+      });
+      emailSent = true;
+    } catch (err) {
+      emailError = String(err);
+    }
+
+    return NextResponse.json({
+      fixStatus: "SUCCESS",
+      actions: {
+        activated: !user.active, // was inactive before
+        approved: !user.isApproved, // was unapproved before
+        passwordInvalidated: true,
+        previousTokensInvalidated: true,
+        approvalEmailSent: emailSent,
+        emailError,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        active: true, // now
+        isApproved: true, // now
+        passwordSet: false, // remains false until user sets it via the link
+      },
+      nextSteps: emailSent
+        ? `El profesional recibió un email en ${user.email} con un link válido por 48hs para setear su contraseña definitiva. Después de setearla, podrá loguearse normalmente.`
+        : `El usuario fue activado y aprobado pero el email no pudo enviarse. El admin debe usar "Reenviar Acceso" desde el panel.`,
+    });
+  } catch (err) {
+    return NextResponse.json({
+      fixStatus: "ERROR",
+      error: String(err),
+      stack: err instanceof Error ? err.stack : null,
+    }, { status: 500 });
+  }
+}
+
