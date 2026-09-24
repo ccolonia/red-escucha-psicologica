@@ -524,172 +524,221 @@ export function ProfessionalWeeklyAgenda({
     setFichaDialogOpen(true);
   };
 
-  // === Activar slot como Disponible ===
-  // El profesional hace click en un slot "schedule" (naranja) → se activa
-  // como "available" (verde) creando un override type="extra".
-  // Esto lo hace visible para el admin en la Agenda Central.
+  // === Toggle unificado de slot (state machine) ===
+  // Implementa la máquina de estados correcta para el toggle de disponibilidad:
   //
-  // Implementación con OPTIMISTIC UI + manejo robusto de errores:
-  //   1. Calcular endTime según slotDuration y modality de la FRANJA ESPECÍFICA.
-  //   2. Snapshot del state actual (para revertir si falla).
-  //   3. Insertar optimistamente el nuevo override en state local.
-  //   4. Llamar al POST /api/professionals/[id]/overrides.
-  //   5. Si responde ok → recargar overrides frescos para sincronizar ID real.
-  //   6. Si falla → revertir state al snapshot y mostrar toast claro.
-  const handleActivateSlot = async (dateStr: string, time: string, dayOfWeek: number) => {
+  //   source === 'schedule' (naranja, base) → POST 'block' override → celda pasa a 'blocked'
+  //   source === 'blocked' (gris)           → DELETE 'block' override → celda pasa a 'schedule'
+  //   source === 'available' (verde, extra) → DELETE 'extra' override → celda pasa a 'outside' o 'schedule'
+  //   source === 'outside'                  → POST 'extra' override → celda pasa a 'available'
+  //
+  // Optimistic UI en todos los casos: snapshot + mutación local inmediata +
+  // revert si la API falla. Recarga final para sincronizar IDs reales.
+  const toggleSlot = async (
+    dateStr: string,
+    time: string,
+    dayOfWeek: number,
+    currentSource: "schedule" | "available" | "blocked" | "outside"
+  ) => {
     if (!professionalId) return;
-    // NO permitir activar slots pasados
     if (isSlotInPast(dateStr, time)) {
-      toast.error("No se puede activar un slot que ya pasó");
+      toast.error("No se puede modificar un slot que ya pasó");
       return;
     }
-    // Calcular endTime según slotDuration y modality de la FRANJA ESPECÍFICA
-    // que contiene este slot (FIX: múltiples franjas por día).
+
+    // === Calcular duración y endTime según la franja dueña del slot ===
     const daySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek);
     const owningSchedule = daySchedules.find(
       (s) => time >= s.startTime && time < s.endTime
-    ) || daySchedules[0]; // fallback a la primera franja del día
+    ) || daySchedules[0];
     const dur = owningSchedule?.slotDuration || 45;
     const modality = owningSchedule?.modality || "ambas";
     const [h, m] = time.split(":").map(Number);
     const total = h * 60 + m + dur;
     const endTime = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 
-    // === OPTIMISTIC UI ===
-    // Snapshot para revertir si la API falla
+    // === Snapshot para revertir optimistic UI ===
     const overridesSnapshot = overrides;
-    // Insertar optimistamente un override temporal (con ID negativo para distinguir)
-    const tempId = `temp-${Date.now()}`;
-    const optimisticOverride = {
-      id: tempId,
-      professionalId,
-      date: dateStr,
-      type: "extra" as const,
-      startTime: time,
-      endTime,
-      slotDuration: dur,
-      modality,
-      direccionId: null,
-      reason: "Slot activado desde grilla",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setOverrides((prev) => [...prev, optimisticOverride]);
 
-    setActivatingSlot(true);
-    try {
-      const res = await fetch(`/api/professionals/${professionalId}/overrides`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: dateStr,
-          type: "extra",
-          startTime: time,
-          endTime: endTime,
-          slotDuration: dur,
-          modality: modality,
-          reason: "Slot activado desde grilla",
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        // Revertir optimistic UI
+    // === Acción según source ===
+    if (currentSource === "schedule") {
+      // Caso A.2: bloquear slot de la plantilla base → crear override 'block'
+      const tempId = `temp-block-${Date.now()}`;
+      const optimisticOverride = {
+        id: tempId,
+        professionalId,
+        date: dateStr,
+        type: "block" as const,
+        startTime: time,
+        endTime,
+        slotDuration: null,
+        modality: null,
+        direccionId: null,
+        reason: "Bloqueado desde grilla",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setOverrides((prev) => [...prev, optimisticOverride]);
+
+      setActivatingSlot(true);
+      try {
+        const res = await fetch(`/api/professionals/${professionalId}/overrides`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: dateStr,
+            type: "block",
+            startTime: time,
+            endTime,
+            reason: "Bloqueado desde grilla",
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          setOverrides(overridesSnapshot);
+          toast.error(data.error || "No se pudo actualizar el horario. Reintentá en unos momentos.");
+          return;
+        }
+        toast.success(`Horario ${time} bloqueado correctamente`);
+        await reloadOverrides();
+      } catch (err) {
+        console.error("Error blocking slot:", err);
         setOverrides(overridesSnapshot);
-        toast.error(data.error || "No se pudo actualizar el horario. Reintentá en unos momentos.");
-        return;
+        toast.error("No se pudo actualizar el horario. Reintentá en unos momentos.");
+      } finally {
+        setActivatingSlot(false);
       }
-      toast.success(`Slot ${time}–${endTime} activado como Disponible`);
-      // Recargar overrides de la semana actual (con from/to) para sincronizar
-      const weekStartStr = format(currentWeekStart, "yyyy-MM-dd");
-      const weekEnd = addDays(currentWeekStart, 6);
-      const weekEndStr = format(weekEnd, "yyyy-MM-dd");
-      const overRes = await fetch(`/api/professionals/${professionalId}/overrides?from=${weekStartStr}&to=${weekEndStr}`).then((r) => r.json());
-      setOverrides(Array.isArray(overRes) ? overRes : []);
-    } catch (err) {
-      console.error("Error activating slot:", err);
-      // Revertir optimistic UI
-      setOverrides(overridesSnapshot);
-      toast.error("No se pudo actualizar el horario. Reintentá en unos momentos.");
-    } finally {
-      setActivatingSlot(false);
+    } else if (currentSource === "blocked") {
+      // Caso B.1: desbloquear slot que tenía override 'block' → DELETE 'block'
+      const existing = overrides.find((o) =>
+        o.date === dateStr && o.type === "block" &&
+        ((!o.startTime && !time) || o.startTime === time)
+      );
+      // Optimistic: remover del state local
+      if (existing) {
+        setOverrides((prev) => prev.filter((o) => o.id !== existing.id));
+      }
+
+      setActivatingSlot(true);
+      try {
+        let deleteUrl: string;
+        if (existing?.id && !existing.id.startsWith("temp-")) {
+          deleteUrl = `/api/professionals/${professionalId}/overrides?overrideId=${existing.id}`;
+        } else {
+          deleteUrl = `/api/professionals/${professionalId}/overrides?date=${encodeURIComponent(dateStr)}&startTime=${encodeURIComponent(time)}&type=block`;
+        }
+        const res = await fetch(deleteUrl, { method: "DELETE" });
+        if (!res.ok) {
+          const data = await res.json();
+          setOverrides(overridesSnapshot);
+          toast.error(data.error || "No se pudo actualizar el horario. Reintentá en unos momentos.");
+          return;
+        }
+        toast.success(`Horario ${time} habilitado correctamente`);
+        await reloadOverrides();
+      } catch (err) {
+        console.error("Error unblocking slot:", err);
+        setOverrides(overridesSnapshot);
+        toast.error("No se pudo actualizar el horario. Reintentá en unos momentos.");
+      } finally {
+        setActivatingSlot(false);
+      }
+    } else if (currentSource === "available") {
+      // Caso A.1: desactivar slot 'extra' → DELETE 'extra'
+      const existing = overrides.find((o) =>
+        o.date === dateStr && o.type === "extra" && o.startTime === time
+      );
+      if (existing) {
+        setOverrides((prev) => prev.filter((o) => o.id !== existing.id));
+      }
+
+      setActivatingSlot(true);
+      try {
+        let deleteUrl: string;
+        if (existing?.id && !existing.id.startsWith("temp-")) {
+          deleteUrl = `/api/professionals/${professionalId}/overrides?overrideId=${existing.id}`;
+        } else {
+          deleteUrl = `/api/professionals/${professionalId}/overrides?date=${encodeURIComponent(dateStr)}&startTime=${encodeURIComponent(time)}&type=extra`;
+        }
+        const res = await fetch(deleteUrl, { method: "DELETE" });
+        if (!res.ok) {
+          const data = await res.json();
+          setOverrides(overridesSnapshot);
+          toast.error(data.error || "No se pudo actualizar el horario. Reintentá en unos momentos.");
+          return;
+        }
+        toast.success(`Horario adicional ${time} removido`);
+        await reloadOverrides();
+      } catch (err) {
+        console.error("Error removing extra slot:", err);
+        setOverrides(overridesSnapshot);
+        toast.error("No se pudo actualizar el horario. Reintentá en unos momentos.");
+      } finally {
+        setActivatingSlot(false);
+      }
+    } else if (currentSource === "outside") {
+      // Caso B.2: activar slot fuera de la plantilla → POST 'extra'
+      const tempId = `temp-extra-${Date.now()}`;
+      const optimisticOverride = {
+        id: tempId,
+        professionalId,
+        date: dateStr,
+        type: "extra" as const,
+        startTime: time,
+        endTime,
+        slotDuration: dur,
+        modality,
+        direccionId: null,
+        reason: "Slot activado desde grilla",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setOverrides((prev) => [...prev, optimisticOverride]);
+
+      setActivatingSlot(true);
+      try {
+        const res = await fetch(`/api/professionals/${professionalId}/overrides`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: dateStr,
+            type: "extra",
+            startTime: time,
+            endTime,
+            slotDuration: dur,
+            modality,
+            reason: "Slot activado desde grilla",
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          setOverrides(overridesSnapshot);
+          toast.error(data.error || "No se pudo actualizar el horario. Reintentá en unos momentos.");
+          return;
+        }
+        toast.success(`Horario ${time}–${endTime} habilitado como Disponible`);
+        await reloadOverrides();
+      } catch (err) {
+        console.error("Error adding extra slot:", err);
+        setOverrides(overridesSnapshot);
+        toast.error("No se pudo actualizar el horario. Reintentá en unos momentos.");
+      } finally {
+        setActivatingSlot(false);
+      }
     }
   };
 
-  // === Desactivar slot (volver de Disponible a schedule) ===
-  // Implementación con OPTIMISTIC UI + fallback por tupla [date, startTime]:
-  //   1. Snapshot del estado actual (para revertir si falla).
-  //   2. Remover inmediatamente el override del state local → la celda cambia
-  //      de verde ("available") a naranja ("schedule") sin esperar respuesta.
-  //   3. Llamar al backend:
-  //      - Si tenemos el overrideId local → DELETE ?overrideId=...
-  //      - Si NO lo tenemos (state desync) → DELETE ?date=...&startTime=...&type=extra
-  //        El backend resuelve el override por tupla única.
-  //   4. Si la API responde success (incluso notFound=true) → recargar overrides
-  //      frescos de la semana para sincronizar.
-  //   5. Si la API falla → revertir state al snapshot y mostrar toast claro.
-  const handleDeactivateSlot = async (dateStr: string, time: string) => {
+  // === Helper: recargar overrides de la semana actual ===
+  const reloadOverrides = async () => {
     if (!professionalId) return;
-    if (isSlotInPast(dateStr, time)) {
-      toast.error("No se puede desactivar un slot que ya pasó");
-      return;
-    }
-
-    // Buscar el override type="extra" que coincide en state local
-    const existing = overrides.find((o) =>
-      o.date === dateStr && o.type === "extra" && o.startTime === time
-    );
-
-    // === OPTIMISTIC UI ===
-    // Snapshot para revertir si la API falla
-    const overridesSnapshot = overrides;
-    // Remover inmediatamente del state local
-    if (existing) {
-      setOverrides((prev) => prev.filter((o) => o.id !== existing.id));
-    }
-
-    setActivatingSlot(true);
+    const weekStartStr = format(currentWeekStart, "yyyy-MM-dd");
+    const weekEnd = addDays(currentWeekStart, 6);
+    const weekEndStr = format(weekEnd, "yyyy-MM-dd");
     try {
-      // === Construir URL de DELETE ===
-      // Si tenemos overrideId → usarlo (más directo)
-      // Si NO lo tenemos (state desync) → usar tupla [date, startTime, type=extra]
-      let deleteUrl: string;
-      if (existing?.id) {
-        deleteUrl = `/api/professionals/${professionalId}/overrides?overrideId=${existing.id}`;
-      } else {
-        deleteUrl = `/api/professionals/${professionalId}/overrides?date=${encodeURIComponent(dateStr)}&startTime=${encodeURIComponent(time)}&type=extra`;
-      }
-
-      const res = await fetch(deleteUrl, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        // Revertir optimistic UI
-        setOverrides(overridesSnapshot);
-        toast.error(data.error || "No se pudo actualizar el horario. Reintentá en unos momentos.");
-        return;
-      }
-
-      const data = await res.json();
-      if (data.notFound) {
-        // El override ya no estaba en DB — el estado visual correcto es "schedule"
-        // así que no necesitamos hacer nada especial, solo recargar para sincronizar.
-        toast.success(`Slot ${time} sincronizado`);
-      } else {
-        toast.success(`Slot ${time} desactivado`);
-      }
-
-      // Recargar overrides de la semana actual (con from/to) para sincronizar
-      const weekStartStr = format(currentWeekStart, "yyyy-MM-dd");
-      const weekEnd = addDays(currentWeekStart, 6);
-      const weekEndStr = format(weekEnd, "yyyy-MM-dd");
       const overRes = await fetch(`/api/professionals/${professionalId}/overrides?from=${weekStartStr}&to=${weekEndStr}`).then((r) => r.json());
       setOverrides(Array.isArray(overRes) ? overRes : []);
     } catch (err) {
-      console.error("Error deactivating slot:", err);
-      // Revertir optimistic UI
-      setOverrides(overridesSnapshot);
-      toast.error("No se pudo actualizar el horario. Reintentá en unos momentos.");
-    } finally {
-      setActivatingSlot(false);
+      console.error("Error reloading overrides:", err);
     }
   };
 
@@ -1082,10 +1131,21 @@ export function ProfessionalWeeklyAgenda({
 
   // Determine cell state
   // === FLUJO CON EJE Y ESTANDARIZADO A 15 MIN ===
-  // - "schedule": la celda es el INICIO de un slot del schedule (muestra modalidad)
-  // - "available": la celda es el INICIO de un slot activado (verde "Disponible")
-  // - "booked": la celda es el INICIO de un appointment (card del turno)
-  // - "outside": fuera del schedule o es sub-intervalo cubierto por rowSpan superior
+  // Máquina de estados del toggle (4 estados visualmente distinguibles):
+  //
+  // - "schedule": celda en plantilla base (naranja) → "Disponible" por base
+  //   Click → BLOCK (crear override type='block') → pasa a "blocked"
+  //
+  // - "available": celda con override 'extra' (verde) → "Disponible" ad-hoc
+  //   Click → REMOVE EXTRA (delete override 'extra') → pasa a "outside" o "schedule"
+  //
+  // - "blocked": celda bloqueada por override 'block' (gris) → "Bloqueado"
+  //   Click → UNBLOCK (delete override 'block') → pasa a "schedule"
+  //
+  // - "booked": celda con turno confirmado (card) → no clickable
+  //
+  // - "outside": fuera de plantilla y sin override → no clickable por ahora
+  //   (podría habilitarse para crear 'extra' en el futuro)
   //
   // IMPORTANTE: con el eje Y de 15 min, una celda a las 14:15 que está dentro
   // de un slot de 45 min empezado a las 14:00 NO debe renderizarse como
@@ -1097,28 +1157,33 @@ export function ProfessionalWeeklyAgenda({
       dateStr: string,
       time: string,
       dayOfWeek: number
-    ): "schedule" | "available" | "booked" | "outside" => {
+    ): "schedule" | "available" | "blocked" | "booked" | "outside" => {
       const apt = getAppointmentForCell(dateStr, time);
       if (apt && apt.status !== "cancelled_by_patient" && apt.status !== "cancelled") {
         return "booked";
       }
 
-      // Encontrar TODOS los schedules de este día (FIX: múltiples franjas por día)
-      const daySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek);
+      // 1) VERIFICAR OVERRIDE 'block' PRIMERO (tiene prioridad sobre el schedule)
+      // Si existe un override 'block' para esta fecha + startTime, la celda está bloqueada.
+      const blockOverride = overrides.find((o) => {
+        if (o.date !== dateStr || o.type !== "block") return false;
+        // Si el block es full-day (sin startTime), bloquea todo el día.
+        if (!o.startTime) return true;
+        // Si el block tiene startTime específico, solo bloquea ese slot.
+        return o.startTime === time;
+      });
+      if (blockOverride) return "blocked";
 
-      // Verificar si la celda es el INICIO de un slot activado (override extra)
+      // 2) VERIFICAR OVERRIDE 'extra' (slots ad-hoc fuera de la plantilla)
       const activatedSlot = overrides.find((o) => {
         if (o.date !== dateStr || o.type !== "extra") return false;
         if (!o.startTime || !o.endTime) return false;
-        // Solo renderizar en el startTime exacto del override
         return time === o.startTime;
       });
       if (activatedSlot) return "available";
 
-      // Verificar si la celda es el INICIO de un slot de CUALQUIERA de las
-      // franjas del día. Iteramos todas y nos quedamos con la primera que
-      // matchee (rara vez habrá más de una, porque las franjas no se solapan).
-      // FIX: antes usábamos .find() y solo checkeábamos la primera franja.
+      // 3) VERIFICAR PLANTILLA BASE (schedule)
+      const daySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek);
       for (const sch of daySchedules) {
         const allSlots = generateTimeSlotsForSchedule(
           sch.startTime,
@@ -1462,6 +1527,7 @@ export function ProfessionalWeeklyAgenda({
                 let slotClass = "p-0.5 transition-colors z-10 h-full flex flex-col justify-stretch ";
                 if (slot.type === "schedule") slotClass += "bg-amber-50 ";
                 else if (slot.type === "available") slotClass += "bg-emerald-50 ";
+                else if (slot.type === "blocked") slotClass += "bg-slate-100 ";
                 else if (slot.type === "booked") slotClass += "bg-white ";
                 if (slotIsPast) slotClass += "opacity-50 ";
                 if (isCurrentDay) slotClass += "border-l-2 border-l-teal-300 ";
@@ -1474,13 +1540,17 @@ export function ProfessionalWeeklyAgenda({
                       gridRow: `${rowStart} / span ${span}`,
                       gridColumn: colIndex,
                     }}
-                    onClick={(slot.type === "schedule" && !slotIsPast) ? () => handleActivateSlot(dateStr, slot.time, dayOfWeek) : (slot.type === "available" && !slotIsPast) ? () => handleDeactivateSlot(dateStr, slot.time) : undefined}
+                    onClick={
+                      !slotIsPast && (slot.type === "schedule" || slot.type === "available" || slot.type === "blocked")
+                        ? () => toggleSlot(dateStr, slot.time, dayOfWeek, slot.type)
+                        : undefined
+                    }
                   >
                     {slot.type === "booked" && slot.apt && renderAppointment(slot.apt)}
                     {slot.type === "schedule" && (
                       <div
                         className="flex items-center justify-center w-full rounded text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition-colors flex-1 min-h-0"
-                        title={`${MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.label || "P|OL"} — click para activar como Disponible ${slot.time}–${slotEnd} hs`}
+                        title={`${MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.label || "P|OL"} — Disponible (base) ${slot.time}–${slotEnd} hs — click para bloquear`}
                       >
                         {MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.label || "P|OL"}
                       </div>
@@ -1488,11 +1558,19 @@ export function ProfessionalWeeklyAgenda({
                     {slot.type === "available" && (
                       <div
                         className="flex items-center justify-center gap-0.5 w-full rounded text-[10px] font-medium bg-emerald-100 border border-emerald-200 text-emerald-700 hover:bg-emerald-200 transition-colors flex-1 min-h-0"
-                        title={`Disponible (${MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.fullLabel || "Híbrida"}) ${slot.time}–${slotEnd} hs — click para desactivar`}
+                        title={`Disponible ad-hoc (${MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.fullLabel || "Híbrida"}) ${slot.time}–${slotEnd} hs — click para remover`}
                       >
                         <span>{MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.emoji || "🔄"}</span>
                         <span>Disponible</span>
                         <span className="text-[8px] opacity-75">({MODALITY_CELL_DISPLAY[slot.modality || "ambas"]?.label || "P|OL"})</span>
+                      </div>
+                    )}
+                    {slot.type === "blocked" && (
+                      <div
+                        className="flex items-center justify-center w-full rounded text-[10px] font-medium bg-slate-200 border border-slate-300 text-slate-500 hover:bg-slate-300 transition-colors flex-1 min-h-0 line-through"
+                        title={`Bloqueado ${slot.time}–${slotEnd} hs — click para habilitar`}
+                      >
+                        <span>Bloqueado</span>
                       </div>
                     )}
                   </div>
@@ -1559,6 +1637,8 @@ export function ProfessionalWeeklyAgenda({
               rowClass += "bg-amber-50/30 ";
             } else if (state === "available") {
               rowClass += "bg-emerald-50/50 ";
+            } else if (state === "blocked") {
+              rowClass += "bg-slate-100/50 ";
             } else if (state === "booked") {
               rowClass += "bg-white ";
             }
@@ -1580,8 +1660,9 @@ export function ProfessionalWeeklyAgenda({
                   {state === "schedule" && !slotIsPastMobile && (
                     <div className="ml-2 flex-1">
                       <button
-                        onClick={() => handleActivateSlot(dateStr, time, dayOfWeek)}
+                        onClick={() => toggleSlot(dateStr, time, dayOfWeek, "schedule")}
                         className="flex items-center justify-center w-full bg-amber-50 border border-amber-200 text-amber-600 rounded-lg py-2 text-xs font-medium hover:bg-amber-100 transition-colors"
+                        title="Click para bloquear este horario"
                       >
                         {modalityDisplay?.label || "P|OL"}
                       </button>
@@ -1590,11 +1671,23 @@ export function ProfessionalWeeklyAgenda({
                   {state === "available" && !slotIsPastMobile && (
                     <div className="ml-2 flex-1">
                       <button
-                        onClick={() => handleDeactivateSlot(dateStr, time)}
+                        onClick={() => toggleSlot(dateStr, time, dayOfWeek, "available")}
                         className="flex items-center justify-center gap-1 w-full bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg py-2 text-xs font-medium hover:bg-emerald-200 transition-colors"
+                        title="Click para remover este horario adicional"
                       >
                         <span>{MODALITY_CELL_DISPLAY[modality || "ambas"]?.emoji || "🔄"}</span>
                         Disponible ({MODALITY_CELL_DISPLAY[modality || "ambas"]?.label || "P|OL"})
+                      </button>
+                    </div>
+                  )}
+                  {state === "blocked" && !slotIsPastMobile && (
+                    <div className="ml-2 flex-1">
+                      <button
+                        onClick={() => toggleSlot(dateStr, time, dayOfWeek, "blocked")}
+                        className="flex items-center justify-center w-full bg-slate-200 border border-slate-300 text-slate-500 rounded-lg py-2 text-xs font-medium hover:bg-slate-300 transition-colors line-through"
+                        title="Click para habilitar este horario"
+                      >
+                        Bloqueado
                       </button>
                     </div>
                   )}

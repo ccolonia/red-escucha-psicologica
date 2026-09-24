@@ -84,9 +84,14 @@ export async function POST(
     // - Bloqueo de día completo: sin startTime/endTime (null)
     // - Bloqueo parcial de slot: con startTime/endTime (ej: "09:00"-"09:45")
 
-    // === Evitar duplicados en type="extra" ===
-    // Si ya existe un override con la misma fecha + startTime + type="extra",
-    // no crear otro. Devolver el existente como si fuera nuevo (idempotente).
+    // === Evitar duplicados (idempotencia) ===
+    // Aplica a ambos tipos de override:
+    //   - type="extra": si ya existe un extra con [professionalId, date, startTime]
+    //     → devolver el existente (no crear duplicado)
+    //   - type="block" con startTime específico: si ya existe un block para el
+    //     mismo [professionalId, date, startTime] → devolver el existente
+    //   - type="block" sin startTime (full-day): si ya existe un block full-day
+    //     para esa fecha → devolver el existente
     if (type === "extra" && startTime) {
       const existing = await db.scheduleOverride.findFirst({
         where: {
@@ -97,7 +102,20 @@ export async function POST(
         },
       });
       if (existing) {
-        // Ya existe — devolver sin crear duplicado
+        return NextResponse.json(existing, { status: 200 });
+      }
+    } else if (type === "block") {
+      // Para block con startTime específico, buscamos por [date, startTime, type=block]
+      // Para block full-day (sin startTime), buscamos por [date, type=block, startTime=null]
+      const existing = await db.scheduleOverride.findFirst({
+        where: {
+          professionalId: id,
+          date,
+          type: "block",
+          startTime: startTime || null,
+        },
+      });
+      if (existing) {
         return NextResponse.json(existing, { status: 200 });
       }
     }
