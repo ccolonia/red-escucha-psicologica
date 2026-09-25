@@ -1158,27 +1158,34 @@ export function ProfessionalWeeklyAgenda({
       time: string,
       dayOfWeek: number
     ): "schedule" | "available" | "blocked" | "booked" | "outside" => {
-      const apt = getAppointmentForCell(dateStr, time);
+      // === Normalización de hora ===
+      // Truncar a HH:MM (5 chars) para evitar descalces tipo "09:00" vs "09:00:00"
+      const normalizedTime = time.slice(0, 5);
+
+      const apt = getAppointmentForCell(dateStr, normalizedTime);
       if (apt && apt.status !== "cancelled_by_patient" && apt.status !== "cancelled") {
         return "booked";
       }
 
       // 1) VERIFICAR OVERRIDE 'block' PRIMERO (tiene prioridad sobre el schedule)
-      // Si existe un override 'block' para esta fecha + startTime, la celda está bloqueada.
       const blockOverride = overrides.find((o) => {
         if (o.date !== dateStr || o.type !== "block") return false;
-        // Si el block es full-day (sin startTime), bloquea todo el día.
-        if (!o.startTime) return true;
-        // Si el block tiene startTime específico, solo bloquea ese slot.
-        return o.startTime === time;
+        const oStart = (o.startTime || "").slice(0, 5);
+        // Block full-day (sin startTime) → bloquea todo el día
+        if (!oStart) return true;
+        // Block específico → solo bloquea si startTime coincide exactamente
+        return oStart === normalizedTime;
       });
       if (blockOverride) return "blocked";
 
       // 2) VERIFICAR OVERRIDE 'extra' (slots ad-hoc fuera de la plantilla)
       const activatedSlot = overrides.find((o) => {
         if (o.date !== dateStr || o.type !== "extra") return false;
-        if (!o.startTime || !o.endTime) return false;
-        return time === o.startTime;
+        const oStart = (o.startTime || "").slice(0, 5);
+        const oEnd = (o.endTime || "").slice(0, 5);
+        if (!oStart || !oEnd) return false;
+        // Coincide si el tiempo está dentro del rango [oStart, oEnd)
+        return normalizedTime >= oStart && normalizedTime < oEnd;
       });
       if (activatedSlot) return "available";
 
@@ -1190,7 +1197,7 @@ export function ProfessionalWeeklyAgenda({
           sch.endTime,
           sch.slotDuration
         );
-        if (allSlots.includes(time) && isSlotInSchedule(dayOfWeek, time)) {
+        if (allSlots.includes(normalizedTime) && isSlotInSchedule(dayOfWeek, normalizedTime)) {
           return "schedule";
         }
       }
@@ -1447,7 +1454,7 @@ export function ProfessionalWeeklyAgenda({
               type SlotItem = {
                 time: string;
                 duration: number;
-                type: "schedule" | "available" | "booked";
+                type: "schedule" | "available" | "blocked" | "booked";
                 modality: string | null;
                 apt?: typeof visibleAppointments[0];
               };
@@ -1460,44 +1467,86 @@ export function ProfessionalWeeklyAgenda({
                 return daySchedules.find((s) => slotTime >= s.startTime && slotTime < s.endTime);
               };
 
-              // Schedule slots (no activados, no con appointment)
+              // === NORMALIZACIÓN DE HORA ===
+              // Evita descalces tipo "09:00" vs "09:00:00" recortando a 5 chars (HH:MM).
+              const normalizeTime = (t: string | null | undefined): string => {
+                if (!t) return "";
+                return t.slice(0, 5);
+              };
+
+              // === helper local: verificar si un slot tiene override 'block' ===
+              // Soporta block full-day (sin startTime) y block específico (con startTime).
+              const isSlotBlocked = (slotTime: string): boolean => {
+                return overrides.some((o) => {
+                  if (o.date !== dateStr || o.type !== "block") return false;
+                  const oStart = normalizeTime(o.startTime);
+                  // Block full-day (sin startTime) → bloquea todo el día
+                  if (!oStart) return true;
+                  // Block específico → solo bloquea si startTime coincide exactamente
+                  return oStart === normalizeTime(slotTime);
+                });
+              };
+
+              // === helper local: verificar si un slot tiene override 'extra' ===
+              const isSlotExtra = (slotTime: string): boolean => {
+                return overrides.some((o) => {
+                  if (o.date !== dateStr || o.type !== "extra") return false;
+                  const oStart = normalizeTime(o.startTime);
+                  if (!oStart) return false;
+                  // Para extra, comparamos por rango (el slot puede ser sub-intervalo del extra)
+                  const oEnd = normalizeTime(o.endTime);
+                  if (!oEnd) return false;
+                  return slotTime >= oStart && slotTime < oEnd;
+                });
+              };
+
+              // === Generación de slots con clasificación correcta de origen ===
+              // ORDEN ESTRICTO DE PRIORIDAD:
+              //   1. ¿Tiene appointment confirmado? → "booked"
+              //   2. ¿Tiene override 'block'? → "blocked" (slot bloqueado, gris)
+              //   3. ¿Tiene override 'extra'? → "available" (slot ad-hoc, verde)
+              //   4. ¿Está en plantilla base? → "schedule" (base, naranja)
+              //   5. Fuera de todo → no se renderiza
+              //
+              // ESTO ES CRÍTICO: antes, los slots de la plantilla base se
+              // marcaban automáticamente como "available" (verde), lo cual hacía
+              // que el toggle ejecutara DELETE de 'extra' (incorrecto).
               for (const slotTime of scheduleSlots) {
-                // Buscar la franja específica que contiene este slot
                 const owningSchedule = getOwningSchedule(slotTime);
                 const slotDuration = owningSchedule?.slotDuration || 45;
 
-                // Check if there's an appointment at this exact time
+                // 1. ¿Appointment confirmado?
                 const apt = visibleAppointments.find((a) => a.date === dateStr && a.time === slotTime);
                 if (apt && apt.status !== "cancelled_by_patient" && apt.status !== "cancelled") {
                   slotItems.push({ time: slotTime, duration: slotDuration, type: "booked", modality: null, apt });
-                } else {
-                  // Check if this slot is activated by an extra override
-                  const isActivated = extraOverrides.some((o) => {
-                    if (!o.startTime) return false;
-                    const oStart = timeToMin(o.startTime);
-                    const oEnd = o.endTime ? timeToMin(o.endTime) : oStart + slotDuration;
-                    const sMin = timeToMin(slotTime);
-                    return sMin >= oStart && sMin < oEnd;
-                  });
-                  if (isActivated) {
-                    const modality = getModalityForCell(dateStr, dayOfWeek, slotTime);
-                    slotItems.push({ time: slotTime, duration: slotDuration, type: "available", modality });
-                  } else {
-                    // === FIX: Auto-activación de slots ===
-                    // Los slots dentro de la franja horaria configurada nacen como
-                    // "available" (verde) automáticamente. Antes eran "schedule"
-                    // (amarillo) y requerían activación manual celda por celda.
-                    const modality = getModalityForCell(dateStr, dayOfWeek, slotTime);
-                    slotItems.push({ time: slotTime, duration: slotDuration, type: "available", modality });
-                  }
+                  continue;
                 }
+
+                // 2. ¿Override 'block'?
+                if (isSlotBlocked(slotTime)) {
+                  slotItems.push({ time: slotTime, duration: slotDuration, type: "blocked", modality: null });
+                  continue;
+                }
+
+                // 3. ¿Override 'extra'?
+                if (isSlotExtra(slotTime)) {
+                  const modality = getModalityForCell(dateStr, dayOfWeek, slotTime);
+                  slotItems.push({ time: slotTime, duration: slotDuration, type: "available", modality });
+                  continue;
+                }
+
+                // 4. Es de plantilla base
+                const modality = getModalityForCell(dateStr, dayOfWeek, slotTime);
+                slotItems.push({ time: slotTime, duration: slotDuration, type: "schedule", modality });
               }
 
-              // Extra override slots that DON'T align with schedule (extra availability outside schedule)
+              // Extra override slots que NO alinean con schedule (disponibilidad adicional fuera de plantilla)
               for (const o of extraOverrides) {
-                if (!o.startTime || !o.endTime) continue;
+                const oStart = normalizeTime(o.startTime);
+                const oEnd = normalizeTime(o.endTime);
+                if (!oStart || !oEnd) continue;
                 const oDuration = o.slotDuration || 45;
-                const extraSlots = generateTimeSlotsForSchedule(o.startTime, o.endTime, oDuration);
+                const extraSlots = generateTimeSlotsForSchedule(oStart, oEnd, oDuration);
                 for (const slotTime of extraSlots) {
                   // Skip if already in scheduleSlots (avoid duplicates)
                   if (scheduleSlots.includes(slotTime)) continue;
