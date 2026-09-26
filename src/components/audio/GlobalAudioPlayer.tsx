@@ -163,22 +163,24 @@ export function GlobalAudioPlayer({
   // ========================================================================
   return (
     <div
-      className="fixed bottom-6 right-6 sm:bottom-4 sm:right-4 z-50"
+      className="fixed top-20 right-4 sm:top-24 sm:right-8 z-50"
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      {/* Tooltip flotante */}
+      {/* Tooltip flotante — se despliega hacia ABAJO desde el botón (origen top-right)
+          para no cortarse con el borde superior de la pantalla */}
       <AnimatePresence>
         {showTooltip && (
           <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            initial={{ opacity: 0, y: -4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            exit={{ opacity: 0, y: -4, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute right-0 bottom-full mb-2 px-3 py-1.5 bg-emerald-950/90 text-white text-xs font-medium rounded-lg shadow-lg whitespace-nowrap pointer-events-none backdrop-blur-sm border border-emerald-100/10"
+            className="absolute right-0 top-full mt-2 px-3 py-1.5 bg-emerald-950/90 text-white text-xs font-medium rounded-lg shadow-lg whitespace-nowrap pointer-events-none backdrop-blur-sm border border-emerald-100/10 origin-top-right"
           >
             {isPlaying ? "Desactivar música de fondo" : "Activar música de fondo"}
-            <div className="absolute left-1/2 -translate-x-1/2 top-full -mt-1 w-2 h-2 bg-emerald-950/90 rotate-45" />
+            {/* Flecha triangular pointing up hacia el botón */}
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-full -mb-1 w-2 h-2 bg-emerald-950/90 rotate-45" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -189,7 +191,7 @@ export function GlobalAudioPlayer({
         onClick={togglePlay}
         aria-label={isPlaying ? "Pausar música de fondo" : "Reproducir música de fondo"}
         aria-pressed={isPlaying}
-        className="group relative flex items-center gap-2 px-3 py-2 rounded-full bg-emerald-950/40 hover:bg-emerald-950/55 backdrop-blur-md border border-emerald-100/30 shadow-lg transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+        className="group relative flex items-center gap-2 px-3 py-2 rounded-full bg-white/80 hover:bg-white/90 backdrop-blur-md border border-emerald-100/40 shadow-lg transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
       >
         {/* Elemento audio (invisible) */}
         <audio
@@ -206,7 +208,7 @@ export function GlobalAudioPlayer({
           {[0, 1, 2, 3].map((i) => (
             <motion.div
               key={i}
-              className="flex-1 bg-emerald-300 rounded-full origin-bottom"
+              className="flex-1 bg-emerald-500 rounded-full origin-bottom"
               style={{ minHeight: "3px" }}
               initial={{ height: "30%" }}
               animate={
@@ -241,7 +243,7 @@ export function GlobalAudioPlayer({
             transition={{ duration: 0.2 }}
             className="absolute inset-0 flex items-center justify-center"
           >
-            <Volume2 className="w-4 h-4 text-emerald-100" strokeWidth={2} />
+            <Volume2 className="w-4 h-4 text-emerald-700" strokeWidth={2} />
           </motion.div>
           <motion.div
             initial={false}
@@ -252,7 +254,7 @@ export function GlobalAudioPlayer({
             transition={{ duration: 0.2 }}
             className="absolute inset-0 flex items-center justify-center"
           >
-            <VolumeX className="w-4 h-4 text-emerald-200/70" strokeWidth={2} />
+            <VolumeX className="w-4 h-4 text-emerald-600/70" strokeWidth={2} />
           </motion.div>
         </div>
 
@@ -260,8 +262,8 @@ export function GlobalAudioPlayer({
         <motion.span
           className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
           animate={{
-            backgroundColor: isPlaying ? "#34D399" : "#6B7280",
-            opacity: isPlaying ? 0.9 : 0.4,
+            backgroundColor: isPlaying ? "#10B981" : "#9CA3AF",
+            opacity: isPlaying ? 0.9 : 0.5,
           }}
           transition={{ duration: 0.3 }}
         />
