@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { GlobalAudioPlayer } from "@/components/audio/GlobalAudioPlayer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -255,6 +256,13 @@ gtag('config', 'AW-1017920443');`}
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground overflow-x-hidden`}
       >
         {children}
+        {/* === Reproductor de audio ambiente global ===
+            Se monta FUERA de la jerarquía de páginas para que la música
+            sea continua y NUNCA se corte o reinicie al cambiar de ruta
+            en Next.js App Router. El estado de reproducción persiste
+            entre navegaciones porque el componente no se desmonta.
+            El archivo de audio debe estar en /public/audio/rep-ambient.mp3 */}
+        <GlobalAudioPlayer />
       </body>
     </html>
   );

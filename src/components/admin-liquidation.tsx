@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   FileSpreadsheet,
-  Download,
   ChevronLeft,
   ChevronRight,
   DollarSign,
@@ -19,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { exportSettlementToExcel } from "@/lib/export-settlement-excel";
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -107,48 +107,24 @@ export function AdminLiquidation() {
     );
   }, [data]);
 
-  const exportCSV = () => {
-    const headers = [
-      "Profesional",
-      "Especialidad",
-      "Total Turnos",
-      "Atendido",
-      "Ausente",
-      "Reprogramado",
-      "Cancelado",
-      "Honorario/Sesión",
-      "Total Cobrado",
-      "Honorario Prof.",
-      "Comisión REP",
-    ];
-
-    const rows = data.map((row) => [
-      row.professionalName,
-      row.specialty,
-      row.totalAppointments,
-      row.attended,
-      row.absent,
-      row.rescheduled,
-      row.cancelled,
-      row.sessionFee,
-      row.totalPatientFee,
-      row.totalProfessionalFee,
-      row.totalRepFee,
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((r) => r.map((v) => `"${v}"`).join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `liquidacion_${MONTHS[selectedMonth - 1].toLowerCase()}_${selectedYear}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success("CSV descargado");
+  const exportExcel = async () => {
+    if (!data || data.length === 0) {
+      toast.error("No hay datos para exportar");
+      return;
+    }
+    try {
+      const periodName = `${MONTHS[selectedMonth - 1]} ${selectedYear}`;
+      const fileName = `liquidacion_${MONTHS[selectedMonth - 1].toLowerCase()}_${selectedYear}`;
+      await exportSettlementToExcel({
+        data,
+        periodName,
+        fileName,
+      });
+      toast.success("Excel descargado correctamente");
+    } catch (err) {
+      console.error("[admin-liquidation] Error exportando Excel:", err);
+      toast.error("No se pudo generar el Excel. Reintentá en unos momentos.");
+    }
   };
 
   return (
@@ -177,10 +153,10 @@ export function AdminLiquidation() {
             <Button
               variant="outline"
               className="border-emerald-200 text-emerald-600"
-              onClick={exportCSV}
+              onClick={exportExcel}
             >
-              <Download className="mr-2 w-4 h-4" />
-              Exportar CSV
+              <FileSpreadsheet className="mr-2 w-4 h-4" />
+              Exportar Excel
             </Button>
           )}
         </div>
