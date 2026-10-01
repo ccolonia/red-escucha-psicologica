@@ -20,13 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ProfessionalSearchSelect } from "@/components/professional-search-select";
 import { toast } from "sonner";
 
 const MONTHS = [
@@ -267,18 +261,14 @@ export function AdminPlanilla() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium text-teal-700 mb-1 block">Profesional</label>
-              <Select value={selectedProfId} onValueChange={(v) => { setSelectedProfId(v); setSelectedWeek(null); }}>
-                <SelectTrigger className="border-teal-200">
-                  <SelectValue placeholder="Seleccionar profesional..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {professionals.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.user.name} — {p.specialty}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ProfessionalSearchSelect
+                professionals={professionals}
+                selectedId={selectedProfId}
+                onSelect={(id) => {
+                  setSelectedProfId(id);
+                  setSelectedWeek(null);
+                }}
+              />
             </div>
           </div>
         </CardContent>
