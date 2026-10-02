@@ -464,7 +464,7 @@ export function TriageWizard() {
                           </a>
                           {/* === WhatsApp Central de REP (no del profesional) === */}
                           <a
-                            href={`https://wa.me/541168667898?text=${encodeURIComponent(`Hola, estuve usando el buscador de REP y quiero consultar por un turno con ${prof.name}`)}`}
+                            href={`https://wa.me/5491168667898?text=${encodeURIComponent(`Hola, estuve usando el buscador de REP y quiero consultar por un turno con ${prof.name}`)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center justify-center px-3 py-2.5 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg transition-colors"

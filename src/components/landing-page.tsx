@@ -1205,10 +1205,14 @@ export function LandingPage() {
                 Reemplaza al tagline animado anterior. Centrado entre el logo
                 y el menú de navegación. Estilo amber fijo (sin parpadeo).
                 Al hacer click abre WhatsApp directamente.
-                Visible en todos los tamaños (mobile + PC). */}
+                Visible en todos los tamaños (mobile + PC).
+
+                URL HARDCODEADA EXACTA para Google Ads (sin signo + en el número,
+                mensaje pre-codificado en URL encoding). No usa cmsConfig para
+                garantizar consistencia con el redireccionamiento de anuncios. */}
             <div className="flex flex-1 items-center justify-center">
               <a
-                href={`https://wa.me/${cmsConfig.whatsapp_number || "541168667898"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
+                href="https://wa.me/5491168667898?text=Hola%2C%20me%20gustar%C3%ADa%20consultar%20para%20obtener%20un%20turno.%20Gracias"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="relative inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium text-sm px-4 py-1.5 rounded-full shadow-md border border-amber-300/40 whitespace-nowrap backdrop-blur-sm cursor-pointer transition-colors"
@@ -1700,7 +1704,7 @@ export function LandingPage() {
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2 justify-center mt-4">
                     <a
-                      href={`https://wa.me/${cmsConfig.whatsapp_number || "541168667898"}?text=${encodeURIComponent("Necesito hablar con un profesional de urgencia")}`}
+                      href={`https://wa.me/${(cmsConfig.whatsapp_number || "5491168667898").replace(/^\+/, "")}?text=${encodeURIComponent("Necesito hablar con un profesional de urgencia")}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-medium text-sm px-5 py-2.5 rounded-full transition-all"
@@ -2812,7 +2816,7 @@ export function LandingPage() {
           cmsConfig.whatsapp_enabled !== "false" */}
       {false && cmsConfig.whatsapp_enabled !== "false" && (
       <a
-        href={`https://wa.me/${cmsConfig.whatsapp_number || "541168667898"}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
+        href={`https://wa.me/${(cmsConfig.whatsapp_number || "5491168667898").replace(/^\+/, "")}?text=${encodeURIComponent(cmsConfig.whatsapp_message || "Hola, quiero hacer una consulta")}`}
         rel="noopener noreferrer"
         aria-label="Contactar por WhatsApp"
         className="fixed z-50 w-14 h-14 bg-[#25D366] hover:bg-[#20bd5a] rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"

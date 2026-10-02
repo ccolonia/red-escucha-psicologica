@@ -22,7 +22,7 @@ import { X, Send } from "lucide-react";
  * de dos popups verdes al mismo tiempo).
  */
 
-const DEFAULT_WHATSAPP_NUMBER = "541168667898";
+const DEFAULT_WHATSAPP_NUMBER = "5491168667898";
 const DEFAULT_WHATSAPP_MESSAGE = "Hola, quisiera recibir información";
 
 export function WhatsAppFloat() {
@@ -38,7 +38,11 @@ export function WhatsAppFloat() {
       .then((res) => res.json())
       .then((data) => {
         if (data.config?.whatsapp_number) {
-          setWhatsappNumber(data.config.whatsapp_number);
+          // === Sanitizar número: eliminar signo + al inicio ===
+          // Google Ads rechaza URLs wa.me con '+' en el número telefónico.
+          // Lo eliminamos defensivamente por si el CMS lo trae.
+          const sanitized = String(data.config.whatsapp_number).replace(/^\+/, "").trim();
+          setWhatsappNumber(sanitized);
         }
         if (data.config?.whatsapp_message) {
           setWhatsappMessage(data.config.whatsapp_message);
