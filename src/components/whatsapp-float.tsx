@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send } from "lucide-react";
 
@@ -23,7 +23,15 @@ import { X, Send } from "lucide-react";
  */
 
 const DEFAULT_WHATSAPP_NUMBER = "5491168667898";
-const DEFAULT_WHATSAPP_MESSAGE = "Hola, quisiera recibir información";
+const DEFAULT_WHATSAPP_MESSAGE = "Hola, me gustaría consultar para obtener un turno. Gracias";
+
+// === Helper: sanitizar número de teléfono para wa.me ===
+// Google Ads requiere que la URL de wa.me NO contenga el signo + en el
+// número telefónico. Esta función lo elimina defensivamente, junto con
+// cualquier espacio o guión residual.
+function cleanPhoneForWhatsApp(phone: string): string {
+  return String(phone).replace(/^\+/, "").replace(/[\s-]/g, "").trim();
+}
 
 export function WhatsAppFloat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -38,11 +46,13 @@ export function WhatsAppFloat() {
       .then((res) => res.json())
       .then((data) => {
         if (data.config?.whatsapp_number) {
-          // === Sanitizar número: eliminar signo + al inicio ===
+          // === Sanitizar número: eliminar signo + al inicio, espacios y guiones ===
           // Google Ads rechaza URLs wa.me con '+' en el número telefónico.
-          // Lo eliminamos defensivamente por si el CMS lo trae.
-          const sanitized = String(data.config.whatsapp_number).replace(/^\+/, "").trim();
-          setWhatsappNumber(sanitized);
+          // Lo sanitizamos defensivamente por si el CMS lo trae.
+          const sanitized = cleanPhoneForWhatsApp(data.config.whatsapp_number);
+          if (sanitized) {
+            setWhatsappNumber(sanitized);
+          }
         }
         if (data.config?.whatsapp_message) {
           setWhatsappMessage(data.config.whatsapp_message);
@@ -99,10 +109,23 @@ export function WhatsAppFloat() {
   }, [isOpen]);
 
   const handleStartConversation = () => {
-    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-    setIsOpen(false);
+    // === Cerrar popup al hacer clic en "Iniciar Conversación" ===
+    // La URL limpia se construye en `whatsappUrl` (ver useMemo abajo) y se
+    // inyecta en el href del <a> tag. El navegador abre la pestaña nueva
+    // porque target="_blank" + rel="noopener noreferrer".
+    // Acá solo cerramos el popup después de un pequeño delay para que el
+    // navegador procese el click.
+    setTimeout(() => setIsOpen(false), 50);
   };
+
+  // === Construcción de URL limpia con useMemo ===
+  // Recalcula solo cuando cambian whatsappNumber o whatsappMessage.
+  // Garantiza que el href siempre tenga el número sanitizado y el mensaje
+  // codificado correctamente para URL.
+  const whatsappUrl = React.useMemo(() => {
+    const cleanPhone = cleanPhoneForWhatsApp(whatsappNumber);
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+  }, [whatsappNumber, whatsappMessage]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50" ref={popupRef}>
@@ -185,13 +208,17 @@ export function WhatsAppFloat() {
 
             {/* === Footer (botón Iniciar Conversación) === */}
             <div className="bg-white px-4 py-3 border-t border-slate-100">
-              <button
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={handleStartConversation}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white font-medium text-sm transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
                   boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
                 }}
+                aria-label="Iniciar conversación de WhatsApp"
               >
                 {/* Ícono WhatsApp SVG oficial */}
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white" aria-hidden>
@@ -199,7 +226,7 @@ export function WhatsAppFloat() {
                 </svg>
                 Iniciar Conversación
                 <Send className="w-3.5 h-3.5 opacity-80" />
-              </button>
+              </a>
               <p className="text-[9px] text-slate-400 text-center mt-1.5">
                 Te redirigirá a WhatsApp con un mensaje pre-cargado
               </p>
