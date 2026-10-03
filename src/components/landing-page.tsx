@@ -2157,59 +2157,56 @@ export function LandingPage() {
               return itemsToShow.map((item) => {
                 // Generar ID único para la tarjeta (para scroll del buscador)
                 const cardId = `spec-card-${item.label.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-")}`;
-                // === Si el item tiene whatsappMessage, el botón "Solicitar Turno"
-                //     es un <a> real que abre wa.me en nueva pestaña.
-                //     Si no tiene, sigue el comportamiento anterior (overlay sin link). ===
-                const whatsappUrl = item.whatsappMessage
-                  ? `https://wa.me/5491168667898?text=${encodeURIComponent(item.whatsappMessage)}`
-                  : null;
+                // === Generación dinámica de URL de WhatsApp para TODAS las tarjetas ===
+                // Si el item tiene whatsappMessage explícito → lo usa.
+                // Si no → genera un mensaje default usando el label como nombre de servicio.
+                // Esto unifica el comportamiento: TODAS las tarjetas abren WhatsApp.
+                const whatsappMessage = item.whatsappMessage
+                  || `Hola, me gustaría solicitar un turno para ${item.label}. Gracias`;
+                const whatsappUrl = `https://wa.me/5491168667898?text=${encodeURIComponent(whatsappMessage)}`;
                 return (
                 <div
                   key={item.label}
                   id={cardId}
-                  onClick={whatsappUrl ? undefined : () => scrollToSection("contacto")}
-                  className={`specialty-card rounded-xl p-5 sm:p-6 transition-all duration-500 group relative overflow-hidden ${
+                  className={`specialty-card rounded-2xl p-5 sm:p-6 transition-all duration-300 group relative overflow-hidden flex flex-col justify-between border ${
                     searchHighlight === item.label
-                      ? "bg-sage-100 ring-2 ring-sage-400 shadow-lg scale-105"
-                      : "bg-beige-100 hover:shadow-xl hover:bg-beige-50 hover:-translate-y-1"
+                      ? "bg-stone-50 border-emerald-500 ring-2 ring-emerald-300 shadow-lg scale-105"
+                      : "bg-stone-50/80 border-stone-200/60 hover:border-emerald-500 hover:shadow-xl hover:-translate-y-1"
                   }`}
                 >
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 bg-sage-300/15 rounded-xl flex items-center justify-center mb-3 sm:mb-4 transition-transform duration-300 group-hover:scale-110">
-                    <item.icon className="w-5 h-5 sm:w-6 sm:h-6 text-sage-500" />
-                  </div>
-                  <h3 className="font-serif font-semibold text-forest-500 text-base sm:text-lg">
-                    {item.label}
-                  </h3>
-                  <p className="text-forest-400 text-xs sm:text-sm mt-1.5 font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                    {item.desc}
-                  </p>
-                  {/* === Overlay "Solicitar Turno" al hacer hover ===
-                      Si el item tiene whatsappMessage, renderiza un <a> real
-                      con target="_blank" + rel="noopener noreferrer" que abre
-                      WhatsApp con mensaje pre-cargado.
-                      Si no tiene whatsappMessage, renderiza un overlay estático
-                      sin link (comportamiento legacy). */}
-                  {whatsappUrl ? (
-                    <a
-                      href={whatsappUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute inset-x-0 bottom-0 flex items-center justify-center pb-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 rounded-b-xl bg-gradient-to-t from-emerald-600/95 to-emerald-500/90 hover:from-emerald-700 hover:to-emerald-600 text-white font-medium text-xs sm:text-sm px-3 py-2.5 shadow-lg pointer-events-auto group-hover:pointer-events-auto"
-                      style={{ fontFamily: "Montserrat, sans-serif" }}
-                      aria-label={`Solicitar turno de ${item.label} por WhatsApp`}
-                    >
-                      <CalendarPlus className="w-4 h-4 mr-1.5" />
-                      Solicitar Turno
-                    </a>
-                  ) : (
-                    <div className="absolute inset-0 bg-sage-300/20 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
-                      <span className="text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-1.5 rounded-full shadow-md" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                        <CalendarPlus className="w-4 h-4" />
-                        Solicitar Turno
-                      </span>
+                  {/* === Contenido superior (ícono + título + descripción) === */}
+                  <div className="flex flex-col">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 bg-sage-300/15 rounded-xl flex items-center justify-center mb-3 sm:mb-4 transition-transform duration-300 group-hover:scale-110">
+                      <item.icon className="w-5 h-5 sm:w-6 sm:h-6 text-sage-500" />
                     </div>
-                  )}
+                    <h3 className="font-serif font-semibold text-forest-500 text-base sm:text-lg">
+                      {item.label}
+                    </h3>
+                    <p className="text-forest-400 text-xs sm:text-sm mt-1.5 font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                      {item.desc}
+                    </p>
+                  </div>
+                  {/* === Barra inferior esmeralda "Solicitar Turno" ===
+                      Diseño unificado para TODAS las tarjetas:
+                      - Ubicación: parte inferior adherida al borde (mt-auto + absolute bottom-0)
+                      - Fondo verde esmeralda REP bg-emerald-600 hover:bg-emerald-700
+                      - Texto blanco font-medium text-sm
+                      - Ícono CalendarPlus blanco a la izquierda
+                      - Animación de revelado:
+                        opacity-0 translate-y-2 pointer-events-none (default)
+                        group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto */}
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute inset-x-0 bottom-0 w-full mt-auto rounded-b-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm py-2.5 px-4 flex items-center justify-center gap-2 transition-all duration-300 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto shadow-lg"
+                    style={{ fontFamily: "Montserrat, sans-serif" }}
+                    aria-label={`Solicitar turno de ${item.label} por WhatsApp`}
+                  >
+                    <CalendarPlus className="w-4 h-4" />
+                    Solicitar Turno
+                  </a>
                 </div>
                 );
               });
