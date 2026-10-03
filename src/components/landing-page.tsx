@@ -60,6 +60,8 @@ import {
   Handshake,
   Search,
   XCircle,
+  Sliders,
+  Gamepad2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -113,7 +115,15 @@ const defaultSpecialtyTabs = [
 // Cada pestaña tiene un id, label, e items con icono, título y descripción.
 // La pestaña "atencion" tiene sub-categorías (Individual, Vincular, Grupal).
 
-type SpecItem = { icon: React.ComponentType<{ className?: string }>; label: string; desc: string };
+type SpecItem = {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  desc: string;
+  /** Mensaje personalizado para el botón "Solicitar Turno" por WhatsApp.
+   *  Si está presente, la tarjeta muestra un botón CTA en hover que abre
+   *  wa.me/5491168667898?text=<mensaje>. Si no está, la tarjeta no muestra CTA. */
+  whatsappMessage?: string;
+};
 type SpecSubTab = { id: string; label: string; items: SpecItem[] };
 type SpecMainTab = { id: string; label: string; subTabs?: SpecSubTab[]; items?: SpecItem[] };
 
@@ -175,6 +185,13 @@ const SYNONYMS: Record<string, string[]> = {
   "psiquiatría infanto-juvenil": ["psiquiatría infanto-juvenil", "psiquiatra niños", "psiquiatra adolescentes", "psiquiatría infantil", "desarrollo cognitivo niños"],
   "psiquiatría forense o legal": ["psiquiatría forense", "psiquiatría legal", "psiquiatra judicial", "evaluación mental judicial", "salud mental justicia"],
   "psiquiatría de enlace o interconsulta": ["psiquiatría de enlace", "interconsulta", "psiquiatría hospitalaria", "salud mental hospital"],
+  // === Sinónimos para Psicopedagogía Clínica ===
+  "terapia psicopedagógica integral": ["terapia psicopedagógica integral", "psicopedagogía", "psicopedagogica", "dificultades aprendizaje", "aprendizaje", "rendimiento académico"],
+  "terapia de modificación de conducta": ["modificación de conducta", "conducta", "autorregulación", "hábitos", "rutinas", "niños conducta", "adolescentes conducta"],
+  "rehabilitación / estimulación neurocognitiva": ["estimulación neurocognitiva", "rehabilitación neurocognitiva", "memoria", "atención", "funciones ejecutivas", "procesamiento información"],
+  "terapia de integración sensorial": ["integración sensorial", "estímulos", "procesamiento sensorial", "sensibilidad", "enfoque sensorial"],
+  "terapia basada en el juego (ludoterapia)": ["ludoterapia", "terapia del juego", "juego simbólico", "juego terapéutico", "terapia basada en juego"],
+  "entrenamiento en habilidades sociales": ["habilidades sociales", "empatía", "comunicación asertiva", "resolución de conflictos", "vinculación pares", "habilidades sociales niños"],
 };
 
 // ===== Índice de búsqueda (flattened) =====
@@ -348,6 +365,48 @@ const specialtyMainTabs: SpecMainTab[] = [
       { icon: Baby, label: "Psiquiatría Infanto-Juvenil", desc: "Centrada en el desarrollo cognitivo y emocional de niños y adolescentes." },
       { icon: Gavel, label: "Psiquiatría Forense o Legal", desc: "Colaboración con los sistemas de justicia para evaluar la salud mental de personas involucradas en procesos judiciales." },
       { icon: HeartPulse, label: "Psiquiatría de Enlace o Interconsulta", desc: "Trabajo conjunto con otras especialidades médicas dentro de hospitales generales." },
+    ],
+  },
+  {
+    id: "psicopedagogia",
+    label: "Psicopedagogía Clínica",
+    items: [
+      {
+        icon: GraduationCap,
+        label: "Terapia Psicopedagógica Integral",
+        desc: "Evaluación e intervención personalizada para optimizar los procesos de aprendizaje y superar dificultades académicas.",
+        whatsappMessage: "Hola, me gustaría solicitar un turno para Terapia Psicopedagógica Integral. Gracias",
+      },
+      {
+        icon: Sliders,
+        label: "Terapia de Modificación de Conducta",
+        desc: "Estrategias de autorregulación, gestión de hábitos y desarrollo de rutinas positivas para niños y adolescentes.",
+        whatsappMessage: "Hola, me gustaría consultar por Terapia de Modificación de Conducta. Gracias",
+      },
+      {
+        icon: Brain,
+        label: "Rehabilitación / Estimulación Neurocognitiva",
+        desc: "Fortalecimiento de memoria, atención, funciones ejecutivas y procesamiento de la información.",
+        whatsappMessage: "Hola, solicito información sobre Estimulación Neurocognitiva. Gracias",
+      },
+      {
+        icon: Sparkles,
+        label: "Terapia de Integración Sensorial",
+        desc: "Abordaje para procesar y responder eficazmente a los estímulos del entorno, favoreciendo el enfoque e interacción.",
+        whatsappMessage: "Hola, me gustaría consultar sobre Terapia de Integración Sensorial. Gracias",
+      },
+      {
+        icon: Gamepad2,
+        label: "Terapia Basada en el Juego (Ludoterapia)",
+        desc: "Estrategia terapéutica que utiliza el juego simbólico para proyectar, procesar y desarrollar habilidades socioemocionales.",
+        whatsappMessage: "Hola, me gustaría pedir un turno para Ludoterapia (Terapia del Juego). Gracias",
+      },
+      {
+        icon: Users,
+        label: "Entrenamiento en Habilidades Sociales",
+        desc: "Desarrollo de empatía, comunicación asertiva, resolución de conflictos y vinculación con pares.",
+        whatsappMessage: "Hola, me interesa solicitar un turno para Entrenamiento en Habilidades Sociales. Gracias",
+      },
     ],
   },
 ];
@@ -2098,18 +2157,24 @@ export function LandingPage() {
               return itemsToShow.map((item) => {
                 // Generar ID único para la tarjeta (para scroll del buscador)
                 const cardId = `spec-card-${item.label.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-")}`;
+                // === Si el item tiene whatsappMessage, el botón "Solicitar Turno"
+                //     es un <a> real que abre wa.me en nueva pestaña.
+                //     Si no tiene, sigue el comportamiento anterior (overlay sin link). ===
+                const whatsappUrl = item.whatsappMessage
+                  ? `https://wa.me/5491168667898?text=${encodeURIComponent(item.whatsappMessage)}`
+                  : null;
                 return (
                 <div
                   key={item.label}
                   id={cardId}
-                  onClick={() => scrollToSection("contacto")}
-                  className={`specialty-card rounded-xl p-5 sm:p-6 cursor-pointer transition-all duration-500 group relative overflow-hidden ${
+                  onClick={whatsappUrl ? undefined : () => scrollToSection("contacto")}
+                  className={`specialty-card rounded-xl p-5 sm:p-6 transition-all duration-500 group relative overflow-hidden ${
                     searchHighlight === item.label
                       ? "bg-sage-100 ring-2 ring-sage-400 shadow-lg scale-105"
-                      : "bg-beige-100 hover:shadow-lg hover:bg-beige-50"
+                      : "bg-beige-100 hover:shadow-xl hover:bg-beige-50 hover:-translate-y-1"
                   }`}
                 >
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 bg-sage-300/15 rounded-xl flex items-center justify-center mb-3 sm:mb-4">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 bg-sage-300/15 rounded-xl flex items-center justify-center mb-3 sm:mb-4 transition-transform duration-300 group-hover:scale-110">
                     <item.icon className="w-5 h-5 sm:w-6 sm:h-6 text-sage-500" />
                   </div>
                   <h3 className="font-serif font-semibold text-forest-500 text-base sm:text-lg">
@@ -2118,13 +2183,33 @@ export function LandingPage() {
                   <p className="text-forest-400 text-xs sm:text-sm mt-1.5 font-light leading-relaxed" style={{ fontFamily: "Montserrat, sans-serif" }}>
                     {item.desc}
                   </p>
-                  {/* Overlay "Solicitar Turno" al hacer hover */}
-                  <div className="absolute inset-0 bg-sage-300/20 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
-                    <span className="text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-1.5 rounded-full shadow-md" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                      <CalendarPlus className="w-4 h-4" />
+                  {/* === Overlay "Solicitar Turno" al hacer hover ===
+                      Si el item tiene whatsappMessage, renderiza un <a> real
+                      con target="_blank" + rel="noopener noreferrer" que abre
+                      WhatsApp con mensaje pre-cargado.
+                      Si no tiene whatsappMessage, renderiza un overlay estático
+                      sin link (comportamiento legacy). */}
+                  {whatsappUrl ? (
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute inset-x-0 bottom-0 flex items-center justify-center pb-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 rounded-b-xl bg-gradient-to-t from-emerald-600/95 to-emerald-500/90 hover:from-emerald-700 hover:to-emerald-600 text-white font-medium text-xs sm:text-sm px-3 py-2.5 shadow-lg pointer-events-auto group-hover:pointer-events-auto"
+                      style={{ fontFamily: "Montserrat, sans-serif" }}
+                      aria-label={`Solicitar turno de ${item.label} por WhatsApp`}
+                    >
+                      <CalendarPlus className="w-4 h-4 mr-1.5" />
                       Solicitar Turno
-                    </span>
-                  </div>
+                    </a>
+                  ) : (
+                    <div className="absolute inset-0 bg-sage-300/20 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
+                      <span className="text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-1.5 rounded-full shadow-md" style={{ fontFamily: "Montserrat, sans-serif" }}>
+                        <CalendarPlus className="w-4 h-4" />
+                        Solicitar Turno
+                      </span>
+                    </div>
+                  )}
                 </div>
                 );
               });
