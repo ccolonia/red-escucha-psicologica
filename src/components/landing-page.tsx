@@ -2165,10 +2165,14 @@ export function LandingPage() {
                   || `Hola, me gustaría solicitar un turno para ${item.label}. Gracias`;
                 const whatsappUrl = `https://wa.me/5491168667898?text=${encodeURIComponent(whatsappMessage)}`;
                 return (
-                <div
+                <a
                   key={item.label}
                   id={cardId}
-                  className={`specialty-card rounded-2xl p-5 sm:p-6 transition-all duration-300 group relative overflow-hidden flex flex-col justify-between border ${
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Solicitar turno de ${item.label} por WhatsApp`}
+                  className={`specialty-card rounded-2xl p-5 sm:p-6 transition-all duration-300 group relative overflow-hidden flex flex-col justify-between border cursor-pointer block ${
                     searchHighlight === item.label
                       ? "bg-stone-50 border-emerald-500 ring-2 ring-emerald-300 shadow-lg scale-105"
                       : "bg-stone-50/80 border-stone-200/60 hover:border-emerald-500 hover:shadow-xl hover:-translate-y-1"
@@ -2187,27 +2191,28 @@ export function LandingPage() {
                     </p>
                   </div>
                   {/* === Barra inferior esmeralda "Solicitar Turno" ===
-                      Diseño unificado para TODAS las tarjetas:
-                      - Ubicación: parte inferior adherida al borde (mt-auto + absolute bottom-0)
-                      - Fondo verde esmeralda REP bg-emerald-600 hover:bg-emerald-700
-                      - Texto blanco font-medium text-sm
-                      - Ícono CalendarPlus blanco a la izquierda
-                      - Animación de revelado:
-                        opacity-0 translate-y-2 pointer-events-none (default)
-                        group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto */}
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute inset-x-0 bottom-0 w-full mt-auto rounded-b-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm py-2.5 px-4 flex items-center justify-center gap-2 transition-all duration-300 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto shadow-lg"
+                      Comportamiento RESPONSIVE:
+                      - Mobile (< 768px): botón SIEMPRE VISIBLE (no depende de hover).
+                        opacity-100 translate-y-0 → el usuario ve el CTA sin tener que hacer hover.
+                        El tap en cualquier parte de la tarjeta dispara el link de WhatsApp.
+                      - Desktop (≥ 768px): animación sutil de revelado al hover.
+                        md:opacity-0 md:translate-y-2 md:pointer-events-none
+                        md:group-hover:opacity-100 md:group-hover:translate-y-0
+                        md:group-hover:pointer-events-auto
+                      Esto garantiza usabilidad en pantallas táctiles sin romper la animación
+                      elegante en desktop. */}
+                  <div
+                    className="mt-auto pt-4 -mx-5 sm:-mx-6 -mb-5 sm:-mb-6 rounded-b-2xl bg-emerald-600 group-hover:bg-emerald-700 text-white font-medium text-sm py-2.5 px-4 flex items-center justify-center gap-2 transition-all duration-300
+                              opacity-100 translate-y-0
+                              md:opacity-0 md:translate-y-2 md:pointer-events-none
+                              md:group-hover:opacity-100 md:group-hover:translate-y-0 md:group-hover:pointer-events-auto
+                              shadow-lg"
                     style={{ fontFamily: "Montserrat, sans-serif" }}
-                    aria-label={`Solicitar turno de ${item.label} por WhatsApp`}
                   >
                     <CalendarPlus className="w-4 h-4" />
                     Solicitar Turno
-                  </a>
-                </div>
+                  </div>
+                </a>
                 );
               });
             })()}
