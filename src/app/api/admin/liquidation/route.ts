@@ -3,6 +3,28 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+// ============================================================================
+// Constantes de configuración de Liquidación
+// ============================================================================
+
+// === Tarifa de sesión por defecto ===
+// Se usa como fallback cuando el profesional NO tiene AttendanceSheet
+// cargada para el mes (es decir, no se cargaron tarifas personalizadas).
+//
+// Este valor se propaga a la Columna H ("$/Sesión") del Excel de Liquidación
+// y alimenta las columnas calculadas:
+//   - Columna I "Honor. Prof." = totalPatientFee * 0.7
+//   - Columna J "Comisión REP" = totalPatientFee * 0.3
+//   - Columna K "Total Cobrado" = attended * sessionFee
+//
+// UPDATE (2026-10): actualizado de $15.000 → $40.000 por indicación del admin.
+// Si se necesita volver a ajustar, modificar solo esta constante.
+const DEFAULT_SESSION_FEE = 40000;
+
+// Porcentajes de reparto (70% profesional / 30% REP)
+const PROFESSIONAL_FEE_PERCENTAGE = 0.7;
+const REP_FEE_PERCENTAGE = 0.3;
+
 // GET /api/admin/liquidation — Monthly liquidation data for all professionals
 export async function GET(request: NextRequest) {
   try {
@@ -81,11 +103,18 @@ export async function GET(request: NextRequest) {
             );
           }
         } else {
-          // Default session fee estimate
-          sessionFee = 15000;
+          // === Fallback: el profesional NO tiene AttendanceSheet cargada ===
+          // Usamos la tarifa por defecto ($40.000 por sesión) y calculamos
+          // los honorarios profesionales y la comisión REP con los porcentajes
+          // estándar (70% / 30%).
+          //
+          // Si el profesional tiene tarifa personalizada en su AttendanceSheet
+          // (cargada desde la Planilla de Atención), se usa esa en lugar de
+          // este fallback.
+          sessionFee = DEFAULT_SESSION_FEE;
           totalPatientFee = attended.length * sessionFee;
-          totalProfessionalFee = Math.round(totalPatientFee * 0.7);
-          totalRepFee = Math.round(totalPatientFee * 0.3);
+          totalProfessionalFee = Math.round(totalPatientFee * PROFESSIONAL_FEE_PERCENTAGE);
+          totalRepFee = Math.round(totalPatientFee * REP_FEE_PERCENTAGE);
         }
 
         return {
