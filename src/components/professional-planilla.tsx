@@ -23,6 +23,7 @@ import {
   Landmark,
   Copy,
   Check,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { PlanillaGuideModal, hasUserCompletedPlanillaGuide } from "@/components/planilla-guide-modal";
 import {
   Select,
   SelectContent,
@@ -202,6 +204,22 @@ export function ProfessionalPlanilla() {
   // === Modal Cuenta REP (datos bancarios) ===
   const [bankDialogOpen, setBankDialogOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // === Modal Guía Planilla REP (onboarding interactivo) ===
+  // Auto-abre la primera vez que el profesional entra a la Planilla
+  // (si NO tiene el flag en localStorage). Después puede reabrirlo con
+  // el botón "(?) Guía" en la barra superior.
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+
+  useEffect(() => {
+    // Solo auto-abrir si el usuario NO completó la guía antes
+    if (!hasUserCompletedPlanillaGuide()) {
+      // Pequeño delay para que el modal aparezca después del render inicial
+      // y no compita con otros modals (como el de banco o carga de datos)
+      const timer = setTimeout(() => setIsGuideOpen(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const handleCopy = async (text: string, field: string) => {
     try {
@@ -524,9 +542,21 @@ export function ProfessionalPlanilla() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-teal-900 flex items-center gap-2">
+          {/* === Título + botón "(?) Guía" para reabrir el wizard === */}
+          <h2 className="text-2xl font-bold text-teal-900 flex items-center gap-2 flex-wrap">
             <FileSpreadsheet className="w-6 h-6" />
             Planilla de Atención
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsGuideOpen(true)}
+              className="ml-1 border-teal-200 text-teal-600 hover:bg-teal-50"
+              aria-label="Abrir guía interactiva de la Planilla REP"
+              title="Abrir guía interactiva"
+            >
+              <HelpCircle className="mr-1 w-4 h-4" />
+              Guía
+            </Button>
           </h2>
           <p className="text-teal-600 text-sm mt-1">
             {profName} • Comisión REP: {Math.round(repCommission * 100)}%
@@ -1074,6 +1104,12 @@ export function ProfessionalPlanilla() {
           </div>
         </div>
       )}
+
+      {/* === Modal Guía Planilla REP (wizard de onboarding interactivo) ===
+          Se abre automáticamente la primera vez que el profesional entra
+          a la Planilla (controlado por localStorage). Se puede reabrir
+          cuando se quiera con el botón "(?) Guía" del header. */}
+      <PlanillaGuideModal open={isGuideOpen} onOpenChange={setIsGuideOpen} />
     </div>
   );
 }
