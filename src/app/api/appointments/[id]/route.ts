@@ -8,7 +8,23 @@ import { sendCancellationByProfessionalEmail, sendRescheduleNotificationEmail } 
 // "cancelled_by_professional" is an intermediate state: professional cancelled but
 // admin must decide whether to reassign or delete definitively
 // "cancelled_by_patient" is a final state: patient requested cancellation, slot is freed
+//
+// "scheduled" = estado inicial de los appointments generados por una serie
+// recurrente (RecurringSeries). Estos appointments son "placeholders" hasta
+// que el admin/profesional los confirma. Desde "scheduled" se puede:
+//   - confirmar (confirmed)
+//   - cancelar por paciente (cancelled_by_patient)
+//   - cancelar por profesional (cancelled_by_professional)
+//   - cancelar definitivamente (cancelled)
+//   - reprogramar (rescheduled)
+//   - marcar ausente (absent) — caso excepcional si no vino
+//   - completar (completed) — si la fecha ya pasó y fue atendido
+//
+// FIX (tarea 2026-10-XX): "scheduled" NO estaba en el mapa → la cancelación
+// de instancias individuales de series recurrentes fallaba con 400 silencioso
+// y el slot quedaba bloqueado en la agenda visual.
 const validTransitions: Record<string, string[]> = {
+  scheduled: ["confirmed", "cancelled", "cancelled_by_professional", "cancelled_by_patient", "rescheduled", "absent", "completed"],
   pending: ["confirmed", "cancelled", "cancelled_by_professional", "cancelled_by_patient", "rescheduled"],
   confirmed: ["completed", "cancelled", "cancelled_by_professional", "cancelled_by_patient", "absent", "rescheduled"],
   cancelled_by_professional: ["cancelled", "confirmed", "cancelled_by_patient"], // admin can reassign, delete, or mark as patient-cancelled
