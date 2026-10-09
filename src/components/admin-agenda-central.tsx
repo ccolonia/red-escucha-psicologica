@@ -1259,74 +1259,103 @@ export function AdminAgendaCentral() {
               <div className="md:hidden px-3 pb-2 space-y-2 bg-white border-b border-teal-100">
                 {/* === NAVEGACIÓN DE SEMANAS: [<] Mes/Rango [>] ===
                     Estructura compacta anti-desbordamiento para mobile:
-                    - Botones [<] y [>] con flex-shrink-0 (NUNCA empujados fuera del viewport)
-                    - Texto central con min-w-0 + flex-1 + truncate (se adapta al ancho)
+                    - Contenedor: flex items-center justify-between w-full gap-2
+                      con bg-emerald-50/80 + border-emerald-100 + rounded-xl
+                    - Botones [<] y [>] con flex-shrink-0 w-10 h-10 (40x40px rígido)
+                      + shadow-sm + active:scale-95 (feedback táctil)
+                    - Texto central con flex-1 min-w-0 + truncate (se adapta al ancho)
                     - Mes y Año en uppercase bold (ej: OCTUBRE 2026)
-                    - Rango de días compacto (ej: 5 oct - 11 oct)
-                    - Botón "Hoy" como pill flotante SOLO cuando weekOffset !== 0
-                    - Tocar el rango de fechas abre date-picker nativo */}
-                <div className="flex items-center justify-between w-full px-3 py-2 bg-emerald-50/60 rounded-xl mb-2">
-                  {/* Botón Flecha Izquierda [<] — flex-shrink-0 garantiza que nunca se empuje fuera */}
+                    - Rango de días (ej: 12 oct — 18 oct)
+                    - Date picker nativo oculto sobre el texto central
+                    - FIX UTC: parsear YYYY-MM-DD con new Date(year, month-1, day)
+                      para evitar desfasaje de zona horaria
+                    - FIX OFFSET: calcular getMonday de ambas fechas y setear
+                      weekOffset absoluto (no acumulativo) */}
+                <div className="flex md:hidden items-center justify-between w-full px-3 py-2 bg-emerald-50/80 rounded-xl border border-emerald-100 my-2 gap-2">
+                  {/* Botón Flecha Izquierda [<] — flex-shrink-0 w-10 h-10 rígido */}
                   <button
                     type="button"
                     onClick={() => setWeekOffset((w) => w - 1)}
-                    className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-stone-200 text-emerald-800 active:bg-emerald-100 transition-colors"
+                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-stone-200 text-emerald-800 shadow-sm active:scale-95 transition-transform"
                     aria-label="Semana anterior"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
 
-                  {/* Texto Central: Mes y Año + Rango de días
-                      min-w-0 + flex-1 + truncate para que se adapte sin romper los botones laterales */}
-                  <div className="flex flex-col items-center justify-center text-center px-2 min-w-0 flex-1">
-                    <label className="relative cursor-pointer w-full">
-                      {/* Línea 1: MES Y AÑO en uppercase bold */}
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 block leading-tight">
-                        {format(monday, "MMMM yyyy", { locale: es }).toUpperCase()}
-                      </span>
-                      {/* Línea 2: Rango de días compacto (5 oct - 11 oct) */}
-                      <span className="text-xs text-stone-600 truncate block leading-tight">
-                        {format(monday, "d MMM", { locale: es })} - {format(addDays(monday, 6), "d MMM", { locale: es })}
-                      </span>
-                      {/* Indicador de offset (Esta semana / +N semana(s)) — sutil */}
-                      <span className="text-[9px] text-emerald-600 block leading-tight">
+                  {/* Contenedor Central con Fecha y Selector DatePicker
+                      relative + flex-1 + min-w-0 + flex-col + truncate */}
+                  <div className="relative flex-1 min-w-0 flex flex-col items-center justify-center text-center cursor-pointer">
+                    {/* Línea 1: MES Y AÑO en uppercase bold tracking-wider */}
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 truncate w-full">
+                      {format(monday, "MMMM yyyy", { locale: es }).toUpperCase()}
+                    </span>
+                    {/* Línea 2: Rango de días compacto */}
+                    <span className="text-xs font-medium text-stone-600 truncate w-full">
+                      {format(monday, "d MMM", { locale: es })} — {format(addDays(monday, 6), "d MMM", { locale: es })}
+                    </span>
+                    {/* Indicador de offset + botón "Hoy" (solo si weekOffset !== 0) */}
+                    <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                      <span className="text-[9px] text-emerald-600">
                         {weekOffset === 0 ? "Esta semana" : weekOffset > 0 ? `+${weekOffset} sem.` : `${weekOffset} sem.`}
                       </span>
-                      {/* Date picker nativo oculto: al tocar el label, abre el calendario del sistema */}
-                      <input
-                        type="date"
-                        value={weekStartISO}
-                        onChange={(e) => {
-                          // Calcular el weekOffset desde la fecha seleccionada
-                          const selectedDate = new Date(e.target.value + "T12:00:00");
-                          const todayMonday = startOfWeek(new Date(), { weekStartsOn: 1 });
-                          const diffMs = selectedDate.getTime() - todayMonday.getTime();
-                          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-                          const newOffset = Math.round(diffDays / 7);
-                          setWeekOffset(newOffset);
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        aria-label="Seleccionar fecha para saltar a esa semana"
-                      />
-                    </label>
-                    {/* Botón "Hoy" — pill flotante debajo del rango, solo si weekOffset !== 0 */}
-                    {weekOffset !== 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setWeekOffset(0)}
-                        className="mt-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-100 text-emerald-700 active:bg-emerald-200 transition-colors"
-                        aria-label="Volver a la semana actual"
-                      >
-                        Hoy
-                      </button>
-                    )}
+                      {weekOffset !== 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setWeekOffset(0);
+                          }}
+                          className="px-1.5 py-0 text-[9px] font-medium rounded-full bg-emerald-200 text-emerald-800 active:bg-emerald-300 transition-colors"
+                          aria-label="Volver a la semana actual"
+                        >
+                          Hoy
+                        </button>
+                      )}
+                    </div>
+                    {/* Input de Fecha Nativo Oculto sobre el texto */}
+                    <input
+                      type="date"
+                      value={weekStartISO}
+                      onChange={(e) => {
+                        // === FIX UTC: parsear YYYY-MM-DD evitando desfasaje ===
+                        // NO usar new Date("2026-10-16") porque JS lo interpreta como UTC
+                        // y resta 3 horas en Argentina (UTC-3), moviendo la fecha al día anterior.
+                        // Usar new Date(year, month-1, day) que crea la fecha en zona horaria local.
+                        const [year, month, day] = e.target.value.split("-").map(Number);
+                        const selectedDate = new Date(year, month - 1, day);
+
+                        // === Helper getMonday: calcula el lunes de la semana de una fecha ===
+                        // Usa Lunes como primer día de la semana (getDay() === 0 ? -6 : 1)
+                        const getMonday = (d: Date) => {
+                          const date = new Date(d);
+                          const dayOfWeek = date.getDay();
+                          const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                          date.setDate(diff);
+                          date.setHours(0, 0, 0, 0);
+                          return date;
+                        };
+
+                        const baseMonday = getMonday(new Date());
+                        const targetMonday = getMonday(selectedDate);
+
+                        // === FIX OFFSET ABSOLUTO (no acumulativo) ===
+                        // Calcular la diferencia en semanas entre el lunes base (semana actual real)
+                        // y el lunes objetivo (semana de la fecha seleccionada).
+                        // Esto evita la acumulación de offsets que causaba el salto al 23/10.
+                        const diffTime = targetMonday.getTime() - baseMonday.getTime();
+                        const diffWeeks = Math.round(diffTime / (7 * 24 * 60 * 60 * 1000));
+                        setWeekOffset(diffWeeks);
+                      }}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                      aria-label="Seleccionar fecha para saltar a esa semana"
+                    />
                   </div>
 
-                  {/* Botón Flecha Derecha [>] — flex-shrink-0 garantiza que nunca se empuje fuera */}
+                  {/* Botón Flecha Derecha [>] — flex-shrink-0 w-10 h-10 rígido */}
                   <button
                     type="button"
                     onClick={() => setWeekOffset((w) => w + 1)}
-                    className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-stone-200 text-emerald-800 active:bg-emerald-100 transition-colors"
+                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-stone-200 text-emerald-800 shadow-sm active:scale-95 transition-transform"
                     aria-label="Semana siguiente"
                   >
                     <ChevronRight className="w-5 h-5" />
