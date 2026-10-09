@@ -1257,30 +1257,40 @@ export function AdminAgendaCentral() {
               {/* === MOBILE: Control bar con selector de modo de vista + carrusel de días ===
                   Visible solo en < md. En desktop se ignora y se muestra la grilla de 7 días. */}
               <div className="md:hidden px-3 pb-2 space-y-2 bg-white border-b border-teal-100">
-                {/* === NAVEGACIÓN DE SEMANAS: [<] rango-fecha [>] ===
-                    Botones táctiles (p-2, min 40x40px) para avanzar/retroceder 7 días.
-                    El botón "Hoy" aparece solo cuando weekOffset !== 0.
-                    Tocar el rango de fechas abre un date-picker nativo para saltar
-                    directamente a cualquier fecha sin hacer múltiples taps. */}
-                <div className="flex items-center gap-2">
-                  {/* Botón Semana Anterior [<] */}
+                {/* === NAVEGACIÓN DE SEMANAS: [<] Mes/Rango [>] ===
+                    Estructura compacta anti-desbordamiento para mobile:
+                    - Botones [<] y [>] con flex-shrink-0 (NUNCA empujados fuera del viewport)
+                    - Texto central con min-w-0 + flex-1 + truncate (se adapta al ancho)
+                    - Mes y Año en uppercase bold (ej: OCTUBRE 2026)
+                    - Rango de días compacto (ej: 5 oct - 11 oct)
+                    - Botón "Hoy" como pill flotante SOLO cuando weekOffset !== 0
+                    - Tocar el rango de fechas abre date-picker nativo */}
+                <div className="flex items-center justify-between w-full px-3 py-2 bg-emerald-50/60 rounded-xl mb-2">
+                  {/* Botón Flecha Izquierda [<] — flex-shrink-0 garantiza que nunca se empuje fuera */}
                   <button
                     type="button"
                     onClick={() => setWeekOffset((w) => w - 1)}
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg border border-teal-200 bg-white text-teal-600 hover:bg-teal-50 active:bg-teal-100 transition-colors"
+                    className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-stone-200 text-emerald-800 active:bg-emerald-100 transition-colors"
                     aria-label="Semana anterior"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
 
-                  {/* Centro: rango de fechas + botón "Hoy" */}
-                  <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
-                    <label className="relative cursor-pointer">
-                      <span className="text-xs font-medium text-teal-900 text-center block leading-tight">
-                        {weekLabel}
+                  {/* Texto Central: Mes y Año + Rango de días
+                      min-w-0 + flex-1 + truncate para que se adapte sin romper los botones laterales */}
+                  <div className="flex flex-col items-center justify-center text-center px-2 min-w-0 flex-1">
+                    <label className="relative cursor-pointer w-full">
+                      {/* Línea 1: MES Y AÑO en uppercase bold */}
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 block leading-tight">
+                        {format(monday, "MMMM yyyy", { locale: es }).toUpperCase()}
                       </span>
-                      <span className="text-[9px] text-teal-500 text-center block leading-tight">
-                        {weekOffset === 0 ? "Esta semana" : weekOffset > 0 ? `+${weekOffset} semana(s)` : `${weekOffset} semana(s)`}
+                      {/* Línea 2: Rango de días compacto (5 oct - 11 oct) */}
+                      <span className="text-xs text-stone-600 truncate block leading-tight">
+                        {format(monday, "d MMM", { locale: es })} - {format(addDays(monday, 6), "d MMM", { locale: es })}
+                      </span>
+                      {/* Indicador de offset (Esta semana / +N semana(s)) — sutil */}
+                      <span className="text-[9px] text-emerald-600 block leading-tight">
+                        {weekOffset === 0 ? "Esta semana" : weekOffset > 0 ? `+${weekOffset} sem.` : `${weekOffset} sem.`}
                       </span>
                       {/* Date picker nativo oculto: al tocar el label, abre el calendario del sistema */}
                       <input
@@ -1299,12 +1309,12 @@ export function AdminAgendaCentral() {
                         aria-label="Seleccionar fecha para saltar a esa semana"
                       />
                     </label>
-                    {/* Botón "Hoy" — solo visible si no estamos en la semana actual */}
+                    {/* Botón "Hoy" — pill flotante debajo del rango, solo si weekOffset !== 0 */}
                     {weekOffset !== 0 && (
                       <button
                         type="button"
                         onClick={() => setWeekOffset(0)}
-                        className="flex-shrink-0 px-2 py-1 text-[10px] font-medium rounded-md bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors"
+                        className="mt-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-100 text-emerald-700 active:bg-emerald-200 transition-colors"
                         aria-label="Volver a la semana actual"
                       >
                         Hoy
@@ -1312,11 +1322,11 @@ export function AdminAgendaCentral() {
                     )}
                   </div>
 
-                  {/* Botón Semana Siguiente [>] */}
+                  {/* Botón Flecha Derecha [>] — flex-shrink-0 garantiza que nunca se empuje fuera */}
                   <button
                     type="button"
                     onClick={() => setWeekOffset((w) => w + 1)}
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg border border-teal-200 bg-white text-teal-600 hover:bg-teal-50 active:bg-teal-100 transition-colors"
+                    className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-stone-200 text-emerald-800 active:bg-emerald-100 transition-colors"
                     aria-label="Semana siguiente"
                   >
                     <ChevronRight className="w-5 h-5" />
