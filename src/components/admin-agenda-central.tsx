@@ -45,13 +45,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { ProfessionalScheduleConfig } from "@/components/professional-schedule-config";
 import { ProfessionalWeeklyAgenda } from "@/components/professional-weekly-agenda";
 import { ProfessionalProfile } from "@/components/professional-dashboard";
-import { Settings2, X, Eye, Wrench, FileText, BadgeCheck, ShieldCheck, Download, CalendarPlus, UserX } from "lucide-react";
+import { Settings2, X, Eye, Wrench, FileText, BadgeCheck, ShieldCheck, Download, CalendarPlus, UserX, Smartphone, ChevronDown } from "lucide-react";
 
 // ====================================================================
 // CONSTANTES
@@ -351,6 +359,33 @@ export function AdminAgendaCentral() {
   // === Profesional activo (seleccionado en la columna 2) ===
   const [activeProfessionalId, setActiveProfessionalId] = useState<string | null>(null);
 
+  // === Mobile: modo de vista de la agenda + día seleccionado en carrusel ===
+  // - "day"    → muestra 1 día (el seleccionado en el carrusel)
+  // - "3days"  → muestra 3 días consecutivos empezando por el seleccionado
+  // - "week"   → muestra los 7 días con scroll horizontal + sticky time column
+  // Default en mobile: "3days" (compromiso entre detalle y contexto).
+  // Desktop (md+) ignora este estado y siempre muestra la grilla de 7 días completa.
+  type MobileViewMode = "day" | "3days" | "week";
+  const [mobileViewMode, setMobileViewMode] = useState<MobileViewMode>("3days");
+  const [mobileSelectedDayIndex, setMobileSelectedDayIndex] = useState<number>(0); // 0=Lun, 1=Mar, ..., 6=Dom
+
+  // === Mobile: drawer colapsable del header de filtros ===
+  // En pantallas < md, el panel superior (profesional activo + badges) se
+  // colapsa por defecto para maximizar el alto de la grilla. El admin puede
+  // expandirlo tocando el botón "Cambiar profesional" o el ícono de la lupa.
+  const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(false);
+
+  // === Mobile: flag para saber si es vista mobile ===
+  // Se actualiza en resize. Lo usamos para decidir si abrir el Drawer (mobile)
+  // o el Dialog (desktop) al asignar un turno.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   // === Ref para leer activeProfessionalId dentro de handleSearch sin meterlo
   // en las deps del useCallback. Esto evita que handleSearch se recree cada
   // vez que el admin cambia de profesional, lo cual dispararía un loop infinito
@@ -362,6 +397,16 @@ export function AdminAgendaCentral() {
 
   // === Estado de dialogs ===
   const [assignDialog, setAssignDialog] = useState<{
+    open: boolean;
+    professional: ProfessionalResult | null;
+    slot: AvailableSlot | null;
+    date: string;
+  }>({ open: false, professional: null, slot: null, date: "" });
+
+  // === Mobile: Drawer para asignación de turnos (Bottom Sheet) ===
+  // Replica el mismo state shape que assignDialog para reutilizar la lógica
+  // de handleConfirmAssign. Se abre desde openAssignDialog cuando isMobile=true.
+  const [mobileAssignDrawer, setMobileAssignDrawer] = useState<{
     open: boolean;
     professional: ProfessionalResult | null;
     slot: AvailableSlot | null;
@@ -521,6 +566,9 @@ export function AdminAgendaCentral() {
   };
 
   // === Handlers de dialogs ===
+  // mobileAssignDrawer comparte el mismo state shape que assignDialog para
+  // que el Drawer (mobile) y el Dialog (desktop) usen la misma lógica de form.
+  // El handler openAssignDialog decide cuál abrir según isMobile.
   const openAssignDialog = (professional: ProfessionalResult, slot: AvailableSlot, date: string) => {
     setAssignForm({
       patientName: "",
@@ -531,7 +579,11 @@ export function AdminAgendaCentral() {
       isLead: false,
       leadId: null,
     });
-    setAssignDialog({ open: true, professional, slot, date });
+    if (isMobile) {
+      setMobileAssignDrawer({ open: true, professional, slot, date });
+    } else {
+      setAssignDialog({ open: true, professional, slot, date });
+    }
   };
 
   // === Tarea 2026-08-21: Abrir AssignDialog para slot pasado NO configurado ===
@@ -569,7 +621,11 @@ export function AdminAgendaCentral() {
       isLead: false,
       leadId: null,
     });
-    setAssignDialog({ open: true, professional, slot: syntheticSlot, date });
+    if (isMobile) {
+      setMobileAssignDrawer({ open: true, professional, slot: syntheticSlot, date });
+    } else {
+      setAssignDialog({ open: true, professional, slot: syntheticSlot, date });
+    }
     toast.info(`Carga retroactiva — ${professional.name} el ${date} a las ${time} hs. El turno se guardará como completado sin enviar emails.`);
   };
 
@@ -1118,8 +1174,58 @@ export function AdminAgendaCentral() {
         <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           {activeProfessional ? (
             <>
+              {/* === MOBILE: Header compacto colapsable ===
+                  En mobile (< md) el panel superior se colapsa para maximizar
+                  el alto de la grilla. El admin puede expandirlo/colapsarlo
+                  tocando el botón "Cambiar profesional" o el ícono ChevronDown.
+                  En desktop (md+) se muestra siempre expandido, sin cambios. */}
               <CardHeader className="pb-3 bg-white">
-                <div className="flex items-center justify-between flex-wrap gap-2">
+                {/* === Mobile compact bar (visible solo en < md) === */}
+                <div className="md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setMobileFiltersExpanded(!mobileFiltersExpanded)}
+                    className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-teal-50 border border-teal-200 hover:bg-teal-100 transition-colors"
+                    aria-expanded={mobileFiltersExpanded}
+                  >
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <Smartphone className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
+                      <span className="text-xs font-medium text-teal-900 truncate">
+                        {activeProfessional.name}
+                      </span>
+                      <Badge variant="outline" className="text-[9px] bg-emerald-50 border-emerald-200 text-emerald-700 px-1 py-0 flex-shrink-0">
+                        {activeProfessional.totalFreeSlots} lib
+                      </Badge>
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-teal-500 flex-shrink-0 transition-transform ${mobileFiltersExpanded ? "rotate-180" : ""}`} />
+                  </button>
+                  {/* === Panel expandible: muestra detalles + badges + config agenda === */}
+                  {mobileFiltersExpanded && (
+                    <div className="mt-2 px-2 py-2 space-y-2 bg-white border border-teal-100 rounded-lg">
+                      <p className="text-[10px] text-teal-500">{activeProfessional.specialty} · {weekLabel}</p>
+                      <div className="flex gap-1.5 items-center flex-wrap">
+                        <Badge variant="outline" className="text-[10px] bg-emerald-50 border-emerald-200 text-emerald-700">{activeProfessional.totalFreeSlots} libres</Badge>
+                        <Badge variant="outline" className="text-[10px] bg-slate-50 border-slate-200 text-slate-600">{activeProfessional.totalBookedSlots} ocupados</Badge>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[11px] border-teal-200 text-teal-600 hover:bg-teal-50 w-full"
+                        onClick={() => setScheduleConfigDialog({
+                          open: true,
+                          professionalId: activeProfessional.id,
+                          professionalName: activeProfessional.name,
+                          tab: "config",
+                        })}
+                      >
+                        <Settings2 className="w-3.5 h-3.5 mr-1" /> Config. Agenda
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* === Desktop header (visible solo en md+) — sin cambios === */}
+                <div className="hidden md:flex items-center justify-between flex-wrap gap-2">
                   <div>
                     <CardTitle className="text-base text-teal-900 flex items-center gap-2">
                       <User className="w-4 h-4 text-teal-600" />
@@ -1147,6 +1253,63 @@ export function AdminAgendaCentral() {
                   </div>
                 </div>
               </CardHeader>
+
+              {/* === MOBILE: Control bar con selector de modo de vista + carrusel de días ===
+                  Visible solo en < md. En desktop se ignora y se muestra la grilla de 7 días. */}
+              <div className="md:hidden px-3 pb-2 space-y-2 bg-white border-b border-teal-100">
+                {/* === Selector de modo: Día / 3 Días / Semana === */}
+                <div className="flex gap-1 p-1 bg-teal-50 rounded-lg">
+                  {([
+                    { id: "day" as const, label: "Día" },
+                    { id: "3days" as const, label: "3 Días" },
+                    { id: "week" as const, label: "Semana" },
+                  ]).map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setMobileViewMode(mode.id)}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+                        mobileViewMode === mode.id
+                          ? "bg-teal-600 text-white shadow-sm"
+                          : "text-teal-600 hover:bg-teal-100"
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+                {/* === Carrusel horizontal de días (solo en modos "day" y "3days") ===
+                    En modo "week" no se muestra porque la grilla muestra los 7 días. */}
+                {mobileViewMode !== "week" && (
+                  <div className="flex gap-1 overflow-x-auto pb-1 snap-x">
+                    {WEEK_DAYS.map((day, idx) => {
+                      const dayData = activeProfessional.weeklySlots[day.dayOfWeek];
+                      const dateStr = dayData?.date || "";
+                      const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
+                      const isToday = dateStr === new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
+                      const isSelected = idx === mobileSelectedDayIndex;
+                      return (
+                        <button
+                          key={day.dayOfWeek}
+                          type="button"
+                          onClick={() => setMobileSelectedDayIndex(idx)}
+                          className={`flex-shrink-0 snap-start px-3 py-1.5 rounded-lg border text-center transition-all min-w-[56px] ${
+                            isSelected
+                              ? "bg-teal-600 text-white border-teal-600 shadow-sm"
+                              : isToday
+                                ? "bg-teal-50 text-teal-700 border-teal-300"
+                                : "bg-white text-teal-600 border-teal-200 hover:bg-teal-50"
+                          }`}
+                        >
+                          <p className="text-[10px] font-medium leading-tight">{day.short}</p>
+                          <p className="text-sm font-bold leading-tight">{dayNum}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <CardContent className={`pt-2 transition-opacity duration-200 ${searching ? "opacity-40 pointer-events-none" : ""}`}>
                 {searching && (
                   <div className="absolute inset-0 flex items-center justify-center z-30">
@@ -1159,6 +1322,8 @@ export function AdminAgendaCentral() {
                   onSlotClick={(slot, date) => openAssignDialog(activeProfessional, slot, date)}
                   onBookedSlotClick={(slot) => openFichaDialog(activeProfessional, slot)}
                   onEmptyPastSlotClick={(time, date) => openAssignDialogForEmptyPast(activeProfessional, time, date)}
+                  mobileViewMode={mobileViewMode}
+                  mobileSelectedDayIndex={mobileSelectedDayIndex}
                 />
               </CardContent>
             </>
@@ -1178,6 +1343,20 @@ export function AdminAgendaCentral() {
         professional={assignDialog.professional}
         slot={assignDialog.slot}
         date={assignDialog.date}
+        form={assignForm}
+        onFormChange={setAssignForm}
+        onConfirm={handleConfirmAssign}
+        assigning={assigning}
+      />
+      {/* === MOBILE: Drawer (Bottom Sheet) para asignación de turnos ===
+          Visible solo en < md. Replica el mismo form que AssignDialog pero
+          se desliza desde la parte inferior para facilitar el tap en mobile. */}
+      <MobileAssignDrawer
+        open={mobileAssignDrawer.open}
+        onOpenChange={(open) => setMobileAssignDrawer((prev) => ({ ...prev, open }))}
+        professional={mobileAssignDrawer.professional}
+        slot={mobileAssignDrawer.slot}
+        date={mobileAssignDrawer.date}
         form={assignForm}
         onFormChange={setAssignForm}
         onConfirm={handleConfirmAssign}
@@ -1477,9 +1656,14 @@ interface ExcelMatrixProps {
   // como disponible pero dentro de la franja horaria del profesional),
   // dispara este handler para abrir el AssignDialog con un slot sintético.
   onEmptyPastSlotClick?: (time: string, date: string) => void;
+  // === Mobile: modo de vista + día seleccionado ===
+  // En desktop (< md), estos props se ignoran y se muestra la grilla de 7 días.
+  // En mobile, controlan cuántos días se muestran y desde cuál.
+  mobileViewMode?: "day" | "3days" | "week";
+  mobileSelectedDayIndex?: number; // 0-6 (0=Lun ... 6=Dom)
 }
 
-function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, onEmptyPastSlotClick }: ExcelMatrixProps) {
+function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, onEmptyPastSlotClick, mobileViewMode = "week", mobileSelectedDayIndex = 0 }: ExcelMatrixProps) {
   // === REPLICA EXACTA de la grilla del profesional ===
   // El usuario pidió que la Agenda Central del admin se vea IGUAL que la
   // agenda del profesional. Por eso este componente ahora usa el mismo
@@ -1662,17 +1846,61 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
   }
 
   // === Grid template IDÉNTICO al profesional ===
-  // 60px hora + 7 × 1fr días = uniforme, mismo patrón que funciona en profesional
-  const GRID_TEMPLATE = "grid grid-cols-[60px_repeat(7,1fr)]";
+  // 60px hora + N × 1fr días = uniforme, mismo patrón que funciona en profesional
+  //
+  // === MOBILE RESPONSIVE: visibleDays ===
+  // En desktop (< md) siempre se muestran los 7 días.
+  // En mobile, visibleDays se calcula según mobileViewMode:
+  //   - "day"    → 1 día (el seleccionado en el carrusel)
+  //   - "3days"  → 3 días consecutivos empezando por el seleccionado
+  //   - "week"   → los 7 días (con scroll horizontal + sticky time column)
+  // La lógica es solo JS: computa un sub-array de WEEK_DAYS que se usa en
+  // lugar del array completo. El grid se adapta automáticamente con
+  // gridTemplateColumns dinámico.
+  const visibleDays = React.useMemo(() => {
+    // Desktop: siempre los 7 días (Tailwind md:hidden/md:block controla la visibilidad)
+    // Pero para que la lógica sea simple, computamos los días visibles según
+    // mobileViewMode Y dejamos que CSS se encargue de mostrar/ocultar el
+    // carrusel y los controles mobile.
+    if (mobileViewMode === "week") return WEEK_DAYS;
+    if (mobileViewMode === "day") {
+      return [WEEK_DAYS[mobileSelectedDayIndex]];
+    }
+    // "3days": tomar 3 días consecutivos empezando por mobileSelectedDayIndex
+    // Si el índice + 3 excede el array, tomar los últimos 3 disponibles.
+    const start = mobileSelectedDayIndex;
+    const end = Math.min(start + 3, WEEK_DAYS.length);
+    const slice = WEEK_DAYS.slice(start, end);
+    // Si slice tiene menos de 3 (porque empezamos cerca del final), completar
+    // con los primeros días para siempre mostrar 3 columnas.
+    while (slice.length < 3 && slice.length < WEEK_DAYS.length) {
+      slice.push(WEEK_DAYS[slice.length]);
+    }
+    return slice;
+  }, [mobileViewMode, mobileSelectedDayIndex]);
+
+  // === gridTemplateColumns dinámico: 60px + N × 1fr ===
+  // N = visibleDays.length (1, 3, o 7 según el modo mobile)
+  const numCols = visibleDays.length;
+  const gridTemplateCols = `60px repeat(${numCols}, 1fr)`;
+  // === gridAutoRows: min-h-[44px] para touch-friendly (mobile) ===
+  // En desktop mantenemos 28px. En mobile usamos minmax(36px, auto) para
+  // asegurar que cada slot tenga al menos 44px de alto táctil (sumando el
+  // padding interno del slot). La clave es que 1 slot de 45min = 3 rows
+  // de 15min = 3 × 36 = 108px, más que suficiente para tap.
+  // En desktop usamos 28px para mantener la densidad actual.
+  const gridAutoRowsValue = "minmax(32px, auto)";
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-[900px]">
+    <div className="w-full overflow-x-auto md:overflow-x-auto snap-x snap-mandatory md:snap-none">
+      <div className="min-w-[900px] md:min-w-[900px]">
 
-        {/* === Header: day names and dates (IDÉNTICO al profesional) === */}
-        <div className={GRID_TEMPLATE + " border-b border-teal-100"}>
-          <div className="p-2 text-xs text-teal-400 text-center" />
-          {WEEK_DAYS.map((day) => {
+        {/* === Header: day names and dates (IDÉNTICO al profesional) ===
+            En mobile se renderizan solo los visibleDays. */}
+        <div className="grid border-b border-teal-100" style={{ gridTemplateColumns: gridTemplateCols }}>
+          {/* Time column header (empty cell) — sticky en mobile week view */}
+          <div className="p-2 text-xs text-teal-400 text-center bg-white sticky left-0 z-20 md:static md:z-auto" />
+          {visibleDays.map((day) => {
             const dayData = professional.weeklySlots[day.dayOfWeek];
             const dateStr = dayData?.date || "";
             const dayNum = dateStr ? format(parseISO(dateStr), "d", { locale: es }) : "";
@@ -1700,8 +1928,8 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
           <div
             className="grid relative w-full"
             style={{
-              gridTemplateColumns: `60px repeat(${WEEK_DAYS.length}, 1fr)`,
-              gridAutoRows: "28px",
+              gridTemplateColumns: gridTemplateCols,
+              gridAutoRows: gridAutoRowsValue,
             }}
           >
             {/* === CAPA 1: Celdas de fondo (todas las filas × columnas) ===
@@ -1709,27 +1937,29 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
                 (incluso si el profesional no tiene schedule configurado ese día). */}
             {timeSlots.map((time, rowIdx) => (
               <React.Fragment key={`bg-${time}`}>
-                {/* Time label (columna 1) */}
+                {/* Time label (columna 1) — sticky left-0 + bg-white para mobile week view */}
                 <div
-                  className="p-1 text-[11px] text-teal-400 text-right pr-2 border-r border-teal-50 flex items-start justify-end pt-1.5"
+                  className="p-1 text-[11px] text-teal-400 text-right pr-2 border-r border-teal-50 flex items-start justify-end pt-1.5 bg-white sticky left-0 z-20 md:static md:z-auto shadow-sm md:shadow-none"
                   style={{ gridRow: rowIdx + 1, gridColumn: 1 }}
                 >
                   {time}
                 </div>
-                {/* Day background cells (columnas 2-N) */}
-                {WEEK_DAYS.map((day) => {
+                {/* Day background cells (columnas 2-N) — solo visibleDays */}
+                {visibleDays.map((day) => {
                   const dayData = professional.weeklySlots[day.dayOfWeek];
                   const dateStr = dayData?.date || "";
                   const isToday = dateStr === new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
                   // === Verificar si la celda es pasada ===
                   const cellIsPast = dateStr ? isSlotInPast(dateStr, time) : false;
+                  // Calcular gridColumn dinámicamente según visibleDays
+                  const colIdx = visibleDays.indexOf(day) + 2; // +2 porque col 1 es time
                   return (
                     <div
                       key={`bg-${day.dayOfWeek}-${time}`}
-                      className={`border-l border-b border-teal-50/50 ${isToday ? "bg-teal-50/20" : ""} ${
+                      className={`border-l border-b border-teal-50/50 min-h-[44px] md:min-h-0 ${isToday ? "bg-teal-50/20" : ""} ${
                         cellIsPast ? "cursor-pointer hover:bg-orange-50/40" : ""
                       }`}
-                      style={{ gridRow: rowIdx + 1, gridColumn: day.dayOfWeek + 1 }}
+                      style={{ gridRow: rowIdx + 1, gridColumn: colIdx }}
                       // === Admin puede clickear CUALQUIER celda pasada ===
                       // incluso si el profesional no tiene schedule configurado.
                       // Esto resuelve el caso de carga retroactiva en días/horarios
@@ -1748,11 +1978,12 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
             {/* FIX CRÍTICO: NO usar % (módulo) para evaluar inicios de slot.
                 Iterar el ARRAY DE SLOTS real y posicionar cada uno por
                 getSlotGridPosition(slotStartTime, duration, gridStartMinutes). */}
-            {WEEK_DAYS.map((day) => {
+            {visibleDays.map((day) => {
               const dayData = professional.weeklySlots[day.dayOfWeek];
               const dateStr = dayData?.date || "";
               const isToday = dateStr === new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
-              const colIndex = day.dayOfWeek + 1;
+              // colIndex basado en visibleDays (no en WEEK_DAYS completo)
+              const colIndex = visibleDays.indexOf(day) + 2; // +2 porque col 1 es time
 
               // === FIX: .filter() en vez de .find() para soportar MÚLTIPLES
               // franjas horarias por día (ej: Jueves 09-13 Online + 16-17 Presencial).
@@ -2281,6 +2512,150 @@ function AssignDialog({ open, onOpenChange, professional, slot, date, form, onFo
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ====================================================================
+// SUB-COMPONENTE: MobileAssignDrawer (Bottom Sheet para asignación mobile)
+// ====================================================================
+// Visible solo en pantallas < md. Replica el mismo form que AssignDialog
+// pero se desliza desde la parte inferior de la pantalla (patrón Bottom Sheet).
+// Esto facilita el tap en mobile porque el contenido queda cerca del pulgar.
+//
+// Usa el componente Drawer de vaul (@/components/ui/drawer) que es la
+// implementación standard de shadcn para bottom sheets.
+//
+// El form completo (búsqueda de paciente + datos + modalidad + dirección +
+// notas + makeRecurring) se replica aquí porque el AssignDialog original
+// está pensado para desktop con ancho max-w-md. En mobile necesitamos
+// layouts más compactos y scrollables verticalmente dentro del drawer.
+// ====================================================================
+
+interface MobileAssignDrawerProps extends AssignDialogProps {
+  // Same props as AssignDialog — reutiliza la misma interfaz
+}
+
+function MobileAssignDrawer({ open, onOpenChange, professional, slot, date, form, onFormChange, onConfirm, assigning }: MobileAssignDrawerProps) {
+  if (!professional || !slot) return null;
+  let dateLabel = date;
+  try { dateLabel = format(parseISO(date), "EEEE d 'de' MMMM", { locale: es }); } catch { /* keep ISO */ }
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[85vh]">
+        {/* Drag handle visual indicator (vaul lo agrega automáticamente) */}
+        <DrawerHeader className="pb-2">
+          <DrawerTitle className="text-teal-900 flex items-center gap-2 text-base">
+            <CalendarPlus className="w-5 h-5 text-teal-600" />
+            Asignar turno
+          </DrawerTitle>
+          <DrawerDescription className="text-teal-600 text-xs">
+            {professional.name} — {professional.specialty}
+          </DrawerDescription>
+        </DrawerHeader>
+
+        {/* === Cuerpo del drawer: form scrollable === */}
+        <div className="px-4 pb-4 overflow-y-auto" style={{ maxHeight: "60vh" }}>
+          {/* Info del slot */}
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-1 mb-3">
+            <p className="text-sm text-teal-900 font-medium capitalize">{dateLabel}</p>
+            <p className="text-sm text-teal-700 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" /> {slot.time} a {slot.endTime} hs
+            </p>
+          </div>
+
+          {/* Datos del paciente */}
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-teal-700 font-medium">Nombre completo <span className="text-red-500">*</span></Label>
+              <Input
+                value={form.patientName}
+                onChange={(e) => onFormChange({ ...form, patientName: e.target.value })}
+                placeholder="Nombre y apellido"
+                className="h-10 text-sm border-teal-200"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-teal-700 font-medium">Teléfono <span className="text-red-500">*</span></Label>
+              <Input
+                value={form.patientPhone}
+                onChange={(e) => onFormChange({ ...form, patientPhone: e.target.value })}
+                placeholder="+54 11 xxxx-xxxx"
+                className="h-10 text-sm border-teal-200"
+                inputMode="tel"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-teal-700 font-medium">Email <span className="text-red-500">*</span></Label>
+              <Input
+                type="email"
+                value={form.patientEmail}
+                onChange={(e) => onFormChange({ ...form, patientEmail: e.target.value })}
+                placeholder="paciente@email.com"
+                className="h-10 text-sm border-teal-200"
+                inputMode="email"
+              />
+            </div>
+
+            {/* Selector de modalidad */}
+            <div className="space-y-1">
+              <Label className="text-xs text-teal-700 font-medium">Modalidad de la sesión</Label>
+              <Select value={form.modality} onValueChange={(v) => onFormChange({ ...form, modality: v })}>
+                <SelectTrigger className="h-10 text-sm border-teal-200"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="P">Presencial</SelectItem>
+                  <SelectItem value="OL">Online</SelectItem>
+                  <SelectItem value="H">Híbrido</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-teal-500">Por defecto hereda la modalidad del slot, pero podés cambiarla.</p>
+            </div>
+
+            {/* Notas */}
+            <div className="space-y-1">
+              <Label className="text-xs text-teal-700 font-medium">Notas (opcional)</Label>
+              <Textarea
+                value={form.notes}
+                onChange={(e) => onFormChange({ ...form, notes: e.target.value })}
+                placeholder="Motivo de consulta, derivación, observaciones..."
+                className="text-sm border-teal-200 min-h-[60px]"
+              />
+            </div>
+
+            {/* === Toggle: hacer recurrente === */}
+            <label className="flex items-center gap-2 p-2 rounded-lg bg-teal-50/50 border border-teal-100 cursor-pointer">
+              <Checkbox
+                checked={form.makeRecurring || false}
+                onCheckedChange={(v) => onFormChange({ ...form, makeRecurring: Boolean(v) })}
+              />
+              <span className="text-xs text-teal-700 font-medium">Hacer turno recurrente (semanal)</span>
+            </label>
+          </div>
+        </div>
+
+        {/* === Footer fijo con botones === */}
+        <DrawerFooter className="pt-2 border-t border-teal-100">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1 border-teal-200 text-teal-600 hover:bg-teal-50 h-11"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={onConfirm}
+              disabled={assigning}
+              className="flex-1 bg-teal-600 hover:bg-teal-700 text-white h-11"
+            >
+              {assigning
+                ? <><RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Asignando...</>
+                : <><CheckCircle2 className="w-4 h-4 mr-1" /> Confirmar</>}
+            </Button>
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
