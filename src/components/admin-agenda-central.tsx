@@ -1400,6 +1400,7 @@ export function AdminAgendaCentral() {
                   onEmptyPastSlotClick={(time, date) => openAssignDialogForEmptyPast(activeProfessional, time, date)}
                   mobileViewMode={mobileViewMode}
                   mobileSelectedDayIndex={mobileSelectedDayIndex}
+                  isMobile={isMobile}
                 />
               </CardContent>
             </>
@@ -1737,9 +1738,13 @@ interface ExcelMatrixProps {
   // En mobile, controlan cuántos días se muestran y desde cuál.
   mobileViewMode?: "day" | "3days" | "week";
   mobileSelectedDayIndex?: number; // 0-6 (0=Lun ... 6=Dom)
+  // === Desktop guard: fuerza visibleDays = WEEK_DAYS cuando NO es mobile ===
+  // Esto garantiza que desktop siempre renderice los 7 días, sin importar
+  // el valor de mobileViewMode (que por defecto es "3days").
+  isMobile?: boolean;
 }
 
-function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, onEmptyPastSlotClick, mobileViewMode = "week", mobileSelectedDayIndex = 0 }: ExcelMatrixProps) {
+function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, onEmptyPastSlotClick, mobileViewMode = "week", mobileSelectedDayIndex = 0, isMobile = false }: ExcelMatrixProps) {
   // === REPLICA EXACTA de la grilla del profesional ===
   // El usuario pidió que la Agenda Central del admin se vea IGUAL que la
   // agenda del profesional. Por eso este componente ahora usa el mismo
@@ -1925,19 +1930,21 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
   // 60px hora + N × 1fr días = uniforme, mismo patrón que funciona en profesional
   //
   // === MOBILE RESPONSIVE: visibleDays ===
-  // En desktop (< md) siempre se muestran los 7 días.
-  // En mobile, visibleDays se calcula según mobileViewMode:
+  // REGLA DE ORO: en desktop (≥ md / isMobile=false) SIEMPRE se muestran
+  // los 7 días de la semana completa (Lun-Dom) sin excepción.
+  // En mobile (< md / isMobile=true), visibleDays se calcula según mobileViewMode:
   //   - "day"    → 1 día (el seleccionado en el carrusel)
   //   - "3days"  → 3 días consecutivos empezando por el seleccionado
   //   - "week"   → los 7 días (con scroll horizontal + sticky time column)
-  // La lógica es solo JS: computa un sub-array de WEEK_DAYS que se usa en
-  // lugar del array completo. El grid se adapta automáticamente con
-  // gridTemplateColumns dinámico.
+  //
+  // El guard `!isMobile` al inicio del useMemo es CRÍTICO: sin él, el
+  // mobileViewMode por defecto ("3days") se aplicaría también en desktop,
+  // rompiendo la vista semanal de 7 días en pantallas grandes.
   const visibleDays = React.useMemo(() => {
-    // Desktop: siempre los 7 días (Tailwind md:hidden/md:block controla la visibilidad)
-    // Pero para que la lógica sea simple, computamos los días visibles según
-    // mobileViewMode Y dejamos que CSS se encargue de mostrar/ocultar el
-    // carrusel y los controles mobile.
+    // === DESKTOP GUARD: siempre 7 días en pantallas ≥ md ===
+    if (!isMobile) return WEEK_DAYS;
+
+    // === MOBILE: computar días según mobileViewMode ===
     if (mobileViewMode === "week") return WEEK_DAYS;
     if (mobileViewMode === "day") {
       return [WEEK_DAYS[mobileSelectedDayIndex]];
@@ -1953,7 +1960,7 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
       slice.push(WEEK_DAYS[slice.length]);
     }
     return slice;
-  }, [mobileViewMode, mobileSelectedDayIndex]);
+  }, [isMobile, mobileViewMode, mobileSelectedDayIndex]);
 
   // === gridTemplateColumns dinámico: 60px + N × 1fr ===
   // N = visibleDays.length (1, 3, o 7 según el modo mobile)
