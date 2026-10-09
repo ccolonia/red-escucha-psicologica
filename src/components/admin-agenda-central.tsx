@@ -1257,6 +1257,72 @@ export function AdminAgendaCentral() {
               {/* === MOBILE: Control bar con selector de modo de vista + carrusel de días ===
                   Visible solo en < md. En desktop se ignora y se muestra la grilla de 7 días. */}
               <div className="md:hidden px-3 pb-2 space-y-2 bg-white border-b border-teal-100">
+                {/* === NAVEGACIÓN DE SEMANAS: [<] rango-fecha [>] ===
+                    Botones táctiles (p-2, min 40x40px) para avanzar/retroceder 7 días.
+                    El botón "Hoy" aparece solo cuando weekOffset !== 0.
+                    Tocar el rango de fechas abre un date-picker nativo para saltar
+                    directamente a cualquier fecha sin hacer múltiples taps. */}
+                <div className="flex items-center gap-2">
+                  {/* Botón Semana Anterior [<] */}
+                  <button
+                    type="button"
+                    onClick={() => setWeekOffset((w) => w - 1)}
+                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg border border-teal-200 bg-white text-teal-600 hover:bg-teal-50 active:bg-teal-100 transition-colors"
+                    aria-label="Semana anterior"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+
+                  {/* Centro: rango de fechas + botón "Hoy" */}
+                  <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
+                    <label className="relative cursor-pointer">
+                      <span className="text-xs font-medium text-teal-900 text-center block leading-tight">
+                        {weekLabel}
+                      </span>
+                      <span className="text-[9px] text-teal-500 text-center block leading-tight">
+                        {weekOffset === 0 ? "Esta semana" : weekOffset > 0 ? `+${weekOffset} semana(s)` : `${weekOffset} semana(s)`}
+                      </span>
+                      {/* Date picker nativo oculto: al tocar el label, abre el calendario del sistema */}
+                      <input
+                        type="date"
+                        value={weekStartISO}
+                        onChange={(e) => {
+                          // Calcular el weekOffset desde la fecha seleccionada
+                          const selectedDate = new Date(e.target.value + "T12:00:00");
+                          const todayMonday = startOfWeek(new Date(), { weekStartsOn: 1 });
+                          const diffMs = selectedDate.getTime() - todayMonday.getTime();
+                          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+                          const newOffset = Math.round(diffDays / 7);
+                          setWeekOffset(newOffset);
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        aria-label="Seleccionar fecha para saltar a esa semana"
+                      />
+                    </label>
+                    {/* Botón "Hoy" — solo visible si no estamos en la semana actual */}
+                    {weekOffset !== 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setWeekOffset(0)}
+                        className="flex-shrink-0 px-2 py-1 text-[10px] font-medium rounded-md bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors"
+                        aria-label="Volver a la semana actual"
+                      >
+                        Hoy
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Botón Semana Siguiente [>] */}
+                  <button
+                    type="button"
+                    onClick={() => setWeekOffset((w) => w + 1)}
+                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg border border-teal-200 bg-white text-teal-600 hover:bg-teal-50 active:bg-teal-100 transition-colors"
+                    aria-label="Semana siguiente"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+
                 {/* === Selector de modo: Día / 3 Días / Semana === */}
                 <div className="flex gap-1 p-1 bg-teal-50 rounded-lg">
                   {([
