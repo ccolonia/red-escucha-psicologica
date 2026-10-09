@@ -947,7 +947,7 @@ export function AdminAgendaCentral() {
           - Solo Profesionales cerrado: 260px + 40px + 1fr
           - Ambas cerradas: 40px + 40px + 1fr (máximo espacio para la grilla)
       */}
-      <div className={`grid gap-4 transition-all duration-300 ${
+      <div className={`grid grid-cols-1 gap-4 transition-all duration-300 ${
         filtersOpen && professionalsOpen
           ? "lg:grid-cols-[260px_230px_1fr]"
           : filtersOpen && !professionalsOpen
@@ -1171,7 +1171,11 @@ export function AdminAgendaCentral() {
         {/* ============================================== */}
         {/* COLUMNA 3: Matriz Excel del profesional activo */}
         {/* ============================================== */}
-        <Card className="border-teal-100 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+        {/* overflow-hidden en mobile para que la matriz (min-w-[900px]) no expanda
+            el Card más allá del viewport. La matriz tiene su propio overflow-x-auto
+            interno para scroll horizontal. En desktop, lg:overflow-y-auto maneja
+            el scroll vertical. */}
+        <Card className="border-teal-100 overflow-hidden lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           {activeProfessional ? (
             <>
               {/* === MOBILE: Header compacto colapsable ===
