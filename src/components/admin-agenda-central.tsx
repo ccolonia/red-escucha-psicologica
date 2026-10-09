@@ -1257,62 +1257,49 @@ export function AdminAgendaCentral() {
               {/* === MOBILE: Control bar con selector de modo de vista + carrusel de días ===
                   Visible solo en < md. En desktop se ignora y se muestra la grilla de 7 días. */}
               <div className="md:hidden px-3 pb-2 space-y-2 bg-white border-b border-teal-100">
-                {/* === NAVEGACIÓN DE SEMANAS: [<] Mes/Rango [>] ===
-                    Estructura compacta anti-desbordamiento para mobile:
-                    - Contenedor: flex items-center justify-between w-full gap-2
-                      con bg-emerald-50/80 + border-emerald-100 + rounded-xl
-                    - Botones [<] y [>] con flex-shrink-0 w-10 h-10 (40x40px rígido)
-                      + shadow-sm + active:scale-95 (feedback táctil)
-                    - Texto central con flex-1 min-w-0 + truncate (se adapta al ancho)
-                    - Mes y Año en uppercase bold (ej: OCTUBRE 2026)
-                    - Rango de días (ej: 12 oct — 18 oct)
-                    - Date picker nativo oculto sobre el texto central
-                    - FIX UTC: parsear YYYY-MM-DD con new Date(year, month-1, day)
-                      para evitar desfasaje de zona horaria
-                    - FIX OFFSET: calcular getMonday de ambas fechas y setear
-                      weekOffset absoluto (no acumulativo) */}
-                <div className="flex md:hidden items-center justify-between w-full px-3 py-2 bg-emerald-50/80 rounded-xl border border-emerald-100 my-2 gap-2">
-                  {/* Botón Flecha Izquierda [<] — flex-shrink-0 w-10 h-10 rígido */}
+                {/* NAV BAR MOBILE - NATIVA Y RÍGIDA
+                    Reemplazo total por HTML/Tailwind nativo puro (sin componentes UI).
+                    - Botones <button type='button'> nativos (no Shadcn Button)
+                    - shrink-0 w-9 h-9 (36x36px EXACTO, no se estira ni achica)
+                    - Caracteres ‹ y › en text-lg font-bold
+                    - box-border en contenedor para garantizar layout predecible
+                    - flex-1 min-w-0 + truncate en bloque central */}
+                <div className="flex md:hidden items-center justify-between w-full px-2 py-1.5 bg-emerald-50/90 border border-emerald-200 rounded-xl my-2 gap-1.5 box-border">
+                  {/* Botón Izquierdo - Nativo HTML */}
                   <button
                     type="button"
                     onClick={() => setWeekOffset((w) => w - 1)}
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-stone-200 text-emerald-800 shadow-sm active:scale-95 transition-transform"
+                    className="shrink-0 w-9 h-9 flex items-center justify-center bg-white border border-stone-300 rounded-lg text-emerald-800 shadow-sm active:bg-emerald-100 text-lg font-bold"
                     aria-label="Semana anterior"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    ‹
                   </button>
 
-                  {/* Contenedor Central con Fecha y Selector DatePicker
-                      relative + flex-1 + min-w-0 + flex-col + truncate */}
-                  <div className="relative flex-1 min-w-0 flex flex-col items-center justify-center text-center cursor-pointer">
-                    {/* Línea 1: MES Y AÑO en uppercase bold tracking-wider */}
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 truncate w-full">
-                      {format(monday, "MMMM yyyy", { locale: es }).toUpperCase()}
+                  {/* Bloque Central de Texto y DatePicker */}
+                  <div className="relative flex-1 min-w-0 flex flex-col items-center justify-center text-center px-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-950 truncate w-full block">
+                      {format(monday, "MMMM yyyy", { locale: es }).toUpperCase() || "OCTUBRE 2026"}
                     </span>
-                    {/* Línea 2: Rango de días compacto */}
-                    <span className="text-xs font-medium text-stone-600 truncate w-full">
-                      {format(monday, "d MMM", { locale: es })} — {format(addDays(monday, 6), "d MMM", { locale: es })}
+                    <span className="text-xs font-semibold text-stone-700 truncate w-full block">
+                      {`${format(monday, "d MMM", { locale: es })} — ${format(addDays(monday, 6), "d MMM", { locale: es })}` || "Semana actual"}
                     </span>
                     {/* Indicador de offset + botón "Hoy" (solo si weekOffset !== 0) */}
-                    <div className="flex items-center justify-center gap-1.5 mt-0.5">
-                      <span className="text-[9px] text-emerald-600">
-                        {weekOffset === 0 ? "Esta semana" : weekOffset > 0 ? `+${weekOffset} sem.` : `${weekOffset} sem.`}
-                      </span>
-                      {weekOffset !== 0 && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setWeekOffset(0);
-                          }}
-                          className="px-1.5 py-0 text-[9px] font-medium rounded-full bg-emerald-200 text-emerald-800 active:bg-emerald-300 transition-colors"
-                          aria-label="Volver a la semana actual"
-                        >
-                          Hoy
-                        </button>
-                      )}
-                    </div>
-                    {/* Input de Fecha Nativo Oculto sobre el texto */}
+                    {(weekOffset !== 0) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setWeekOffset(0);
+                        }}
+                        className="mt-0.5 px-1.5 py-0 text-[9px] font-medium rounded-full bg-emerald-200 text-emerald-800 active:bg-emerald-300 transition-colors"
+                        aria-label="Volver a la semana actual"
+                      >
+                        Hoy
+                      </button>
+                    )}
+
+                    {/* Input Date Picker Oculto encima del texto */}
                     <input
                       type="date"
                       value={weekStartISO}
@@ -1346,19 +1333,19 @@ export function AdminAgendaCentral() {
                         const diffWeeks = Math.round(diffTime / (7 * 24 * 60 * 60 * 1000));
                         setWeekOffset(diffWeeks);
                       }}
-                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                       aria-label="Seleccionar fecha para saltar a esa semana"
                     />
                   </div>
 
-                  {/* Botón Flecha Derecha [>] — flex-shrink-0 w-10 h-10 rígido */}
+                  {/* Botón Derecho - Nativo HTML */}
                   <button
                     type="button"
                     onClick={() => setWeekOffset((w) => w + 1)}
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-stone-200 text-emerald-800 shadow-sm active:scale-95 transition-transform"
+                    className="shrink-0 w-9 h-9 flex items-center justify-center bg-white border border-stone-300 rounded-lg text-emerald-800 shadow-sm active:bg-emerald-100 text-lg font-bold"
                     aria-label="Semana siguiente"
                   >
-                    <ChevronRight className="w-5 h-5" />
+                    ›
                   </button>
                 </div>
 
