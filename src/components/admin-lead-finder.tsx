@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, MapPin, UserPlus, Trash2, Edit3, Loader2, Zap, AlertCircle,
   Users, Star, Phone, Globe, ExternalLink, MessageCircle, Radar, ClipboardList,
-  X, Check, ChevronDown, Navigation,
+  X, Check, ChevronDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,8 +83,6 @@ export function AdminLeadFinder() {
   const [radarError, setRadarError] = useState<string | null>(null);
   const [radarGeocoded, setRadarGeocoded] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [savingPlaceId, setSavingPlaceId] = useState<string | null>(null);
-  // === GPS state ===
-  const [gpsLoading, setGpsLoading] = useState(false);
 
   // === CRM state ===
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -111,70 +109,6 @@ export function AdminLeadFinder() {
   }, []);
 
   useEffect(() => { loadProspects(); }, [loadProspects]);
-
-  // === GPS: Usar mi ubicación actual ===
-  // Usa navigator.geolocation.getCurrentPosition() para obtener lat/lng del GPS.
-  // Luego hace reverse geocoding con Nominatim (OpenStreetMap, gratis, sin API key)
-  // para obtener el nombre legible de la localidad y rellenar el input de Zona.
-  // También setea radarGeocoded con las coordenadas para que el Radar las use directo.
-  const handleUseMyLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error("Tu navegador no soporta geolocalización");
-      return;
-    }
-    setGpsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          // === Reverse geocoding con Nominatim (OpenStreetMap) ===
-          // Gratis, sin API key. Devuelve la dirección legible más cercana.
-          // Formato: https://nominatim.openstreetmap.org/reverse?format=json&lat=X&lon=Y
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
-            { headers: { "Accept-Language": "es" } }
-          );
-          if (res.ok) {
-            const data = await res.json();
-            // Construir nombre legible: "Merlo, Buenos Aires" o "Ciudad, Provincia"
-            const addr = data.address || {};
-            const city = addr.city || addr.town || addr.village || addr.hamlet || addr.municipality || "";
-            const state = addr.state || "";
-            const localityName = [city, state].filter(Boolean).join(", ") || data.display_name?.split(",")[0] || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-            setRadarLocation(localityName);
-          } else {
-            // Si Nominatim falla, usar las coordenadas crudas como fallback
-            setRadarLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-          }
-          // Setear las coordenadas para que el Radar las use directamente
-          setRadarGeocoded({ lat: latitude, lng: longitude, address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` });
-          toast.success("Ubicación obtenida correctamente");
-        } catch (err) {
-          console.error("[GPS] Error en reverse geocoding:", err);
-          // Fallback: usar coordenadas crudas
-          setRadarLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-          setRadarGeocoded({ lat: latitude, lng: longitude, address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` });
-          toast.success("Ubicación GPS obtenida (sin nombre de localidad)");
-        } finally {
-          setGpsLoading(false);
-        }
-      },
-      (err) => {
-        setGpsLoading(false);
-        console.error("[GPS] Error:", err);
-        if (err.code === err.PERMISSION_DENIED) {
-          toast.error("No se pudo obtener la ubicación. Verificá los permisos de GPS de tu navegador.");
-        } else if (err.code === err.POSITION_UNAVAILABLE) {
-          toast.error("Posición no disponible. Verificá que el GPS esté activado.");
-        } else if (err.code === err.TIMEOUT) {
-          toast.error("Tiempo de espera agotado. Intentá de nuevo.");
-        } else {
-          toast.error("Error al obtener la ubicación.");
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
-  };
 
   // === Lanzar Radar ===
   const handleRadarSearch = async () => {
@@ -432,28 +366,7 @@ export function AdminLeadFinder() {
                 </div>
                 <div>
                   <Label className="text-xs text-purple-600">Zona / Localidad</Label>
-                  <div className="flex gap-1">
-                    <Input value={radarLocation} onChange={e => setRadarLocation(e.target.value)} placeholder="Merlo, Buenos Aires" className="h-9 text-sm border-purple-200 flex-1" />
-                    {/* === Botón GPS: Usar mi ubicación actual ===
-                        - navigator.geolocation.getCurrentPosition()
-                        - Reverse geocoding con Nominatim (OpenStreetMap)
-                        - Rellena el input de Zona con la localidad detectada
-                        - Setea radarGeocoded con las coordenadas para el Radar */}
-                    <button
-                      type="button"
-                      onClick={handleUseMyLocation}
-                      disabled={gpsLoading}
-                      className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Usar mi ubicación actual (GPS)"
-                      aria-label="Usar mi ubicación actual"
-                    >
-                      {gpsLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Navigation className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
+                  <Input value={radarLocation} onChange={e => setRadarLocation(e.target.value)} placeholder="Merlo, Buenos Aires" className="h-9 text-sm border-purple-200" />
                 </div>
                 <div>
                   <Label className="text-xs text-purple-600">Radio</Label>
@@ -471,11 +384,6 @@ export function AdminLeadFinder() {
                   </Button>
                 </div>
               </div>
-              {gpsLoading && (
-                <p className="text-[10px] text-purple-500 mt-2 flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Obteniendo ubicación...
-                </p>
-              )}
               {radarGeocoded && (
                 <p className="text-[10px] text-purple-500 mt-2 flex items-center gap-1">
                   <MapPin className="w-3 h-3" /> {radarGeocoded.address} (lat: {radarGeocoded.lat.toFixed(4)}, lng: {radarGeocoded.lng.toFixed(4)})
