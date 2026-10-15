@@ -581,7 +581,13 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-end">
+              {/* === Grid responsivo ===
+                  - Móvil muy angosto (<640px): 1 columna (todo apilado vertical)
+                  - Móvil/tablet (sm+): 2 columnas
+                  - Desktop (md+): 5 columnas (original)
+                  Esto evita que los inputs type='time' y el selector de duración
+                  se compriman demasiado en pantallas táctiles pequeñas. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
                 <div className="space-y-1">
                   <Label className="text-xs text-teal-600">Día</Label>
                   <Select value={newDay.toString()} onValueChange={(v) => setNewDay(Number(v))}>
@@ -608,7 +614,7 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                     className="flex h-9 w-full rounded-md border border-teal-200 bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
                     step={300} // step de 5 min (300 segundos) en el picker
                     min="06:00"
-                    max="24:00"
+                    max="23:59"
                   />
                 </div>
                 <div className="space-y-1">
@@ -620,7 +626,7 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                     className="flex h-9 w-full rounded-md border border-teal-200 bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
                     step={300}
                     min="06:00"
-                    max="24:00"
+                    max="23:59"
                   />
                 </div>
                 <div className="space-y-1">
@@ -791,9 +797,9 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                           return (
                             <div
                               key={idx}
-                              className="flex items-center justify-between p-3 bg-teal-50/50 rounded-lg border border-teal-100"
+                              className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-teal-50/50 rounded-lg border border-teal-100 gap-2"
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 <Clock className="w-4 h-4 text-teal-500" />
                                 <span className="text-sm font-medium text-teal-900">
                                   {s.startTime} - {s.endTime}
@@ -806,7 +812,7 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                                   {MODALITY_MAP[s.modality]?.label}
                                 </Badge>
                               </div>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 self-end sm:self-auto">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -975,7 +981,7 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                         className="flex h-9 w-full rounded-md border border-teal-200 bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
                         step={300}
                         min="06:00"
-                        max="24:00"
+                        max="23:59"
                       />
                     </div>
                     <div className="space-y-1">
@@ -987,7 +993,7 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                         className="flex h-9 w-full rounded-md border border-teal-200 bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
                         step={300}
                         min="06:00"
-                        max="24:00"
+                        max="23:59"
                       />
                     </div>
                     <div className="space-y-1">
