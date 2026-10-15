@@ -1833,10 +1833,16 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
 
   // === getSlotGridPosition: posición absoluta en CSS Grid ===
   // PROHIBIDO usar % (módulo). Calcula la fila relativa a gridStartMinutes.
+  //
+  // FIX (horarios personalizados): Usar Math.round en lugar de Math.floor
+  // para rowStart. Esto permite que un slot que empieza a las 19:20 se
+  // alinee con la fila más cercana (19:15 o 19:30) en lugar de siempre
+  // redondear hacia abajo. Sin este fix, slots con minutos no múltiplos
+  // de 15 (ej: 19:20, 08:25) quedan desplazados visualmente o invisibles.
   function getSlotGridPosition(slotStartTimeStr: string, durationMinutes: number) {
     const [h, m] = slotStartTimeStr.split(":").map(Number);
     const slotStartMin = h * 60 + m;
-    const rowStart = Math.floor((slotStartMin - gridStartMinutes) / 15) + 1;
+    const rowStart = Math.round((slotStartMin - gridStartMinutes) / 15) + 1;
     const span = Math.max(1, Math.round(durationMinutes / 15));
     return { rowStart, span };
   }
@@ -1992,7 +1998,9 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
   // padding interno del slot). La clave es que 1 slot de 45min = 3 rows
   // de 15min = 3 × 36 = 108px, más que suficiente para tap.
   // En desktop usamos 28px para mantener la densidad actual.
-  const gridAutoRowsValue = "minmax(32px, auto)";
+  // FIX: aumentado a minmax(36px, auto) para que slots con minutos atípicos
+  // (ej: 19:20 a 20:00 = 40 min = 3 rows × 36px = 108px) sean visibles.
+  const gridAutoRowsValue = "minmax(36px, auto)";
 
   return (
     <div className="w-full overflow-x-auto md:overflow-x-auto snap-x snap-mandatory md:snap-none">

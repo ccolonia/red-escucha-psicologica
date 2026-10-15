@@ -318,6 +318,12 @@ function getSlotRowSpan(slotDuration: number): number {
 //   rowStart = (840 - 480) / 15 + 1 = 360/15 + 1 = 24 + 1 = 25
 //   span = 45 / 15 = 3
 //   → gridRow: "25 / span 3"
+//
+// FIX (horarios personalizados): Usar Math.round en lugar de Math.floor
+// para rowStart. Esto permite que un slot que empieza a las 19:20 se
+// alinee con la fila de 19:30 (más cercana) en lugar de 19:15.
+// Sin este fix, slots con minutos no múltiplos de 15 (ej: 19:20, 08:25)
+// quedan desplazados visualmente o invisibles en la grilla.
 function getSlotGridPosition(
   slotStartTimeStr: string,
   durationMinutes: number,
@@ -325,7 +331,10 @@ function getSlotGridPosition(
 ): { rowStart: number; span: number } {
   const [h, m] = slotStartTimeStr.split(":").map(Number);
   const slotStartMin = h * 60 + m;
-  const rowStart = Math.floor((slotStartMin - gridStartMinutes) / GRID_INTERVAL_MIN) + 1;
+  // Math.round: 19:20 (53.33 filas) → 53 (19:15) vs 54 (19:30)
+  // round(53.33) = 53 → fila 19:15, que es la más cercana visualmente
+  // Esto asegura que el slot se renderice en la posición más cercana a su hora real.
+  const rowStart = Math.round((slotStartMin - gridStartMinutes) / GRID_INTERVAL_MIN) + 1;
   const span = Math.max(1, Math.round(durationMinutes / GRID_INTERVAL_MIN));
   return { rowStart, span };
 }
