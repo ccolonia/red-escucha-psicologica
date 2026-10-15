@@ -101,17 +101,22 @@ const MODALITY_MAP: Record<string, { label: string; icon: React.ComponentType<{ 
   ambas: { label: "Presencial y Online", icon: CheckCircle2 },
 };
 
-const DURATION_OPTIONS = [40, 45, 50, 60];
+// === Duración de slots ===
+// Presets comunes + opción "custom" que habilita un input numérico libre.
+// El profesional puede elegir 40, 45, 50, 60 (presets) o tipear cualquier
+// valor personalizado (ej: 20, 35, 90, etc.) seleccionando "Personalizado".
+const DURATION_PRESETS = [30, 40, 45, 50, 60, 90, 120];
 
-// Opciones horarias de 06:00 a 24:00 (medianoche) en intervalos de 30 min.
-// Ampliado desde el rango anterior (07:00-22:00) para soportar jornadas
-// extendidas. 24:00 se representa como "24:00" (cierre de jornada).
+// === Opciones horarias de 06:00 a 24:00 en intervalos de 5 minutos ===
+// Cambiado desde intervalos de 30 min a intervalos de 5 min para permitir
+// horarios personalizados como 19:20, 08:15, 14:35, etc.
+// 24:00 se representa como "24:00" (cierre de jornada).
 const TIME_OPTIONS = (() => {
   const options: string[] = [];
   for (let h = 6; h <= 24; h++) {
-    options.push(`${h.toString().padStart(2, "0")}:00`);
-    if (h < 24) {
-      options.push(`${h.toString().padStart(2, "0")}:30`);
+    for (let m = 0; m < 60; m += 5) {
+      if (h === 24 && m > 0) break; // 24:00 es el último
+      options.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
     }
   }
   return options;
@@ -138,6 +143,11 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
   const [newStart, setNewStart] = useState("09:00");
   const [newEnd, setNewEnd] = useState("18:00");
   const [newDuration, setNewDuration] = useState(45);
+  // === Duración personalizada ===
+  // Cuando el profesional selecciona "Personalizado" en el select de duración,
+  // este input se habilita para tipear cualquier valor en minutos (ej: 20, 35, 90).
+  const [customDurationMode, setCustomDurationMode] = useState(false);
+  const [customDurationValue, setCustomDurationValue] = useState("40");
   const [newModality, setNewModality] = useState("ambas");
   // === direccionId para el bloque de schedule que se está creando/editando ===
   // Solo se habilita cuando newModality es "P" o "ambas" (presencial).
@@ -298,6 +308,13 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
     setNewStart(entry.startTime);
     setNewEnd(entry.endTime);
     setNewDuration(entry.slotDuration);
+    // Sincronizar modo de duración personalizada
+    if (!DURATION_PRESETS.includes(entry.slotDuration)) {
+      setCustomDurationMode(true);
+      setCustomDurationValue(entry.slotDuration.toString());
+    } else {
+      setCustomDurationMode(false);
+    }
     setNewModality(entry.modality);
     setNewDireccionId(entry.direccionId || "");
     setEditingScheduleIdx(index);
@@ -582,42 +599,77 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-teal-600">Desde</Label>
-                  <Select value={newStart} onValueChange={setNewStart}>
-                    <SelectTrigger className="border-teal-200 h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_OPTIONS.map((t) => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {/* input type="time" permite tipear cualquier hora:minuto libremente
+                      (ej: 19:20, 08:15, 14:35). Compatible con formato HH:mm de la DB. */}
+                  <input
+                    type="time"
+                    value={newStart}
+                    onChange={(e) => setNewStart(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-teal-200 bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+                    step={300} // step de 5 min (300 segundos) en el picker
+                    min="06:00"
+                    max="24:00"
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-teal-600">Hasta</Label>
-                  <Select value={newEnd} onValueChange={setNewEnd}>
-                    <SelectTrigger className="border-teal-200 h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_OPTIONS.map((t) => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <input
+                    type="time"
+                    value={newEnd}
+                    onChange={(e) => setNewEnd(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-teal-200 bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+                    step={300}
+                    min="06:00"
+                    max="24:00"
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-teal-600">Duración</Label>
-                  <Select value={newDuration.toString()} onValueChange={(v) => setNewDuration(Number(v))}>
-                    <SelectTrigger className="border-teal-200 h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DURATION_OPTIONS.map((d) => (
-                        <SelectItem key={d} value={d.toString()}>{d} min</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-1">
+                    <Select
+                      value={customDurationMode ? "custom" : newDuration.toString()}
+                      onValueChange={(v) => {
+                        if (v === "custom") {
+                          setCustomDurationMode(true);
+                          // Sincronizar customDurationValue con el valor actual
+                          setCustomDurationValue(newDuration.toString());
+                        } else {
+                          setCustomDurationMode(false);
+                          setNewDuration(Number(v));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="border-teal-200 h-9 text-sm flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DURATION_PRESETS.map((d) => (
+                          <SelectItem key={d} value={d.toString()}>{d} min</SelectItem>
+                        ))}
+                        <SelectItem value="custom">Personalizado…</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {/* Input numérico libre: visible solo cuando se elige "Personalizado" */}
+                    {customDurationMode && (
+                      <input
+                        type="number"
+                        value={customDurationValue}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomDurationValue(val);
+                          const num = Number(val);
+                          if (num > 0) {
+                            setNewDuration(num);
+                          }
+                        }}
+                        min={5}
+                        max={240}
+                        step={5}
+                        className="flex h-9 w-20 rounded-md border border-teal-200 bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                        placeholder="40"
+                      />
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-1 items-end">
                   <div className="space-y-1 flex-1">
@@ -915,29 +967,28 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs text-teal-600">Desde</Label>
-                      <Select value={overrideStart} onValueChange={setOverrideStart}>
-                        <SelectTrigger className="border-teal-200 h-9 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIME_OPTIONS.map((t) => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {/* input type="time" para horarios personalizados (5 min steps) */}
+                      <input
+                        type="time"
+                        value={overrideStart}
+                        onChange={(e) => setOverrideStart(e.target.value)}
+                        className="flex h-9 w-full rounded-md border border-teal-200 bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+                        step={300}
+                        min="06:00"
+                        max="24:00"
+                      />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-teal-600">Hasta</Label>
-                      <Select value={overrideEnd} onValueChange={setOverrideEnd}>
-                        <SelectTrigger className="border-teal-200 h-9 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIME_OPTIONS.map((t) => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <input
+                        type="time"
+                        value={overrideEnd}
+                        onChange={(e) => setOverrideEnd(e.target.value)}
+                        className="flex h-9 w-full rounded-md border border-teal-200 bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400"
+                        step={300}
+                        min="06:00"
+                        max="24:00"
+                      />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-teal-600">Duración</Label>
@@ -946,7 +997,7 @@ export function ProfessionalScheduleConfig({ propProfessionalId, onSaved }: { pr
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {DURATION_OPTIONS.map((d) => (
+                          {DURATION_PRESETS.map((d) => (
                             <SelectItem key={d} value={d.toString()}>{d} min</SelectItem>
                           ))}
                         </SelectContent>
