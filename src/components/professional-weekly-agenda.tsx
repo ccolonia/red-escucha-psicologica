@@ -1387,7 +1387,12 @@ export function ProfessionalWeeklyAgenda({
             className="grid relative w-full"
             style={{
               gridTemplateColumns: `60px repeat(${weekDays.length}, 1fr)`,
-              gridAutoRows: "28px",
+              // === FIX: minmax(28px, auto) en lugar de fijo "28px" ===
+              // Esto permite que los slots con duraciones no múltiplos de 15
+              // (ej: 40 min = 3 rows) se expandan correctamente y sean visibles.
+              // Con "28px" fijo, los slots podían quedar comprimidos o invisibles
+              // en pantallas mobile donde el espacio vertical es limitado.
+              gridAutoRows: "minmax(28px, auto)",
             }}
           >
             {/* === CAPA 1: Celdas de fondo (todas las filas × columnas) === */}
