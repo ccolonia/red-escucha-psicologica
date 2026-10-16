@@ -1199,14 +1199,19 @@ export function ProfessionalWeeklyAgenda({
       if (activatedSlot) return "available";
 
       // 3) VERIFICAR PLANTILLA BASE (schedule)
+      // === FIX: verificar si el time de la grilla (alineado a 15 min) cae
+      // DENTRO del rango del schedule, no si coincide exactamente con un slot
+      // generado. Esto permite que horarios como 19:20-20:00 (que genera el
+      // slot "19:20" pero la grilla tiene "19:15", "19:30", "19:45") se
+      // muestren correctamente en la vista mobile. ===
       const daySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek);
       for (const sch of daySchedules) {
-        const allSlots = generateTimeSlotsForSchedule(
-          sch.startTime,
-          sch.endTime,
-          sch.slotDuration
-        );
-        if (allSlots.includes(normalizedTime) && isSlotInSchedule(dayOfWeek, normalizedTime)) {
+        // Verificar si normalizedTime está dentro del rango [startTime, endTime)
+        // Esto es más robusto que allSlots.includes(normalizedTime) porque
+        // funciona con cualquier horario (incluso minutos no múltiplos de 15).
+        const schStart = (sch.startTime || "").slice(0, 5);
+        const schEnd = (sch.endTime || "").slice(0, 5);
+        if (schStart && schEnd && normalizedTime >= schStart && normalizedTime < schEnd) {
           return "schedule";
         }
       }
