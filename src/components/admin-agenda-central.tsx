@@ -1821,6 +1821,23 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
       const m = t % 60;
       slots.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
     }
+
+    // === FIX: Agregar startTimes de schedules que no son múltiplos de 15 ===
+    // Si un schedule empieza a las 19:20 (no múltiplo de 15), necesitamos
+    // que "19:20" exista como fila en la grilla para que el slot se renderice
+    // en la posición correcta.
+    for (const s of rawSchedules) {
+      const startTime = (s.startTime || "").slice(0, 5);
+      if (startTime && !slots.includes(startTime)) {
+        const insertIdx = slots.findIndex((t) => t > startTime);
+        if (insertIdx === -1) {
+          slots.push(startTime);
+        } else {
+          slots.splice(insertIdx, 0, startTime);
+        }
+      }
+    }
+
     return slots.length > 0 ? slots : generateTimeSlotsDynamic(15);
   }, [rawSchedules]);
 

@@ -300,6 +300,25 @@ function generateStandardizedTimeSlots(schedules: ScheduleEntry[]): string[] {
     const m = t % 60;
     slots.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
   }
+
+  // === FIX: Agregar startTimes de schedules que no son múltiplos de 15 ===
+  // Si un schedule empieza a las 19:20 (no múltiplo de 15), necesitamos
+  // que "19:20" exista como fila en la grilla para que el slot se renderice
+  // en la posición correcta. Sin esto, el slot aparece desplazado a la
+  // fila más cercana (19:30) en la vista mobile.
+  for (const s of schedules) {
+    const startTime = (s.startTime || "").slice(0, 5);
+    if (startTime && !slots.includes(startTime)) {
+      // Insertar el startTime en orden cronológico
+      const insertIdx = slots.findIndex((t) => t > startTime);
+      if (insertIdx === -1) {
+        slots.push(startTime);
+      } else {
+        slots.splice(insertIdx, 0, startTime);
+      }
+    }
+  }
+
   return slots;
 }
 
