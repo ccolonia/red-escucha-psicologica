@@ -1218,19 +1218,22 @@ export function ProfessionalWeeklyAgenda({
       if (activatedSlot) return "available";
 
       // 3) VERIFICAR PLANTILLA BASE (schedule)
-      // === FIX: verificar si el time de la grilla (alineado a 15 min) cae
-      // DENTRO del rango del schedule, no si coincide exactamente con un slot
-      // generado. Esto permite que horarios como 19:20-20:00 (que genera el
-      // slot "19:20" pero la grilla tiene "19:15", "19:30", "19:45") se
-      // muestren correctamente en la vista mobile. ===
+      // === FIX: Solo marcar como "schedule" el startTime EXACTO del schedule.
+      // Los tiempos intermedios (ej: 19:30, 19:45 dentro de un schedule
+      // 19:20-20:00) NO se marcan como "schedule" porque:
+      // 1. En desktop, el slot se renderiza como un bloque unificado con rowSpan
+      //    que cubre todas las filas intermedias (no necesita que cada fila
+      //    tenga su propia celda "schedule").
+      // 2. En mobile, si marcamos 19:20, 19:30 y 19:45 como "schedule",
+      //    se renderizan 3 slots amarillos separados en lugar de 1 solo.
+      //    El slot real es UNO: 19:20 a 20:00 (40 min).
+      // Por eso, solo retornamos "schedule" cuando normalizedTime coincide
+      // EXACTAMENTE con el startTime del schedule.
       const daySchedules = schedules.filter((s) => s.dayOfWeek === dayOfWeek);
       for (const sch of daySchedules) {
-        // Verificar si normalizedTime está dentro del rango [startTime, endTime)
-        // Esto es más robusto que allSlots.includes(normalizedTime) porque
-        // funciona con cualquier horario (incluso minutos no múltiplos de 15).
         const schStart = (sch.startTime || "").slice(0, 5);
-        const schEnd = (sch.endTime || "").slice(0, 5);
-        if (schStart && schEnd && normalizedTime >= schStart && normalizedTime < schEnd) {
+        // Solo marcar como "schedule" el startTime exacto
+        if (schStart && normalizedTime === schStart) {
           return "schedule";
         }
       }
