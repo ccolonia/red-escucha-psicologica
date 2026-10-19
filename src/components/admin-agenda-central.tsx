@@ -1955,34 +1955,14 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
     return null;
   }, [rawSchedules]);
 
-  // Verificar si el profesional tiene AL MENOS un slot en toda la semana
-  const hasAnySlot = Object.values(professional.weeklySlots).some(
-    (dayData) => dayData && (dayData.availableSlots.length > 0 || dayData.bookedSlots.length > 0)
-  );
-
-  if (!hasAnySlot) {
-    return (
-      <div className="py-12 text-center">
-        <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
-        <p className="text-teal-600 mt-2 text-sm">Este profesional no tiene horarios configurados para esta semana</p>
-      </div>
-    );
-  }
-
-  // === Grid template IDÉNTICO al profesional ===
-  // 60px hora + N × 1fr días = uniforme, mismo patrón que funciona en profesional
-  //
   // === MOBILE RESPONSIVE: visibleDays ===
   // REGLA DE ORO: en desktop (≥ md / isMobile=false) SIEMPRE se muestran
   // los 7 días de la semana completa (Lun-Dom) sin excepción.
-  // En mobile (< md / isMobile=true), visibleDays se calcula según mobileViewMode:
-  //   - "day"    → 1 día (el seleccionado en el carrusel)
-  //   - "3days"  → 3 días consecutivos empezando por el seleccionado
-  //   - "week"   → los 7 días (con scroll horizontal + sticky time column)
+  // En mobile (< md / isMobile=true), visibleDays se calcula según mobileViewMode.
   //
-  // El guard `!isMobile` al inicio del useMemo es CRÍTICO: sin él, el
-  // mobileViewMode por defecto ("3days") se aplicaría también en desktop,
-  // rompiendo la vista semanal de 7 días en pantallas grandes.
+  // ⚠️ CRÍTICO: Este useMemo DEBE estar ANTES de cualquier early return.
+  // Si se pone después de un `if (!hasAnySlot) return (...)`, React
+  // ejecuta menos hooks cuando hasAnySlot=false → Error #300.
   const visibleDays = React.useMemo(() => {
     // === DESKTOP GUARD: siempre 7 días en pantallas ≥ md ===
     if (!isMobile) return WEEK_DAYS;
@@ -2004,6 +1984,28 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
     }
     return slice;
   }, [isMobile, mobileViewMode, mobileSelectedDayIndex]);
+
+  // Verificar si el profesional tiene AL MENOS un slot en toda la semana
+  const hasAnySlot = Object.values(professional.weeklySlots).some(
+    (dayData) => dayData && (dayData.availableSlots.length > 0 || dayData.bookedSlots.length > 0)
+  );
+
+  // === Early return DESPUÉS de todos los hooks ===
+  // Si el profesional no tiene slots, mostrar mensaje y salir.
+  // Esto debe ir DESPUÉS de todos los useMemo/useCallback para no
+  // violar las Rules of Hooks de React (Error #300).
+  if (!hasAnySlot) {
+    return (
+      <div className="py-12 text-center">
+        <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
+        <p className="text-teal-600 mt-2 text-sm">Este profesional no tiene horarios configurados para esta semana</p>
+      </div>
+    );
+  }
+
+  // === Grid template IDÉNTICO al profesional ===
+  // 60px hora + N × 1fr días = uniforme, mismo patrón que funciona en profesional
+  //
 
   // === gridTemplateColumns dinámico: 60px + N × 1fr ===
   // N = visibleDays.length (1, 3, o 7 según el modo mobile)
@@ -2154,8 +2156,8 @@ function ExcelMatrix({ professional, weekDates, onSlotClick, onBookedSlotClick, 
                 const owningSchedule = getOwningSchedule(slotTime);
                 const slotDuration = owningSchedule?.slotDuration || 45;
 
-                const bookedSlot = dayData?.bookedSlots.find((s) => s.time === slotTime);
-                const freeSlot = dayData?.availableSlots.find((s) => s.time === slotTime);
+                const bookedSlot = dayData?.bookedSlots?.find((s) => s.time === slotTime);
+                const freeSlot = dayData?.availableSlots?.find((s) => s.time === slotTime);
                 const slotIsPast = dayData ? isSlotInPast(dayData.date, slotTime) : false;
 
                 if (bookedSlot && bookedSlot.status !== "blocked") {
