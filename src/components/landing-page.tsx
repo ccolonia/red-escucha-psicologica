@@ -484,7 +484,6 @@ export function LandingPage() {
     name: "",
     email: "",
     phone: "",
-    dni: "",
     message: "",
     reason: "",
     modality: "",
@@ -798,14 +797,6 @@ export function LandingPage() {
     }
 
     try {
-      // === Validar DNI ===
-      const dniRegex = /^\d{7,8}$/;
-      if (!dniRegex.test(contactForm.dni)) {
-        toast.error("El DNI debe tener entre 7 y 8 dígitos numéricos");
-        setContactSending(false);
-        return;
-      }
-
       // === Validar teléfono ===
       // El phone viene en formato E.164 (ej: "541168667898" para AR,
       // "51998465686" para PE). Validar que tenga al menos 8 dígitos
@@ -831,7 +822,7 @@ export function LandingPage() {
           password: Math.random().toString(36).slice(-10) + "A1!",
           role: "patient",
           // Campos extras para paciente + triage
-          dni: contactForm.dni,
+          // DNI se solicita más adelante en el flujo de coordinación
           notes: contactForm.message || null,
           enableTriage: true,
           modality: contactForm.modality || "presencial",
@@ -854,7 +845,7 @@ export function LandingPage() {
 
       if (prRes.ok) {
         setContactSent(true);
-        setContactForm({ name: "", email: "", phone: "", dni: "", message: "", reason: "", modality: "", consultReason: "", patientAge: "", guardianName: "" });
+        setContactForm({ name: "", email: "", phone: "", message: "", reason: "", modality: "", consultReason: "", patientAge: "", guardianName: "" });
         // Google Ads conversion
         if (typeof window !== "undefined" && typeof (window as unknown as Record<string, unknown>).gtag === "function") {
           (window as unknown as Record<string, unknown>).gtag("event", "conversion", {
@@ -2469,28 +2460,6 @@ export function LandingPage() {
                           />
                           <p className="text-xs text-forest-400" style={{ fontFamily: "Montserrat, sans-serif" }}>
                             Seleccioná el país y escribí tu número sin código de área internacional
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="contact-dni" className="text-forest-500 font-medium" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                            DNI <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            id="contact-dni"
-                            type="text"
-                            value={contactForm.dni}
-                            onChange={(e) => {
-                              // Sanitizar: solo permitir dígitos mientras el usuario escribe
-                              const cleaned = e.target.value.replace(/[^0-9]/g, "");
-                              setContactForm({ ...contactForm, dni: cleaned });
-                            }}
-                            placeholder="12345678"
-                            maxLength={8}
-                            inputMode="numeric"
-                            className="border-beige-300 bg-beige-100 focus:border-sage-300 focus:ring-sage-300/20"
-                          />
-                          <p className="text-xs text-forest-400" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                            7-8 dígitos (sin puntos ni guiones)
                           </p>
                         </div>
                       </div>
