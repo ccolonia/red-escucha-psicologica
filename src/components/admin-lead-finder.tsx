@@ -120,10 +120,26 @@ export function AdminLeadFinder() {
     setRadarError(null);
     setRadarResults([]);
     try {
+      // === Si ya tenemos coordenadas geocodificadas, pasarlas al backend ===
+      // Esto permite que el backend salte la geocodificación si ya la tenemos
+      // y use directamente las coordenadas para la búsqueda de lugares.
+      const payload: { query: string; location: string; radiusKm: number; preGeocoded?: { lat: number; lng: number; address: string } } = {
+        query: radarQuery,
+        location: radarLocation,
+        radiusKm: radarRadius,
+      };
+      if (radarGeocoded) {
+        payload.preGeocoded = {
+          lat: radarGeocoded.lat,
+          lng: radarGeocoded.lng,
+          address: radarGeocoded.address,
+        };
+      }
+
       const res = await fetch("/api/admin/lead-finder/radar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: radarQuery, location: radarLocation, radiusKm: radarRadius }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -133,9 +149,13 @@ export function AdminLeadFinder() {
       }
       setRadarResults(data.results || []);
       setRadarGeocoded(data.geocoded);
-      toast.success(`${data.count} resultados encontrados`);
+      if (data.count > 0) {
+        toast.success(`${data.count} resultados encontrados`);
+      } else {
+        toast.info("No se encontraron resultados en esta zona. Probá ampliando el radio a 20km o 30km.");
+      }
     } catch {
-      setRadarError("Error de conexión");
+      setRadarError("Error de conexión. Verificá tu internet e intentá de nuevo.");
     } finally {
       setRadarLoading(false);
     }
@@ -483,7 +503,12 @@ export function AdminLeadFinder() {
               <CardContent className="py-12 text-center">
                 <Radar className="w-10 h-10 text-purple-200 mx-auto mb-2" />
                 <p className="text-sm font-medium text-purple-700">Lanzá el radar para encontrar profesionales</p>
-                <p className="text-xs text-purple-500 mt-1">Ingresá una zona y un tipo de búsqueda para escanear Google Maps</p>
+                <p className="text-xs text-purple-500 mt-1">Ingresá una zona y un tipo de búsqueda para escanear Google Maps y OpenStreetMap</p>
+                {radarGeocoded && (
+                  <p className="text-xs text-purple-400 mt-2">
+                    📍 Zona geocodificada: {radarGeocoded.address} (lat: {radarGeocoded.lat.toFixed(4)}, lng: {radarGeocoded.lng.toFixed(4)})
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

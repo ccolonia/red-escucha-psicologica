@@ -131,38 +131,62 @@ async function searchPlacesWithGoogle(query: string, lat: number, lng: number, r
 
 async function searchPlacesWithNominatim(query: string, lat: number, lng: number, radiusMeters: number): Promise<PlaceResult[]> {
   try {
-    // Nominatim no soporta búsqueda por radio directamente, pero podemos
-    // hacer una búsqueda de texto con la query + la zona y filtrar por distancia
-    const searchQuery = `${query} cerca de ${lat},${lng}`;
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-      query
-    )}&format=json&limit=20&addressdetails=1&countrycodes=ar`;
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "REP-LeadFinder/1.0 (contacto@redescuchapsicologica.com)",
-        "Accept-Language": "es",
-      },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    if (!Array.isArray(data)) return [];
-
-    // Filtrar resultados por distancia al punto central
+    // Nominatim no soporta búsqueda por radio directamente.
+    // Estrategia: buscar la query como texto + filtrar por distancia con Haversine.
+    // Hacemos múltiples búsquedas con variaciones de la query para maximizar resultados.
     const radiusKm = radiusMeters / 1000;
-    return data
-      .filter((item: { lat: string; lon: string }) => {
-        const itemLat = parseFloat(item.lat);
-        const itemLng = parseFloat(item.lon);
-        const distance = haversineDistance(lat, lng, itemLat, itemLng);
-        return distance <= radiusKm;
-      })
-      .map((item: { place_id: string; display_name: string; lat: string; lon: string; type?: string; class?: string }) => ({
-        place_id: `osm_${item.place_id}`,
-        name: item.display_name?.split(",")[0] || "Sin nombre",
-        formatted_address: item.display_name || "",
-        geometry: { location: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) } },
-      }))
-      .slice(0, 20);
+    const searchVariations = [
+      query,                          // query original: "psicologos consultorios"
+      `psicologo ${query.split(" ")[0]}`, // variación 1: "psicologo psicologos"
+      `consultorio psicologico`,      // variación 2: término genérico
+      `psicologo`,                    // variación 3: término simple
+      `centro de salud mental`,       // variación 4: centros de salud
+    ];
+
+    const allResults: PlaceResult[] = [];
+    const seenPlaceIds = new Set<string>();
+
+    for (const searchQuery of searchVariations) {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+          searchQuery
+        )}&format=json&limit=20&addressdetails=1&countrycodes=ar`;
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "REP-LeadFinder/1.0 (contacto@redescuchapsicologica.com)",
+            "Accept-Language": "es",
+          },
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!Array.isArray(data)) continue;
+
+        for (const item of data) {
+          const placeId = `osm_${item.place_id}`;
+          if (seenPlaceIds.has(placeId)) continue; // evitar duplicados
+
+          const itemLat = parseFloat(item.lat);
+          const itemLng = parseFloat(item.lon);
+          if (isNaN(itemLat) || isNaN(itemLng)) continue;
+
+          // Filtrar por distancia
+          const distance = haversineDistance(lat, lng, itemLat, itemLng);
+          if (distance > radiusKm) continue;
+
+          seenPlaceIds.add(placeId);
+          allResults.push({
+            place_id: placeId,
+            name: item.display_name?.split(",")[0] || "Sin nombre",
+            formatted_address: item.display_name || "",
+            geometry: { location: { lat: itemLat, lng: itemLng } },
+          });
+        }
+      } catch {
+        // Silencioso: si una variación falla, continuar con la siguiente
+      }
+    }
+
+    return allResults.slice(0, 20);
   } catch {
     return [];
   }
@@ -188,7 +212,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     const body = await request.json();
-    const { query, location, radiusKm } = body;
+    const { query, location, radiusKm, preGeocoded } = body;
 
     if (!query || !location) {
       return NextResponse.json(
@@ -200,15 +224,20 @@ export async function POST(request: NextRequest) {
     const radiusMeters = Math.min(Math.max(Number(radiusKm) || 10, 1), 50) * 1000;
 
     // === 1. Geocoding con fallback automático ===
-    // Estrategia 1: Google Geocoding API (si hay API key)
-    // Estrategia 2: Nominatim / OpenStreetMap (gratis)
-    // Estrategia 3: Coordenadas default CABA (último recurso)
+    // Si el frontend ya geocodificó (preGeocoded), usar esas coordenadas directo.
+    // Si no, intentar: Google → Nominatim → Default CABA.
     let lat: number;
     let lng: number;
     let geocodedAddress: string;
     let geocodeSource: string;
 
-    if (apiKey) {
+    if (preGeocoded && typeof preGeocoded.lat === "number" && typeof preGeocoded.lng === "number") {
+      // === Usar coordenadas pre-geocodificadas del frontend ===
+      lat = preGeocoded.lat;
+      lng = preGeocoded.lng;
+      geocodedAddress = preGeocoded.address || location;
+      geocodeSource = "pre-geocoded";
+    } else if (apiKey) {
       const googleResult = await geocodeWithGoogle(location, apiKey);
       if (googleResult) {
         lat = googleResult.lat;
