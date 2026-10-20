@@ -142,9 +142,14 @@ export function AdminLeadFinder() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
+      // === Manejo graceful: nunca mostrar banner rojo ===
+      // Si el backend devuelve error, lo convertimos en un mensaje informativo
+      // en lugar de mostrar un bloque rojo bloqueante.
       if (!res.ok) {
-        setRadarError(data.error || "Error en la búsqueda");
-        if (data.hint) toast.error(data.error, { description: data.hint });
+        // Error del backend → mostrar como info, no como error rojo
+        setRadarResults([]);
+        setRadarError(null);
+        toast.info(data.message || data.error || "No se encontraron resultados. Probá con otra zona o ampliando el radio.");
         return;
       }
       setRadarResults(data.results || []);
@@ -152,10 +157,12 @@ export function AdminLeadFinder() {
       if (data.count > 0) {
         toast.success(`${data.count} resultados encontrados`);
       } else {
-        toast.info("No se encontraron resultados en esta zona. Probá ampliando el radio a 20km o 30km.");
+        toast.info(data.message || "No se encontraron consultorios en el radio seleccionado. Probá ampliando a 20km o 30km.");
       }
     } catch {
-      setRadarError("Error de conexión. Verificá tu internet e intentá de nuevo.");
+      setRadarResults([]);
+      setRadarError(null);
+      toast.error("Error de conexión. Verificá tu internet e intentá de nuevo.");
     } finally {
       setRadarLoading(false);
     }
@@ -412,23 +419,8 @@ export function AdminLeadFinder() {
             </CardContent>
           </Card>
 
-          {/* Error */}
-          {radarError && (
-            <Card className="border-red-200 bg-red-50 mb-4">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-red-700">{radarError}</p>
-                    <p className="text-xs text-red-500 mt-1">
-                      Si falta configurar GOOGLE_MAPS_API_KEY, agregala en Vercel → Settings → Environment Variables.
-                      La key debe tener habilitadas: Geocoding API + Places API.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* === Sin banner de error rojo — los errores se manejan con toast === */}
+
 
           {/* Resultados */}
           {radarLoading ? (
