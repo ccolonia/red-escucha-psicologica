@@ -305,11 +305,40 @@ export function AdminLeadFinder() {
     return true;
   });
 
+  // === Formatear teléfono argentino a formato WhatsApp (wa.me) ===
+  // Limpia el número y lo normaliza al formato internacional de Argentina:
+  //   011 3295-3803 → 5491132953803
+  //   +54 11 3295-3803 → 5491132953803
+  //   11 3295-3803 → 5491132953803
+  //   3295-3803 → 5491132953803 (asume 11 como código de área CABA/GBA)
+  function formatPhoneForWhatsApp(phone: string): string {
+    if (!phone) return "";
+    // Remover todo lo que no sea dígito
+    let cleaned = phone.replace(/[^0-9]/g, "");
+    if (!cleaned) return "";
+
+    // Si ya empieza con 549 (formato WhatsApp AR completo), dejar así
+    if (cleaned.startsWith("549")) {
+      return cleaned;
+    }
+    // Si empieza con 54 pero no con 549, agregar el 9 (celular)
+    if (cleaned.startsWith("54") && cleaned.length >= 12) {
+      return "549" + cleaned.substring(2);
+    }
+    // Si empieza con 0 (formato argentino: 011 3295 3803)
+    if (cleaned.startsWith("0")) {
+      cleaned = cleaned.substring(1); // quitar el 0 inicial → 1132953803
+    }
+    // Anteponer código de país + característica móvil Argentina: 549
+    return "549" + cleaned;
+  }
+
   // === WhatsApp corporativo ===
   const openWhatsApp = (phone: string, name: string) => {
-    const cleanPhone = phone.replace(/[^\d+]/g, "");
+    const waPhone = formatPhoneForWhatsApp(phone);
+    if (!waPhone) return;
     const msg = encodeURIComponent(`Hola ${name}, te escribimos de Red Escucha Psicológica. Vimos tu perfil profesional y estamos convocando profesionales para derivación de pacientes. ¿Te interesaría sumarte a la red?`);
-    window.open(`https://wa.me/${cleanPhone.replace(/^\+/, "")}?text=${msg}`, "_blank");
+    window.open(`https://wa.me/${waPhone}?text=${msg}`, "_blank");
   };
 
   // === Estadísticas rápidas ===
@@ -460,8 +489,14 @@ export function AdminLeadFinder() {
 
                     <div className="flex items-center gap-3 text-[10px] text-slate-600 mb-2 flex-wrap">
                       {place.formatted_phone_number && (
-                        <a href={`tel:${place.formatted_phone_number}`} className="flex items-center gap-1 hover:text-teal-600">
-                          <Phone className="w-3 h-3" /> {place.formatted_phone_number}
+                        <a
+                          href={`https://wa.me/${formatPhoneForWhatsApp(place.formatted_phone_number)}?text=${encodeURIComponent("Hola, te escribimos de Red Escucha Psicológica. Vimos tu perfil profesional y estamos convocando profesionales para derivación de pacientes. ¿Te interesaría sumarte?")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[#25D366] hover:text-[#1da851] font-medium transition-colors"
+                          title="Abrir chat de WhatsApp"
+                        >
+                          <MessageCircle className="w-3 h-3" /> {place.formatted_phone_number}
                         </a>
                       )}
                       {place.website && (
@@ -571,7 +606,15 @@ export function AdminLeadFinder() {
                                 </div>
                               )}
                               {p.phone && (
-                                <p className="text-[9px] text-slate-600 mb-1">📞 {p.phone}</p>
+                                <a
+                                  href={`https://wa.me/${formatPhoneForWhatsApp(p.phone)}?text=${encodeURIComponent(`Hola ${p.fullName}, te escribimos de Red Escucha Psicológica. Vimos tu perfil profesional y estamos convocando profesionales para derivación de pacientes. ¿Te interesaría sumarte a la red?`)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-[9px] text-[#25D366] hover:text-[#1da851] font-medium mb-1 transition-colors"
+                                  title="Abrir chat de WhatsApp"
+                                >
+                                  <MessageCircle className="w-3 h-3" /> {p.phone}
+                                </a>
                               )}
                               {p.notes && (
                                 <p className="text-[9px] text-slate-400 italic truncate mb-1">{p.notes}</p>
