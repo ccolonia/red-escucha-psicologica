@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, MapPin, UserPlus, Trash2, Edit3, Loader2, Zap, AlertCircle,
   Users, Star, Phone, Globe, ExternalLink, MessageCircle, Radar, ClipboardList,
-  X, Check, ChevronDown,
+  X, Check, ChevronDown, Copy,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
