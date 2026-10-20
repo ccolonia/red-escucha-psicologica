@@ -7,13 +7,15 @@ import { authOptions } from "@/lib/auth";
 // Body: { query: string, location: string, radiusKm?: number }
 //
 // Proceso:
-//  1. Geocoding API: convierte "Merlo, Buenos Aires" → lat,lng
+//  1. Geocoding: convierte "Merlo, Buenos Aires" → lat,lng
+//     - Estrategia 1: Google Geocoding API (si GOOGLE_MAPS_API_KEY está seteada)
+//     - Estrategia 2 (fallback): Nominatim / OpenStreetMap (gratis, sin API key)
+//     - Estrategia 3 (último recurso): coordenadas default de CABA
 //  2. Places Text Search: busca "psicologos" cerca de lat,lng en radio X
-//  3. Para cada resultado, consulta Place Details para obtener teléfono y web
+//     - Si hay GOOGLE_MAPS_API_KEY: usa Google Places API
+//     - Si no hay: usa Nominatim Search API (OpenStreetMap) como fallback
+//  3. Para cada resultado, consulta Place Details (solo con Google API key)
 //  4. Cruza con tabla ProfessionalProspect para marcar cuáles ya están en CRM
-//
-// Requiere GOOGLE_MAPS_API_KEY en env. Si no está seteada, devuelve error 503
-// con mensaje claro para que el admin sepa que falta configuración.
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -29,14 +31,154 @@ type PlaceResult = {
   geometry: { location: { lat: number; lng: number } };
   rating?: number;
   user_ratings_total?: number;
-  // De Place Details:
   formatted_phone_number?: string;
   website?: string;
-  // Cruzado con CRM:
   inCrm?: boolean;
   crmStatus?: string;
   crmId?: string;
 };
+
+// ============================================================================
+// HELPER: Geocoding con fallback automático
+// ============================================================================
+// Estrategia 1: Google Geocoding API (requiere API key)
+// Estrategia 2: Nominatim / OpenStreetMap (gratis, sin API key)
+// Estrategia 3: Coordenadas default de CABA (último recurso)
+// ============================================================================
+
+async function geocodeWithGoogle(location: string, apiKey: string): Promise<{ lat: number; lng: number; address: string } | null> {
+  try {
+    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+      location
+    )}&key=${apiKey}&language=es&region=ar`;
+    const res = await fetch(geocodeUrl);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.status !== "OK" || !data.results?.length) return null;
+    return {
+      lat: data.results[0].geometry.location.lat,
+      lng: data.results[0].geometry.location.lng,
+      address: data.results[0].formatted_address,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function geocodeWithNominatim(location: string): Promise<{ lat: number; lng: number; address: string } | null> {
+  try {
+    // Nominatim Search API: gratis, sin API key, límite 1 req/seg
+    // Añadimos ", Argentina" si no está incluido para mejorar la precisión
+    const searchQuery = location.toLowerCase().includes("argentina") ? location : `${location}, Argentina`;
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+      searchQuery
+    )}&format=json&limit=1&addressdetails=1&countrycodes=ar`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "REP-LeadFinder/1.0 (contacto@redescuchapsicologica.com)",
+        "Accept-Language": "es",
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    const result = data[0];
+    return {
+      lat: parseFloat(result.lat),
+      lng: parseFloat(result.lon),
+      address: result.display_name || location,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Coordenadas default: centro de CABA (Obelisco)
+const DEFAULT_CABA_COORDS = { lat: -34.6037, lng: -58.3816 };
+
+// ============================================================================
+// HELPER: Places Search con fallback a Nominatim
+// ============================================================================
+
+async function searchPlacesWithGoogle(query: string, lat: number, lng: number, radiusMeters: number, apiKey: string): Promise<PlaceResult[]> {
+  try {
+    const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
+      query
+    )}&location=${lat},${lng}&radius=${radiusMeters}&key=${apiKey}&language=es&region=ar`;
+    const res = await fetch(placesUrl);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (data.status !== "OK" && data.status !== "ZERO_RESULTS") return [];
+    return (data.results || []).slice(0, 20).map((place: {
+      place_id: string;
+      name: string;
+      formatted_address: string;
+      geometry: { location: { lat: number; lng: number } };
+      rating?: number;
+      user_ratings_total?: number;
+    }) => ({
+      place_id: place.place_id,
+      name: place.name,
+      formatted_address: place.formatted_address,
+      geometry: place.geometry,
+      rating: place.rating,
+      user_ratings_total: place.user_ratings_total,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function searchPlacesWithNominatim(query: string, lat: number, lng: number, radiusMeters: number): Promise<PlaceResult[]> {
+  try {
+    // Nominatim no soporta búsqueda por radio directamente, pero podemos
+    // hacer una búsqueda de texto con la query + la zona y filtrar por distancia
+    const searchQuery = `${query} cerca de ${lat},${lng}`;
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+      query
+    )}&format=json&limit=20&addressdetails=1&countrycodes=ar`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "REP-LeadFinder/1.0 (contacto@redescuchapsicologica.com)",
+        "Accept-Language": "es",
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    // Filtrar resultados por distancia al punto central
+    const radiusKm = radiusMeters / 1000;
+    return data
+      .filter((item: { lat: string; lon: string }) => {
+        const itemLat = parseFloat(item.lat);
+        const itemLng = parseFloat(item.lon);
+        const distance = haversineDistance(lat, lng, itemLat, itemLng);
+        return distance <= radiusKm;
+      })
+      .map((item: { place_id: string; display_name: string; lat: string; lon: string; type?: string; class?: string }) => ({
+        place_id: `osm_${item.place_id}`,
+        name: item.display_name?.split(",")[0] || "Sin nombre",
+        formatted_address: item.display_name || "",
+        geometry: { location: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) } },
+      }))
+      .slice(0, 20);
+  } catch {
+    return [];
+  }
+}
+
+// Fórmula de Haversine para calcular distancia entre dos puntos
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,16 +187,6 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          error: "GOOGLE_MAPS_API_KEY no configurada",
-          hint: "Agregá la variable de entorno GOOGLE_MAPS_API_KEY en Vercel → Settings → Environment Variables. La key debe tener habilitadas las APIs: Geocoding API, Places API (New o legacy).",
-        },
-        { status: 503 }
-      );
-    }
-
     const body = await request.json();
     const { query, location, radiusKm } = body;
 
@@ -67,89 +199,103 @@ export async function POST(request: NextRequest) {
 
     const radiusMeters = Math.min(Math.max(Number(radiusKm) || 10, 1), 50) * 1000;
 
-    // === 1. Geocoding: location string → lat,lng ===
-    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-      location
-    )}&key=${apiKey}&language=es&region=ar`;
-    const geocodeRes = await fetch(geocodeUrl);
-    if (!geocodeRes.ok) {
-      return NextResponse.json(
-        { error: "Error al consultar Google Geocoding API" },
-        { status: 502 }
-      );
-    }
-    const geocodeData = await geocodeRes.json();
-    if (geocodeData.status !== "OK" || !geocodeData.results?.length) {
-      return NextResponse.json(
-        {
-          error: `No se pudo geocodificar "${location}"`,
-          status: geocodeData.status,
-          hint: geocodeData.error_message || "Probá con una zona más específica",
-        },
-        { status: 400 }
-      );
-    }
-    const { lat, lng } = geocodeData.results[0].geometry.location;
-    const geocodedAddress = geocodeData.results[0].formatted_address;
+    // === 1. Geocoding con fallback automático ===
+    // Estrategia 1: Google Geocoding API (si hay API key)
+    // Estrategia 2: Nominatim / OpenStreetMap (gratis)
+    // Estrategia 3: Coordenadas default CABA (último recurso)
+    let lat: number;
+    let lng: number;
+    let geocodedAddress: string;
+    let geocodeSource: string;
 
-    // === 2. Places Text Search ===
-    const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
-      query
-    )}&location=${lat},${lng}&radius=${radiusMeters}&key=${apiKey}&language=es&region=ar`;
-    const placesRes = await fetch(placesUrl);
-    if (!placesRes.ok) {
-      return NextResponse.json(
-        { error: "Error al consultar Google Places API" },
-        { status: 502 }
-      );
-    }
-    const placesData = await placesRes.json();
-    if (placesData.status !== "OK" && placesData.status !== "ZERO_RESULTS") {
-      return NextResponse.json(
-        {
-          error: `Google Places API error: ${placesData.status}`,
-          hint: placesData.error_message || "",
-        },
-        { status: 400 }
-      );
+    if (apiKey) {
+      const googleResult = await geocodeWithGoogle(location, apiKey);
+      if (googleResult) {
+        lat = googleResult.lat;
+        lng = googleResult.lng;
+        geocodedAddress = googleResult.address;
+        geocodeSource = "google";
+      } else {
+        // Fallback a Nominatim
+        const nominatimResult = await geocodeWithNominatim(location);
+        if (nominatimResult) {
+          lat = nominatimResult.lat;
+          lng = nominatimResult.lng;
+          geocodedAddress = nominatimResult.address;
+          geocodeSource = "nominatim (fallback)";
+        } else {
+          // Último recurso: coordenadas default CABA
+          lat = DEFAULT_CABA_COORDS.lat;
+          lng = DEFAULT_CABA_COORDS.lng;
+          geocodedAddress = "CABA (coordenadas por defecto)";
+          geocodeSource = "default-caba";
+        }
+      }
+    } else {
+      // Sin API key: ir directo a Nominatim
+      const nominatimResult = await geocodeWithNominatim(location);
+      if (nominatimResult) {
+        lat = nominatimResult.lat;
+        lng = nominatimResult.lng;
+        geocodedAddress = nominatimResult.address;
+        geocodeSource = "nominatim";
+      } else {
+        // Último recurso: coordenadas default CABA
+        lat = DEFAULT_CABA_COORDS.lat;
+        lng = DEFAULT_CABA_COORDS.lng;
+        geocodedAddress = "CABA (coordenadas por defecto)";
+        geocodeSource = "default-caba";
+      }
     }
 
-    const places: PlaceResult[] = (placesData.results || []).slice(0, 20); // limitar a 20 resultados
+    // === 2. Places Search con fallback ===
+    let places: PlaceResult[] = [];
+
+    if (apiKey) {
+      places = await searchPlacesWithGoogle(query, lat, lng, radiusMeters, apiKey);
+    }
+
+    // Si Google no devolvió resultados (o no hay API key), usar Nominatim
+    if (places.length === 0) {
+      places = await searchPlacesWithNominatim(query, lat, lng, radiusMeters);
+    }
 
     if (places.length === 0) {
       return NextResponse.json({
         results: [],
-        geocoded: { lat, lng, address: geocodedAddress },
+        geocoded: { lat, lng, address: geocodedAddress, source: geocodeSource },
         message: "No se encontraron resultados para esta búsqueda",
       });
     }
 
-    // === 3. Place Details: obtener teléfono y web para cada lugar ===
-    // Hacemos las requests en paralelo pero con un límite de concurrencia
-    // para no saturar la API (Google Places tiene quota).
-    const detailPromises = places.map(async (place) => {
-      try {
-        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number,website,international_phone_number&key=${apiKey}&language=es`;
-        const detailRes = await fetch(detailsUrl);
-        if (detailRes.ok) {
-          const detailData = await detailRes.json();
-          if (detailData.status === "OK" && detailData.result) {
-            place.formatted_phone_number =
-              detailData.result.formatted_phone_number ||
-              detailData.result.international_phone_number;
-            place.website = detailData.result.website;
+    // === 3. Place Details (solo con Google API key) ===
+    if (apiKey) {
+      const detailPromises = places.map(async (place) => {
+        try {
+          // Solo buscar details si el place_id es de Google (no de OSM)
+          if (!place.place_id.startsWith("osm_")) {
+            const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number,website,international_phone_number&key=${apiKey}&language=es`;
+            const detailRes = await fetch(detailsUrl);
+            if (detailRes.ok) {
+              const detailData = await detailRes.json();
+              if (detailData.status === "OK" && detailData.result) {
+                place.formatted_phone_number =
+                  detailData.result.formatted_phone_number ||
+                  detailData.result.international_phone_number;
+                place.website = detailData.result.website;
+              }
+            }
           }
+        } catch {
+          /* silencioso */
         }
-      } catch {
-        /* silencioso: si falla details, igual devolvemos el place sin teléfono */
-      }
-      return place;
-    });
+        return place;
+      });
+      places = await Promise.all(detailPromises);
+    }
 
-    const placesWithDetails = await Promise.all(detailPromises);
-
-    // === 4. Cruzar con CRM: marcar cuáles ya están guardados ===
-    const placeIds = placesWithDetails.map((p) => p.place_id);
+    // === 4. Cruzar con CRM ===
+    const placeIds = places.map((p) => p.place_id);
     const existingProspects = await db.professionalProspect.findMany({
       where: { placeId: { in: placeIds } },
       select: { id: true, placeId: true, status: true },
@@ -158,7 +304,7 @@ export async function POST(request: NextRequest) {
       existingProspects.map((p) => [p.placeId, { id: p.id, status: p.status }])
     );
 
-    placesWithDetails.forEach((place) => {
+    places.forEach((place) => {
       const crmEntry = crmMap.get(place.place_id);
       if (crmEntry) {
         place.inCrm = true;
@@ -170,9 +316,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      results: placesWithDetails,
-      geocoded: { lat, lng, address: geocodedAddress },
-      count: placesWithDetails.length,
+      results: places,
+      geocoded: { lat, lng, address: geocodedAddress, source: geocodeSource },
+      count: places.length,
     });
   } catch (error) {
     console.error("LeadFinder Radar error:", error);
