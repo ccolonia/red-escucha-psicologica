@@ -119,34 +119,27 @@ export function AdminLeadFinder() {
     setRadarLoading(true);
     setRadarError(null);
     setRadarResults([]);
+    // === CRÍTICO: Limpiar coordenadas previas antes de buscar ===
+    // Esto fuerza al backend a re-geocodificar la zona actual del input.
+    // Si no limpiamos, el backend reutiliza coordenadas de una búsqueda anterior.
+    setRadarGeocoded(null);
     try {
-      // === Si ya tenemos coordenadas geocodificadas, pasarlas al backend ===
-      // Esto permite que el backend salte la geocodificación si ya la tenemos
-      // y use directamente las coordenadas para la búsqueda de lugares.
-      const payload: { query: string; location: string; radiusKm: number; preGeocoded?: { lat: number; lng: number; address: string } } = {
-        query: radarQuery,
-        location: radarLocation,
-        radiusKm: radarRadius,
-      };
-      if (radarGeocoded) {
-        payload.preGeocoded = {
-          lat: radarGeocoded.lat,
-          lng: radarGeocoded.lng,
-          address: radarGeocoded.address,
-        };
-      }
-
+      // === NO pasar preGeocoded — el backend debe re-geocodificar siempre ===
+      // La zona del input puede haber cambiado y las coordenadas previas
+      // ya no son válidas. El backend recibe el texto de la zona y la
+      // geocodifica fresca cada vez.
       const res = await fetch("/api/admin/lead-finder/radar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          query: radarQuery,
+          location: radarLocation,
+          radiusKm: radarRadius,
+        }),
       });
       const data = await res.json();
       // === Manejo graceful: nunca mostrar banner rojo ===
-      // Si el backend devuelve error, lo convertimos en un mensaje informativo
-      // en lugar de mostrar un bloque rojo bloqueante.
       if (!res.ok) {
-        // Error del backend → mostrar como info, no como error rojo
         setRadarResults([]);
         setRadarError(null);
         toast.info(data.message || data.error || "No se encontraron resultados. Probá con otra zona o ampliando el radio.");
@@ -393,7 +386,14 @@ export function AdminLeadFinder() {
                 </div>
                 <div>
                   <Label className="text-xs text-purple-600">Zona / Localidad</Label>
-                  <Input value={radarLocation} onChange={e => setRadarLocation(e.target.value)} placeholder="Merlo, Buenos Aires" className="h-9 text-sm border-purple-200" />
+                  <Input value={radarLocation} onChange={e => {
+                    setRadarLocation(e.target.value);
+                    // === CRÍTICO: Limpiar coordenadas previas al cambiar la zona ===
+                    // Si el usuario tipea una nueva zona, las coordenadas viejas
+                    // ya no son válidas. Al limpiar radarGeocoded, la próxima
+                    // búsqueda forzará al backend a re-geocodificar la nueva zona.
+                    setRadarGeocoded(null);
+                  }} placeholder="Merlo, Buenos Aires" className="h-9 text-sm border-purple-200" />
                 </div>
                 <div>
                   <Label className="text-xs text-purple-600">Radio</Label>

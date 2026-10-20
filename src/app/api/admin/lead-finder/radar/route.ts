@@ -251,21 +251,33 @@ export async function POST(request: NextRequest) {
     }
 
     // === 2. PLACES SEARCH — Google como motor principal ===
+    // Combinar query + zona para mejor precisión: "psicologos en Moreno, Buenos Aires"
+    const combinedQuery = `${query} en ${location}`;
     let places: PlaceResult[] = [];
     const seenPlaceIds = new Set<string>();
 
     if (apiKey) {
-      // Estrategia 1: Google Text Search (busca por texto: "psicologos")
-      console.log("[Radar] Intentando Google Text Search...");
-      const textResults = await searchPlacesWithGoogleTextSearch(query, lat, lng, radiusMeters, apiKey);
+      // Estrategia 1: Google Text Search con query combinada (zona incluida)
+      console.log(`[Radar] Google Text Search: "${combinedQuery}" @ ${lat},${lng} r=${radiusMeters}m`);
+      const textResults = await searchPlacesWithGoogleTextSearch(combinedQuery, lat, lng, radiusMeters, apiKey);
       for (const p of textResults) {
         if (!seenPlaceIds.has(p.place_id)) { seenPlaceIds.add(p.place_id); places.push(p); }
       }
       console.log(`[Radar] Text Search: ${textResults.length} resultados`);
 
-      // Estrategia 2: Google Nearby Search (busca tipo "health" + keyword "psicologo")
+      // Estrategia 1b: También buscar con la query original sin zona (más amplia)
       if (places.length < 10) {
-        console.log("[Radar] Intentando Google Nearby Search...");
+        console.log(`[Radar] Google Text Search (query original): "${query}"`);
+        const textResults2 = await searchPlacesWithGoogleTextSearch(query, lat, lng, radiusMeters, apiKey);
+        for (const p of textResults2) {
+          if (!seenPlaceIds.has(p.place_id)) { seenPlaceIds.add(p.place_id); places.push(p); }
+        }
+        console.log(`[Radar] Text Search (original): ${textResults2.length} resultados adicionales`);
+      }
+
+      // Estrategia 2: Google Nearby Search (tipo "health" + keyword "psicologo")
+      if (places.length < 10) {
+        console.log("[Radar] Google Nearby Search...");
         const nearbyResults = await searchPlacesWithGoogleNearby(lat, lng, radiusMeters, apiKey);
         for (const p of nearbyResults) {
           if (!seenPlaceIds.has(p.place_id)) { seenPlaceIds.add(p.place_id); places.push(p); }
