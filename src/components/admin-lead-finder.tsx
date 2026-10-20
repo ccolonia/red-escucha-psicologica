@@ -83,6 +83,9 @@ export function AdminLeadFinder() {
   const [radarError, setRadarError] = useState<string | null>(null);
   const [radarGeocoded, setRadarGeocoded] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [savingPlaceId, setSavingPlaceId] = useState<string | null>(null);
+  // === Categoría activa del radar ===
+  // Controla qué plantilla de mensaje WhatsApp se usa al contactar prospectos
+  const [radarCategory, setRadarCategory] = useState<string>("profesionales");
 
   // === CRM state ===
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -306,38 +309,112 @@ export function AdminLeadFinder() {
   });
 
   // === Formatear teléfono argentino a formato WhatsApp (wa.me) ===
-  // Limpia el número y lo normaliza al formato internacional de Argentina:
-  //   011 3295-3803 → 5491132953803
-  //   +54 11 3295-3803 → 5491132953803
-  //   11 3295-3803 → 5491132953803
-  //   3295-3803 → 5491132953803 (asume 11 como código de área CABA/GBA)
   function formatPhoneForWhatsApp(phone: string): string {
     if (!phone) return "";
-    // Remover todo lo que no sea dígito
     let cleaned = phone.replace(/[^0-9]/g, "");
     if (!cleaned) return "";
-
-    // Si ya empieza con 549 (formato WhatsApp AR completo), dejar así
-    if (cleaned.startsWith("549")) {
-      return cleaned;
-    }
-    // Si empieza con 54 pero no con 549, agregar el 9 (celular)
-    if (cleaned.startsWith("54") && cleaned.length >= 12) {
-      return "549" + cleaned.substring(2);
-    }
-    // Si empieza con 0 (formato argentino: 011 3295 3803)
-    if (cleaned.startsWith("0")) {
-      cleaned = cleaned.substring(1); // quitar el 0 inicial → 1132953803
-    }
-    // Anteponer código de país + característica móvil Argentina: 549
+    if (cleaned.startsWith("549")) return cleaned;
+    if (cleaned.startsWith("54") && cleaned.length >= 12) return "549" + cleaned.substring(2);
+    if (cleaned.startsWith("0")) cleaned = cleaned.substring(1);
     return "549" + cleaned;
   }
 
-  // === WhatsApp corporativo ===
+  // === Categorías de búsqueda rápida ===
+  // Cada categoría define: query predefinida, ícono, color, y plantilla de mensaje WhatsApp
+  const RADAR_CATEGORIES = [
+    {
+      id: "profesionales",
+      label: "Psicólogos / Consultorios",
+      icon: "🧠",
+      color: "bg-purple-100 border-purple-300 text-purple-700 hover:bg-purple-200",
+      query: "psicologos consultorios",
+      whatsappMsg: (name: string) => `Hola ${name ? name + ", t" : "T"}e escribimos de Red Escucha Psicológica. Vimos tu perfil profesional y estamos convocando profesionales para derivación de pacientes. ¿Te interesaría sumarte a la red?`,
+    },
+    {
+      id: "colegios",
+      label: "Colegios y Escuelas",
+      icon: "🏫",
+      color: "bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200",
+      query: "colegios escuelas",
+      whatsappMsg: (name: string) => `Hola${name ? " " + name : ""}, nos contactamos de Red Escucha Psicológica para ofrecer un canal de derivación rápida y convenios de atención psicológica para estudiantes y familias de su comunidad educativa. ¿Les interesaría conocer nuestra propuesta?`,
+    },
+    {
+      id: "clinicas",
+      label: "Clínicas y Pediatría",
+      icon: "🩺",
+      color: "bg-emerald-100 border-emerald-300 text-emerald-700 hover:bg-emerald-200",
+      query: "clinicas medicas pediatria centro de salud",
+      whatsappMsg: (name: string) => `Hola${name ? " " + name : ""}, nos contactamos de Red Escucha Psicológica. Ofrecemos un canal de derivación de pacientes para acompañamiento psicológico desde su centro médico. ¿Les interesaría establecer un convenio de derivación?`,
+    },
+    {
+      id: "empresas",
+      label: "Empresas / RRHH",
+      icon: "🏢",
+      color: "bg-amber-100 border-amber-300 text-amber-700 hover:bg-amber-200",
+      query: "empresas rrhh recursos humanos",
+      whatsappMsg: (name: string) => `Hola${name ? " " + name : ""}, nos contactamos de Red Escucha Psicológica para ofrecer programas de bienestar emocional corporativo y atención psicológica para su equipo. ¿Les interesaría un convenio empresarial?`,
+    },
+  ];
+
+  // === Helper: obtener mensaje WhatsApp según categoría activa ===
+  function getWhatsAppMessage(name: string): string {
+    const cat = RADAR_CATEGORIES.find((c) => c.id === radarCategory);
+    if (cat) return cat.whatsappMsg(name);
+    return RADAR_CATEGORIES[0].whatsappMsg(name);
+  }
+
+  // === Handler: seleccionar categoría y lanzar radar automáticamente ===
+  const handleSelectCategory = (catId: string) => {
+    const cat = RADAR_CATEGORIES.find((c) => c.id === catId);
+    if (!cat) return;
+    setRadarCategory(catId);
+    setRadarQuery(cat.query);
+    // Auto-lanzar el radar con la nueva query (si hay zona cargada)
+    if (radarLocation.trim()) {
+      // Usar setTimeout para asegurar que el state se actualice antes de buscar
+      setTimeout(() => handleRadarSearchWithQuery(cat.query), 50);
+    }
+  };
+
+  // === handleRadarSearch variante que acepta query personalizada ===
+  const handleRadarSearchWithQuery = async (customQuery: string) => {
+    if (!customQuery.trim() || !radarLocation.trim()) {
+      toast.error("Completá búsqueda y zona");
+      return;
+    }
+    setRadarLoading(true);
+    setRadarError(null);
+    setRadarResults([]);
+    setRadarGeocoded(null);
+    try {
+      const res = await fetch("/api/admin/lead-finder/radar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: customQuery, location: radarLocation, radiusKm: radarRadius }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRadarResults([]);
+        toast.info(data.message || data.error || "No se encontraron resultados.");
+        return;
+      }
+      setRadarResults(data.results || []);
+      setRadarGeocoded(data.geocoded);
+      if (data.count > 0) toast.success(`${data.count} resultados encontrados`);
+      else toast.info(data.message || "No se encontraron consultorios. Probá ampliando el radio.");
+    } catch {
+      setRadarResults([]);
+      toast.error("Error de conexión.");
+    } finally {
+      setRadarLoading(false);
+    }
+  };
+
+  // === WhatsApp: usar mensaje según categoría ===
   const openWhatsApp = (phone: string, name: string) => {
     const waPhone = formatPhoneForWhatsApp(phone);
     if (!waPhone) return;
-    const msg = encodeURIComponent(`Hola ${name}, te escribimos de Red Escucha Psicológica. Vimos tu perfil profesional y estamos convocando profesionales para derivación de pacientes. ¿Te interesaría sumarte a la red?`);
+    const msg = encodeURIComponent(getWhatsAppMessage(name));
     window.open(`https://wa.me/${waPhone}?text=${msg}`, "_blank");
   };
 
@@ -448,6 +525,28 @@ export function AdminLeadFinder() {
             </CardContent>
           </Card>
 
+          {/* === BÚSQUEDA RÁPIDA POR CATEGORÍA ===
+              Botones de acceso directo que auto-pueblan el campo de búsqueda
+              y lanzan el radar en la zona activa.
+              Cada categoría tiene su propia plantilla de mensaje WhatsApp. */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {RADAR_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleSelectCategory(cat.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+                  radarCategory === cat.id
+                    ? cat.color + " ring-2 ring-offset-1 ring-purple-300"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+                title={`Buscar ${cat.label} en ${radarLocation}`}
+              >
+                <span className="text-base">{cat.icon}</span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+
           {/* === Sin banner de error rojo — los errores se manejan con toast === */}
 
 
@@ -490,7 +589,7 @@ export function AdminLeadFinder() {
                     <div className="flex items-center gap-3 text-[10px] text-slate-600 mb-2 flex-wrap">
                       {place.formatted_phone_number && (
                         <a
-                          href={`https://wa.me/${formatPhoneForWhatsApp(place.formatted_phone_number)}?text=${encodeURIComponent("Hola, te escribimos de Red Escucha Psicológica. Vimos tu perfil profesional y estamos convocando profesionales para derivación de pacientes. ¿Te interesaría sumarte?")}`}
+                          href={`https://wa.me/${formatPhoneForWhatsApp(place.formatted_phone_number)}?text=${encodeURIComponent(getWhatsAppMessage(place.name))}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-[#25D366] hover:text-[#1da851] font-medium transition-colors"
@@ -607,7 +706,7 @@ export function AdminLeadFinder() {
                               )}
                               {p.phone && (
                                 <a
-                                  href={`https://wa.me/${formatPhoneForWhatsApp(p.phone)}?text=${encodeURIComponent(`Hola ${p.fullName}, te escribimos de Red Escucha Psicológica. Vimos tu perfil profesional y estamos convocando profesionales para derivación de pacientes. ¿Te interesaría sumarte a la red?`)}`}
+                                  href={`https://wa.me/${formatPhoneForWhatsApp(p.phone)}?text=${encodeURIComponent(getWhatsAppMessage(p.fullName))}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex items-center gap-1 text-[9px] text-[#25D366] hover:text-[#1da851] font-medium mb-1 transition-colors"
