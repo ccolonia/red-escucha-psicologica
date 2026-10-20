@@ -586,17 +586,44 @@ export function AdminLeadFinder() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-3 text-[10px] text-slate-600 mb-2 flex-wrap">
+                    <div className="flex items-center gap-2 text-[10px] text-slate-600 mb-2 flex-wrap">
                       {place.formatted_phone_number && (
-                        <a
-                          href={`https://wa.me/${formatPhoneForWhatsApp(place.formatted_phone_number)}?text=${encodeURIComponent(getWhatsAppMessage(place.name))}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[#25D366] hover:text-[#1da851] font-medium transition-colors"
-                          title="Abrir chat de WhatsApp"
-                        >
-                          <MessageCircle className="w-3 h-3" /> {place.formatted_phone_number}
-                        </a>
+                        <>
+                          {/* Teléfono en texto (clickeable para copiar) */}
+                          <span className="text-slate-600 font-medium">{place.formatted_phone_number}</span>
+                          {/* 📞 Llamar por teléfono (tel:) — ideal para líneas fijas */}
+                          <a
+                            href={`tel:${place.formatted_phone_number.replace(/[^0-9+]/g, "")}`}
+                            className="flex items-center gap-0.5 text-teal-600 hover:text-teal-700 transition-colors"
+                            title="Llamar por teléfono"
+                          >
+                            <Phone className="w-3 h-3" />
+                          </a>
+                          {/* 💬 WhatsApp (wa.me) — funciona si tiene WhatsApp Business */}
+                          <a
+                            href={`https://wa.me/${formatPhoneForWhatsApp(place.formatted_phone_number)}?text=${encodeURIComponent(getWhatsAppMessage(place.name))}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-0.5 text-[#25D366] hover:text-[#1da851] transition-colors"
+                            title="Abrir chat de WhatsApp"
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                          </a>
+                          {/* 📋 Copiar número al portapapeles */}
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(place.formatted_phone_number).then(() => {
+                                toast.success("Número copiado al portapapeles");
+                              }).catch(() => {
+                                toast.error("No se pudo copiar");
+                              });
+                            }}
+                            className="flex items-center gap-0.5 text-slate-400 hover:text-slate-600 transition-colors"
+                            title="Copiar número"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </>
                       )}
                       {place.website && (
                         <a href={place.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-teal-600 truncate max-w-[150px]">
@@ -705,15 +732,41 @@ export function AdminLeadFinder() {
                                 </div>
                               )}
                               {p.phone && (
-                                <a
-                                  href={`https://wa.me/${formatPhoneForWhatsApp(p.phone)}?text=${encodeURIComponent(getWhatsAppMessage(p.fullName))}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-[9px] text-[#25D366] hover:text-[#1da851] font-medium mb-1 transition-colors"
-                                  title="Abrir chat de WhatsApp"
-                                >
-                                  <MessageCircle className="w-3 h-3" /> {p.phone}
-                                </a>
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="text-[9px] text-slate-600 font-medium">{p.phone}</span>
+                                  {/* 📞 Llamar */}
+                                  <a
+                                    href={`tel:${p.phone.replace(/[^0-9+]/g, "")}`}
+                                    className="text-teal-500 hover:text-teal-700 transition-colors"
+                                    title="Llamar por teléfono"
+                                  >
+                                    <Phone className="w-3 h-3" />
+                                  </a>
+                                  {/* 💬 WhatsApp */}
+                                  <a
+                                    href={`https://wa.me/${formatPhoneForWhatsApp(p.phone)}?text=${encodeURIComponent(getWhatsAppMessage(p.fullName))}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[#25D366] hover:text-[#1da851] transition-colors"
+                                    title="Abrir chat de WhatsApp"
+                                  >
+                                    <MessageCircle className="w-3 h-3" />
+                                  </a>
+                                  {/* 📋 Copiar */}
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(p.phone).then(() => {
+                                        toast.success("Número copiado");
+                                      }).catch(() => {
+                                        toast.error("No se pudo copiar");
+                                      });
+                                    }}
+                                    className="text-slate-300 hover:text-slate-500 transition-colors"
+                                    title="Copiar número"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
                               )}
                               {p.notes && (
                                 <p className="text-[9px] text-slate-400 italic truncate mb-1">{p.notes}</p>
