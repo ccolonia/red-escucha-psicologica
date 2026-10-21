@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProfessionalSearchSelect } from "@/components/professional-search-select";
 import { toast } from "sonner";
+import { exportPatientFeesToExcel, exportProfessionalDirectoryToExcel } from "@/lib/export-admin-reports";
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -209,6 +210,82 @@ export function AdminPlanilla() {
 
   const profName = professionals.find((p) => p.id === selectedProfId)?.user.name || "";
 
+  // === Exportar Reporte Honorarios Pacientes (.xlsx) ===
+  const handleExportPatientFees = async () => {
+    try {
+      // Recolectar datos de todas las planillas del profesional seleccionado (o todas si no hay)
+      const sheetsToExport = selectedProfId
+        ? sheets.filter((s) => s.professionalId === selectedProfId)
+        : sheets;
+
+      if (sheetsToExport.length === 0) {
+        toast.error("No hay planillas para exportar");
+        return;
+      }
+
+      // Construir filas matriciales a partir de las sesiones
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rows: any[] = [];
+      for (const sheet of sheetsToExport) {
+        for (const session of sheet.sessions) {
+          const monthIdx = new Date(session.date + "T12:00:00").getMonth();
+          rows.push({
+            patientName: session.patientName || "—",
+            startDate: session.treatmentStartDate || "",
+            frequency: session.frequency || "",
+            approxMonth: MONTHS[monthIdx] || "",
+            percentage: 0.3,
+            previousAmount: 0,
+            previousMonthLabel: "",
+            monthlyFees: Array(12).fill(null).map((_, i) => i === monthIdx ? (session.patientFee || 0) : null),
+          });
+        }
+      }
+
+      await exportPatientFeesToExcel(rows, selectedYear);
+      toast.success("Reporte de Honorarios descargado");
+    } catch (err) {
+      console.error("[AdminPlanilla] Error exportando honorarios:", err);
+      toast.error("No se pudo generar el reporte de honorarios");
+    }
+  };
+
+  // === Exportar Directorio de Profesionales (.xlsx) ===
+  const handleExportDirectory = async () => {
+    try {
+      if (professionals.length === 0) {
+        toast.error("No hay profesionales para exportar");
+        return;
+      }
+
+      const dirRows = professionals.map((p) => {
+        let zones: string[] = [];
+        try { zones = p.zones ? JSON.parse(p.zones) : []; } catch { zones = []; }
+        return {
+          id: p.id,
+          name: p.user.name,
+          title: p.title || "",
+          license: p.license,
+          specialty: p.specialty,
+          onlineAttention: p.onlineAttention,
+          presentialAttention: p.presentialAttention,
+          homeAttention: p.homeAttention,
+          zones,
+          officeAddress: p.officeAddress || "",
+          phone: p.user.phone || "",
+          email: p.user.email || "",
+          active: p.user.active,
+        };
+      });
+
+      await exportProfessionalDirectoryToExcel(dirRows);
+      toast.success("Directorio de Profesionales descargado");
+    } catch (err) {
+      console.error("[AdminPlanilla] Error exportando directorio:", err);
+      toast.error("No se pudo generar el directorio");
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -231,7 +308,7 @@ export function AdminPlanilla() {
             Vista administrador — seleccioná un profesional para ver/descargar sus planillas
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {currentSheet && (
             <Button
               variant="outline"
@@ -250,6 +327,29 @@ export function AdminPlanilla() {
             >
               <Download className="mr-2 w-4 h-4" />
               Descargar Todo
+            </Button>
+          )}
+          {/* === NUEVOS REPORTES EXCEL === */}
+          {sheets.length > 0 && (
+            <Button
+              variant="outline"
+              className="border-purple-200 text-purple-600"
+              onClick={handleExportPatientFees}
+              title="Exportar matríz de honorarios por mes en formato Excel"
+            >
+              <FileSpreadsheet className="mr-2 w-4 h-4" />
+              Honorarios Pacientes
+            </Button>
+          )}
+          {professionals.length > 0 && (
+            <Button
+              variant="outline"
+              className="border-blue-200 text-blue-600"
+              onClick={handleExportDirectory}
+              title="Exportar directorio de profesionales con zonas y direcciones"
+            >
+              <FileSpreadsheet className="mr-2 w-4 h-4" />
+              Directorio Profesionales
             </Button>
           )}
         </div>
