@@ -330,7 +330,7 @@ export function AdminPlanilla() {
             </Button>
           )}
           {/* === NUEVOS REPORTES EXCEL === */}
-          {sheets.length > 0 && (
+          {professionals.length > 0 && (
             <Button
               variant="outline"
               className="border-purple-200 text-purple-600"
