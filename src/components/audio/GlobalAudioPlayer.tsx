@@ -41,102 +41,25 @@ export function GlobalAudioPlayer({
 }: GlobalAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasStartedOnce, setHasStartedOnce] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const [audioReady, setAudioReady] = useState(false);
 
   // ========================================================================
-  // 1. Inicialización: autoplay + listeners de interacción
+  // 1. Inicialización: NO autoplay — solo setear volumen
   // ========================================================================
+  // La música NUNCA se reproduce automáticamente al cargar la página.
+  // El usuario debe hacer clic explícito en el botón Play para iniciar.
+  // Esto cumple con las políticas de autoplay de los navegadores y
+  // mejora la UX (no sorprende al usuario con música inesperada).
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
     audio.volume = volume;
-
-    const tryAutoPlay = async () => {
-      try {
-        await audio.play();
-        setIsPlaying(true);
-        setHasStartedOnce(true);
-      } catch (err) {
-        // NotAllowedError → el navegador bloquea autoplay hasta interacción
-        // Capturamos silenciosamente y registramos listeners de interacción.
-        if (err instanceof DOMException && err.name === "NotAllowedError") {
-          // No logueamos nada para no ensuciar la consola del usuario
-          registerInteractionListeners();
-        } else {
-          // Otros errores (AbortError por navigation, etc.) — ignoramos silenciosos
-        }
-      }
-    };
-
-    // Pequeño delay para asegurar que el metadata esté cargado
-    if (audio.readyState >= 1) {
-      tryAutoPlay();
-    } else {
-      audio.addEventListener("canplay", tryAutoPlay, { once: true });
-    }
-
-    setAudioReady(true);
-
-    return () => {
-      audio.removeEventListener("canplay", tryAutoPlay);
-      // Limpieza de listeners globales al desmontar (no debería pasar
-      // porque está en layout.tsx, pero por seguridad lo dejamos)
-      cleanupInteractionListeners();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    audio.pause();
+    setIsPlaying(false);
   }, [src, volume]);
 
   // ========================================================================
-  // 2. Listeners de interacción global para iniciar el audio si autoplay falla
-  // ========================================================================
-  const interactionListenersRef = useRef<Array<{ event: string; handler: () => void }>>([]);
-
-  const registerInteractionListeners = useCallback(() => {
-    if (interactionListenersRef.current.length > 0) return;
-
-    const startPlayback = () => {
-      const audio = audioRef.current;
-      if (!audio) return;
-      audio
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          setHasStartedOnce(true);
-        })
-        .catch(() => {
-          // Si aún falla, lo dejamos en pausa silenciosamente
-        });
-      cleanupInteractionListeners();
-    };
-
-    const events: Array<"click" | "touchstart" | "scroll" | "keydown"> = [
-      "click",
-      "touchstart",
-      "scroll",
-      "keydown",
-    ];
-
-    events.forEach((event) => {
-      const handler = startPlayback;
-      // Usamos passive:true para scroll/touch para no bloquear el rendering
-      const options = event === "scroll" || event === "touchstart" ? { passive: true } : undefined;
-      window.addEventListener(event, handler, options);
-      interactionListenersRef.current.push({ event, handler });
-    });
-  }, []);
-
-  const cleanupInteractionListeners = useCallback(() => {
-    interactionListenersRef.current.forEach(({ event, handler }) => {
-      window.removeEventListener(event, handler);
-    });
-    interactionListenersRef.current = [];
-  }, []);
-
-  // ========================================================================
-  // 3. Toggle play/pause desde el botón
+  // 2. Toggle play/pause desde el botón (control exclusivo del usuario)
   // ========================================================================
   const togglePlay = useCallback(async () => {
     const audio = audioRef.current;
@@ -146,20 +69,17 @@ export function GlobalAudioPlayer({
       try {
         await audio.play();
         setIsPlaying(true);
-        setHasStartedOnce(true);
-        // Si había listeners pendientes por autoplay bloqueado, los limpiamos
-        cleanupInteractionListeners();
       } catch {
-        // Silencioso
+        // Silencioso: si el navegador bloquea por alguna razón
       }
     } else {
       audio.pause();
       setIsPlaying(false);
     }
-  }, [cleanupInteractionListeners]);
+  }, []);
 
   // ========================================================================
-  // 4. Render
+  // 3. Render
   // ========================================================================
   return (
     <div
