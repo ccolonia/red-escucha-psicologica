@@ -211,6 +211,7 @@ export function AdminPlanilla() {
   const profName = professionals.find((p) => p.id === selectedProfId)?.user.name || "";
 
   // === Exportar Reporte Honorarios Pacientes (.xlsx) ===
+  // MATRIZ HORIZONTAL: 1 fila por paciente, 12 columnas mensuales
   const handleExportPatientFees = async () => {
     try {
       // Recolectar datos de todas las planillas del profesional seleccionado (o todas si no hay)
@@ -223,27 +224,68 @@ export function AdminPlanilla() {
         return;
       }
 
-      // Construir filas matriciales a partir de las sesiones
+      // === CONSOLIDACIÓN: agrupar por paciente (1 fila por paciente) ===
+      // Key: nombre del paciente normalizado (lowercase + trimmed)
+      // Value: { patientName, startDate, frequency, approxMonth, percentage, previousAmount, previousMonthLabel, monthlyFees[12] }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rows: any[] = [];
+      const patientMap = new Map<string, any>();
+
       for (const sheet of sheetsToExport) {
         for (const session of sheet.sessions) {
+          const rawName = session.patientName || "—";
+          const key = rawName.toLowerCase().trim();
           const monthIdx = new Date(session.date + "T12:00:00").getMonth();
-          rows.push({
-            patientName: session.patientName || "—",
-            startDate: session.treatmentStartDate || "",
-            frequency: session.frequency || "",
-            approxMonth: MONTHS[monthIdx] || "",
-            percentage: 0.3,
-            previousAmount: 0,
-            previousMonthLabel: "",
-            monthlyFees: Array(12).fill(null).map((_, i) => i === monthIdx ? (session.patientFee || 0) : null),
-          });
+          const fee = session.patientFee || 0;
+
+          if (!patientMap.has(key)) {
+            // Crear entrada nueva para este paciente
+            patientMap.set(key, {
+              patientName: rawName,
+              startDate: session.treatmentStartDate || "",
+              frequency: session.frequency || "",
+              approxMonth: MONTHS[monthIdx] || "",
+              percentage: 0.3,
+              previousAmount: 0,
+              previousMonthLabel: "",
+              monthlyFees: Array(12).fill(null),
+            });
+          }
+
+          // Acumular el fee en el mes correspondiente
+          const entry = patientMap.get(key);
+          if (entry) {
+            // Si ya hay un valor para ese mes, sumarlo (puede tener múltiples sesiones por mes)
+            const currentVal = entry.monthlyFees[monthIdx] || 0;
+            entry.monthlyFees[monthIdx] = currentVal + fee;
+
+            // Actualizar startDate si está vacío o si esta sesión es anterior
+            if (!entry.startDate || (session.treatmentStartDate && session.treatmentStartDate < entry.startDate)) {
+              entry.startDate = session.treatmentStartDate;
+            }
+
+            // Actualizar frecuencia si estaba vacía
+            if (!entry.frequency && session.frequency) {
+              entry.frequency = session.frequency;
+            }
+
+            // Actualizar mes aproximado
+            if (!entry.approxMonth) {
+              entry.approxMonth = MONTHS[monthIdx] || "";
+            }
+          }
         }
       }
 
+      // Convertir el Map a array
+      const rows = Array.from(patientMap.values());
+
+      if (rows.length === 0) {
+        toast.error("No hay sesiones para exportar");
+        return;
+      }
+
       await exportPatientFeesToExcel(rows, selectedYear);
-      toast.success("Reporte de Honorarios descargado");
+      toast.success(`Reporte de Honorarios descargado (${rows.length} pacientes)`);
     } catch (err) {
       console.error("[AdminPlanilla] Error exportando honorarios:", err);
       toast.error("No se pudo generar el reporte de honorarios");
