@@ -36,7 +36,7 @@ interface GlobalAudioPlayerProps {
 }
 
 export function GlobalAudioPlayer({
-  src = "/audio/rep-ambient.mp3",
+  src = "/audio/despues-de-la-tormenta.mp3",
   volume = 0.45,
 }: GlobalAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
